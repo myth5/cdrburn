@@ -367,3 +367,46 @@ int burn_drive_get_write_speed(struct burn_drive *d)
 {
 	return d->mdata->max_write_speed;
 }
+
+
+/* ts A51221 */
+static char *enumeration_whitelist[BURN_DRIVE_WHITELIST_LEN];
+static int enumeration_whitelist_top = -1;
+
+/** Add a device to the list of permissible drives. As soon as some entry is in
+    the whitelist all non-listed drives are banned from enumeration.
+    @return 1 success, <=0 failure
+*/
+int burn_drive_add_whitelist(char *device_address)
+{
+	char *new_item;
+	if(enumeration_whitelist_top+1 >= BURN_DRIVE_WHITELIST_LEN)
+		return 0;
+	enumeration_whitelist_top++;
+	new_item = malloc(strlen(device_address) + 1);
+	if (new_item == NULL)
+		return -1;
+	strcpy(new_item, device_address);
+	enumeration_whitelist[enumeration_whitelist_top] = new_item;
+	return 1;
+}
+
+/** Remove all drives from whitelist. This enables all possible drives. */
+void burn_drive_clear_whitelist(void)
+{
+	int i;
+	for (i = 0; i <= enumeration_whitelist_top; i++)
+		free(enumeration_whitelist[i]);
+	enumeration_whitelist_top = -1;
+}
+
+int burn_drive_is_banned(char *device_address)
+{
+	int i;
+	if(enumeration_whitelist_top<0)
+		return 0;
+	for (i = 0; i <= enumeration_whitelist_top; i++) 
+		if (strcmp(enumeration_whitelist[i], device_address) == 0)
+			return 0;
+	return 1;
+}

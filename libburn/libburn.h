@@ -451,6 +451,18 @@ struct burn_message* burn_get_message(void);
 /** Frees a burn_message structure */
 void burn_message_free(struct burn_message *msg);
 
+
+/* ts A51221 */
+/** Maximum number of particularly permissible drive addresses */
+#define BURN_DRIVE_WHITELIST_LEN 255
+/** Add a device to the list of permissible drives. As soon as some entry is in
+    the whitelist all non-listed drives are banned from enumeration.
+    @return 1 success, <=0 failure
+*/
+int burn_drive_add_whitelist(char *device_address);
+/** Remove all drives from whitelist. This enables all possible drives. */
+void burn_drive_clear_whitelist(void);
+
 /** Scans for drives. This function MUST be called until it returns nonzero.
     No drives can be in use when this is called or it will assert.
     All drive pointers are invalidated by using this function. Do NOT store

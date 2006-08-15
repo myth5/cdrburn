@@ -25,6 +25,9 @@
 
 static void enumerate_common(char *fname);
 
+/* ts A51221 */
+int burn_drive_is_banned(char *device_address);
+
 static int sgio_test(int fd)
 {
 	unsigned char test_ops[] = { 0, 0, 0, 0, 0, 0 };
@@ -50,6 +53,9 @@ void ata_enumerate(void)
 		/* open O_RDWR so we don't think read only drives are
 		   in some way useful
 		 */
+		/* ts A51221 */
+		if (burn_drive_is_banned(fname))
+			continue;
 		fd = open(fname, O_RDWR | O_NONBLOCK);
 		if (fd == -1)
 			continue;
@@ -85,6 +91,9 @@ void sg_enumerate(void)
 		/* open RDWR so we don't accidentally think read only drives
 		   are in some way useful
 		 */
+		/* ts A51221 */
+		if (burn_drive_is_banned(fname))
+			continue;
 		fd = open(fname, O_RDWR);
 		if (fd == -1)
 			continue;
