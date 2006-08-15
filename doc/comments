@@ -1,0 +1,52 @@
+/**
+   @author Dana Jansens, Derek Foreman
+
+   @mainpage Libburn Documentation Index
+
+   @section intro Introduction
+
+   Libburn is an open source library suite for reading, mastering and writing
+   optical discs.
+
+   @section using Using the library
+
+   @subsection concepts Library concepts
+
+   There are a few concepts to introduce in order for you to understand how to
+   use Libburn. So, lets start with them:
+
+   <ol>
+   <li> Read - The process of reading the data on a disc for storage or
+        copying.
+   <li> Write - The process of writing data onto a disc to create a new
+        disc image or append to an existing one.
+   <li> Drive - A Drive is a hardware device used to reading and/or writing
+        discs. CD burners and CD-ROMs are examples of Drives.
+   </ol>
+
+   @subsection working Working with the library
+
+   Now that you understand the above @ref concepts, you're ready to look at the
+   actual use of the library.
+
+   In general, using the library to perform a process consists of the following
+   steps:
+
+   <ol>
+   <li> Initialize the library. (If not already done; a single instance of
+        the library can perform multiple operations simultaneously with
+        multiple drives.)
+   <li> Scan for available Drives.
+   <li> Choose and grab a Drive for reading/writing.
+   <li> Fill in the options for the operation.
+   <li> Wait for the operation to complete, displaying status along the way
+        if desired.
+   <li> Release the Drive.
+   <li> Destroy the library instance. (If you're done working with the
+        library.)
+   </ol>
+
+   Here's a very simple example of burning an ISO file
+
+   @include burniso.c
+*/
