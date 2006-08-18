@@ -94,7 +94,8 @@ noinst_PROGRAMS = \
 	test/poll \
 	test/rip \
 	test/toc \
-	test/structest
+	test/structest \
+	cdrskin/cdrskin
 
 test_devices_CPPFLAGS = -Ilibburn
 test_devices_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
@@ -126,6 +127,17 @@ test_blank_SOURCES = test/blank.c
 test_iso_CPPFLAGS = -Ilibisofs
 test_iso_LDADD = $(libisofs_libisofs_la_OBJECTS) $(THREAD_LIBS)
 test_iso_SOURCES = test/iso.c
+
+##  cdrskin construction site - ts A60816
+cdrskin_cdrskin_CPPFLAGS = -Ilibburn
+cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_2_1
+cdrskin_cdrskin_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h cdrskin/cleanup.c cdrskin/cleanup.h cdrskin/cdrskin_timestamp.h
+##
+## Open questions: how to compute $timestamp and express -DX="$timestamp"
+##                 
+
+
 
 ## ========================================================================= ##
 
