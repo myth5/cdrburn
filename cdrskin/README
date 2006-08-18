@@ -1,0 +1,317 @@
+------------------------------------------------------------------------------
+            libburn.pykix.org    scdbackup.sourceforge.net/cdrskin
+------------------------------------------------------------------------------
+This all is under GPL. Wether it can become LGPL is currently very unclear.
+(So for now see explanation and GPL reference at the end of this text)
+------------------------------------------------------------------------------
+
+Libburn. By Derek Foreman <derek@signalmarketing.com> and
+            Ben Jansens <xor@orodu.net>
+Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
+
+Mario Danic <mario.danic@gmail.com>, Luke Biddell <luke.biddell@gmail.com>,
+Anant Narayanan <anant@kix.in> , Thomas Schmitt <scdbackup@gmx.net>
+Copyright (C) 2006 Mario Danic, Luke Biddell, Anant Narayanan, Thomas Schmitt
+
+------------------------------------------------------------------------------
+My thanks to the above authors (except myself, of course) for making the
+following possible.
+
+cdrskin. By Thomas Schmitt <scdbackup@gmx.net>
+Integrated sub project of libburn.pykix.org but also published via:
+http://scdbackup.sourceforge.net/cdrskin_eng.html
+http://scdbackup.sourceforge.net/cdrskin-0.1.4.tar.gz
+Copyright (C) 2006 Thomas Schmitt
+
+------------------------------------------------------------------------------
+
+On top of libburn there is implemented cdrskin 0.1.4, a limited cdrecord
+compatibility wrapper which allows to use some libburn features from
+the command line.
+Interested users of cdrecord are invited to participate in the development
+of cdrskin. Contact: scdbackup@gmx.net
+
+
+Important :
+This software is provided as is. There is no warranty implied and no
+protection against possible damages. You use this on your own risk.
+Don't blame me or other authors of libburn if anything goes wrong.
+
+I used it on my own risk with :
+SuSE 7.2, kernel 2.4.4,  ide-scsi emulation, LITE-ON LTR48125S CD burner
+SuSE 9.0, kernel 2.4.21, ide-scsi emulation, LG GSA-4082B CD/DVD burner
+RIP-14.4, kernel 2.6.14, no ide-scsi,        with both above burners
+
+It fails to compile or run on SuSE 6.4 (kernel 2.2.14).
+It does not find the IDE CD burner on SuSE 7.2 without ide-scsi.
+Other people sucessfully tested cdrskin on several kernel 2.6 based x86 Linux
+systems, including 64 bit systems. (Further reports are welcome.)
+
+
+                   Compilation, First Glimpse, Installation
+
+Obtain cdrskin-0.1.4.tar.gz , go to a directory of your choice and do:
+
+    tar xzf cdrskin-0.1.4.tar.gz
+    cd cdrskin-0.1.4
+
+Or obtain a libburn.pykix.org SVN snapshot, go into toplevel directory libburn,
+and execute the autotools command  ./bootstrap
+
+Within that toplevel directory of either cdrskin-0.1.4 or libburn then execute:
+
+    ./configure
+    make
+
+(Note: there are next-level directories "libburn" and "cdrskin". Those
+would be the wrong ones. Meant is the highest directory of tarball resp. 
+SVN download. Among others containing files "AUTHORS", "configure", 
+"Makefile.am", as well as directories "libburn" and "cdrskin".)
+
+This will already produce a cdrskin binary. But it might be necessary to
+install libburn in order to use this binary. Installation of libburn is
+beyond the scope of cdrskin. For this, see included libburn docs.
+
+In order to surely get a standalone binary, execute
+
+    cdrskin/compile_cdrskin.sh
+
+Help texts :
+    cdrskin/cdrskin --help
+    cdrskin/cdrskin -help
+
+Install (eventually as superuser) cdrskin to a directory where it can be found:
+    cp cdrskin/cdrskin /usr/bin
+
+It is not necessary for the standalone cdrskin binary to have libburn
+installed, since it incorporates the necessary libburn parts at compile time.
+It will not collide with an installed version of libburn either.
+But libpthread must be installed on the system and glibc has to match. (See
+below for a way to create a statically linked binary.)
+
+Up to now i discourage to install the emerging libraries and to use them
+with other programs. Unless you need my patches, better use vanilla libburn
+for that.
+
+
+                                    Usage
+
+The user of cdrskin needs rw-permission for the CD burner device.
+A list of rw-accessible drives can be obtained by
+
+    cdrskin --devices
+
+CD devices which offer no rw-permission are invisible to normal users.
+The superuser should be able to see any usable drive and then set the
+permissions as needed. If this hangs then there is a drive with
+unexpected problems (locked, busy, broken, whatever). You might have to
+guess the address of your (non-broken) burner by other means, then.
+On Linux 2.4 this would be some /dev/sgN and on 2.6. some /dev/hdX.
+
+The output of  cdrskin --devices  might look like
+
+    0  dev='/dev/sg0'  rwrwr- :  'TEAC'  'CD-ROM CD-532S'
+    1  dev='/dev/sg1'  rwrw-- :  'LITE-ON'  'LTR-48125S'
+
+So full and insecure enabling of both for everybody would look like
+
+    chmod a+rw /dev/sg0 /dev/sg1
+
+(The CD-ROM is in these examples only for demonstrating the presence of another
+ SCSI device. This /dev/sg0 may be left as it is and stay invisible for normal
+ users.)
+
+I strongly discourage to run cdrskin with setuid root or via sudo !
+It is not checked for the necessary degree of hacker safety.
+
+
+                                Usage examples 
+
+Get an overview of cdrecord style addresses of available devices
+    cdrskin -scanbus 
+
+Obtain some info about the drive
+    cdrskin dev=1,1,0 -checkdrive 
+
+Obtain some info about the drive and the inserted media
+    cdrskin dev=1,1,0 -atip 
+
+Thoroughly blank a CD-RW
+    cdrskin -v dev=1,1,0 blank=all eject_device=/dev/cdrom -eject 
+
+Blank CD-RW sufficiently for making it ready for overwrite
+    cdrskin -v dev=1,1,0 blank=fast eject_device=/dev/cdrom -eject 
+
+Burn image file  my_image.iso  to CD
+    cdrskin -v dev=1,1,0 speed=12 fs=8m -sao driveropts=burnfree padsize=300k \
+            eject_device=/dev/cdrom -eject  my_image.iso 
+
+Burn a compressed afio archive to CD on-the-fly
+    find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao \
+                                  driveropts=burnfree padsize=300k tsize=650m - 
+
+
+           Usage example with  http://scdbackup.sourceforge.net
+
+Address may be a cdrecord-style  "scsibus,target,lun"  as listed with
+cdrskin -scanbus (but not as listed with cdrecord -scanbus) :
+
+    export SCDBACKUP_SCSI_ADR="1,1,0"
+
+or a device file address as listed by --devices with an accessible drive :
+
+    export SCDBACKUP_SCSI_ADR="/dev/sg1"
+
+Set usage of cdrskin with appropriate options rather than cdrecord :
+
+    export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m eject_device=/dev/cdrw"
+
+Run a backup :
+
+    scdbackup_home
+
+
+                                Restrictions
+
+The convenient burn mode TAO is not available with libburn yet.
+Therefore it has to be defaulted to mode SAO which needs to know the track
+size in advance. non-cdrecord option  tao_to_sao_tsize=650m  causes each CD
+to get burned up to 650 MB regardless of the payload size.
+
+Command eject does not work with /dev/sgX and there is no easy way to determine
+a drive's device file address which is suitable for eject.
+So this address has to be supplied by eject_device=... unless your drive is
+/dev/sg0 which is guessed as eject_device=/dev/sr0 .
+
+No audio features, no multi session ... Please report your wishes.
+
+
+                           Inspiration and Standard
+
+For the original meaning of cdrecord options see :
+    man cdrecord 
+    (http://cdrecord.berlios.de/old/private/man/cdrecord-2.0.html)
+Do not bother Joerg Schilling with any cdrskin problems.
+(Be cursed if you install cdrskin as "cdrecord" without clearly forwarding
+ this "don't bother Joerg" demand.)   
+cdrskin does not contain any bytes copied from cdrecord's sources. Many bytes
+have been copied from the message output of cdrecord runs, though. I am
+thankful to Joerg Schilling for every single one of them.
+
+Actually i, Thomas Schmitt, am a devoted user of cdrecord via my project
+scdbackup which still runs a bit better with cdrecord than with cdrskin. TAO.
+I have the hope that Joerg feels more flattered than annoyed by cdrskin.
+
+
+                             Pseudo-SCSI Adresses
+
+cdrecord and cdrskin share only some syntax of addresses but not the meaning
+of the components. A cdrecord-style address for cdrskin
+  [[prefix:]scsibus,]target,lun
+corresponds either to a device file address or to a libburn drive number.
+Component "scsibus" indicates the translation method. Defined busses are:
+  0  target is the libburn drivenumber as listed with --devices
+  1  associated to device file /dev/sgN , target chooses N
+  2  associated to device file /dev/hdX , target 0='a', 1='b' ..., 25='z' 
+
+So "1,1,0" is /dev/sg1, "2,3,0" is /dev/hdd, "0,2,0" is libburn drive #2 at
+some unspecified device file. 
+This scheme shall help to keep cdrecord-style addresses stable and exchangeable
+between users without excluding drives with unexpected device addresses.
+The numbering on bus 0 is prone to arbitrary changes caused by changes in
+drive accessability.
+Further busses may emerge as libburn evolves. "prefix" and "lun" may get
+a meaning. To stay upward compatible, use addresses as printed by -scanbus.
+
+Some programs or users have their own ideas about the address of their burner.
+K3b 0.10 for example derives cdrecord addresses by own examination of the
+devices and not by calling cdrecord -scanbus.
+To direct such callers to the appropriate drives, cdrskin allows to define
+device address aliases. Like
+  cdrskin dev_translation=+1,0,0+/dev/sg1 \
+          dev_translation=+ATA:1,0,0+/dev/sg1 \
+          dev_translation=-"cd+dvd"-1,1,0 \
+          ...
+Any of the addresses dev=1,0,0, dev=ATA:1,0,0, dev=cd+dvd will be mapped to
+/dev/sg1 resp. to its standard alias 1,1,0.
+The first character after "dev_translation=" defines the character which
+separates the two parts of the translation pair. (Above: "+" and "-".)
+
+In K3b 0.10 it is possible to employ alternative writer programs by setting
+their full path (e.g. /usr/bin/cdrskin) in menu
+  Settings:Configure K3b...:Programs:Search Path 
+and to make them default in menu
+  Settings:Configure K3b...:Programs:Programs:
+A suitable setting for "cdrecord" in menu 
+  Settings:Configure K3b...:Programs:User Parameters
+would then probably be
+  -v dev_translation=+1,0,0+/dev/sg1
+You will learn from button "Show Debugging Output" after a failed burn run
+what cdrecord command was used with what address "dev=...". This address "..."
+will be the right one to replace "1,0,0" in above example.
+
+
+                                 Startup Files
+
+If not --no_rc is the first argument then cdrskin attempts on startup to read
+arguments from the following three files:
+  /etc/defaults/cdrskin
+  /etc/opt/cdrskin/rc
+  $HOME/.cdrskinrc
+The files are read in the sequence given above.
+Each readable line is treated as one single argument. No extra blanks,
+no comments, no empty lines are permitted.
+
+Example content of a startup file:
+dev=1,1,0
+dev_translation=+1,0,0+1,1,0
+--fifo_start_empty
+fs=16m
+
+
+                        Special compilation variations
+
+You may get a (super fat) statically linked binary by :
+    cdrskin/compile_cdrskin.sh -static
+if your system supports static linking, at all. This will not help with kernels
+which do not properly support the necessary low-level interfaces chosen by
+your compile-time libraries.
+
+A size reduced but fully functional binary may be produced by 
+    cdrskin/compile_cdrskin.sh -do_strip
+
+An extra lean binary with reduced capabilities is created by
+    cdrskin/compile_cdrskin.sh -do_diet -do_strip
+It will not read startup files, will abort on option  dev_translation= ,
+will not have a fifo buffer, and will not be able to put out help texts or
+debugging messages.
+
+
+------------------------------------------------------------------------------
+It is my understanding that you may put a binary of unchanged cdrskin on any
+suitable system if you only tell the user that the source is available for
+free in the internet. Search engines will find it. Better than any URL here.
+
+If you link to the libraries or if you make changes in our source, you will 
+currently have to release your own programs under GPL and nothing else, i fear.
+As it looks no single one of us currently has the right to issue any other
+license.
+You may submit source changes which affect our standalone binaries and if
+they get included you may distribute binaries derived from our new code base.
+
+signed: Thomas Schmitt (and his understanding of GPL), author of this README.
+------------------------------------------------------------------------------
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
