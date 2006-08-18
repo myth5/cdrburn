@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-aclocal-1.7
+aclocal
 libtoolize --copy --force
 autoconf
-automake-1.7 --foreign --add-missing --copy --include-deps
+automake --foreign --add-missing --copy --include-deps
