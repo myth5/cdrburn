@@ -83,6 +83,13 @@ int burn_write_flush(struct burn_write_opts *o)
 	return 1;
 }
 
+
+/* ts A60819:
+   This is unused since about Feb 2006, icculus.org/burn CVS.
+   The compiler complains. We shall please our compiler.
+*/
+#ifdef Libburn_write_with_function_print_cuE
+
 static void print_cue(struct cue_sheet *sheet)
 {
 	int i;
@@ -99,6 +106,9 @@ static void print_cue(struct cue_sheet *sheet)
 		printf("%02X:%02X:%02X\n", unit[5], unit[6], unit[7]);
 	}
 }
+
+#endif /* Libburn_write_with_print_cuE */
+
 
 static void add_cue(struct cue_sheet *sheet, unsigned char ctladr,
 		    unsigned char tno, unsigned char indx,
@@ -181,8 +191,12 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 			add_cue(sheet, ctladr | 1, i + 1, 0, form, 0, runtime);
 			runtime += 150;
 /* XXX fix pregap interval 1 for data tracks */
-//                      if (!(form & BURN_AUDIO))
-//                              tar[i]->pregap1 = 1;
+/* ts A60813 silence righteous compiler warning about C++ style comments
+   This is possibly not a comment but rather a trace of Derek Foreman
+   experiments. Thus not to be beautified - but to be preserved rectified.
+/ /                      if (!(form & BURN_AUDIO))
+/ /                              tar[i]->pregap1 = 1;
+*/
 			tar[i]->pregap2 = 1;
 		}
 /* XXX HERE IS WHERE WE DO INDICES IN THE CUE SHEET */
