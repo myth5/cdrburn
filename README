@@ -13,6 +13,7 @@ Mario Danic <mario.danic@gmail.com>, Luke Biddell <luke.biddell@gmail.com>,
 Anant Narayanan <anant@kix.in> , Thomas Schmitt <scdbackup@gmx.net>
 Copyright (C) 2006 Mario Danic, Luke Biddell, Anant Narayanan, Thomas Schmitt
 
+This libburn toplevel README (C) 2006 Thomas Schmitt 
 ------------------------------------------------------------------------------
 
 Overview of libburn.pykix.org :
@@ -71,8 +72,7 @@ its toplevel directory and execute
    ./configure
    make
 
-[team: test and eventually remove the doubt]
-I am not sure wether anybody ever has tested to install the libraries by
+To make the libraries accessible for running resp. developing applications 
    make install
 
 
@@ -93,8 +93,9 @@ Project history as far as known to me:
   The cdrskin project site is reachable and offers download of the heavily
   patched (elsewise outdated) tarball under the name  cdrskin-0.1.2  :
      http://scdbackup.sourceforge.net/cdrskin_eng.html
-  It is on the move to use vanilla libburn.pykix.org , though.
-    
+  It has meanwhile moved to use vanilla libburn.pykix.org , though.
+  Version 0.1.4 constitutes the first release of this kind.
+
 - In Juli 2006 our team mate Mario Danic announced a revival of libburn
   which by about nearly everybody else was perceived as unfriendly fork.
   Derek Foreman four days later posted a message which expressed his
@@ -106,7 +107,7 @@ Project history as far as known to me:
     http://lists.freedesktop.org/archives/libburn/2006-August/000446.html
     http://mailman-mail1.webfaction.com/pipermail/libburn-hackers/2006-August/000024.html
 
-- Mid August 2006 project cdrskin is establishing a branch office in libburn
+- Mid August 2006 project cdrskin established a branch office in libburn
   so that all maintainers of our tools have one single place to get the
   current (at least slightely) usable coordinated versions of everything.
   Project cdrskin will live forth independendly for a while but it is committed
