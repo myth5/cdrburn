@@ -28,6 +28,15 @@ static void enumerate_common(char *fname);
 /* ts A51221 */
 int burn_drive_is_banned(char *device_address);
 
+/* ts A60813 : storage objects are in libburn/init.c
+   wether to use O_EXCL
+   wether to use O_NOBLOCK with open(2) on devices
+   wether to take O_EXCL rejection as fatal error */
+extern int burn_sg_open_o_excl;
+extern int burn_sg_open_o_nonblock;
+extern int burn_sg_open_abort_busy;
+
+
 static int sgio_test(int fd)
 {
 	unsigned char test_ops[] = { 0, 0, 0, 0, 0, 0 };
@@ -48,6 +57,24 @@ void ata_enumerate(void)
 	int i, fd;
 	char fname[10];
 
+	/* ts A60813 */
+	int open_mode = O_RDWR;
+
+	/* ts A60813
+	   O_EXCL with block devices is an unpublished feature
+	   of Linux kernels. Possibly introduced 2002.
+	   It can only be used if libburn stops opening several
+	   file descriptor on the same block device.
+	   See comment in sg_grab() */
+	if(burn_sg_open_o_excl)
+		open_mode |= O_EXCL;
+	/* ts A60813
+	   O_NONBLOCK was already hardcoded in ata_ but not in sg_.
+	   There must be some reason for this. So O_NONBLOCK is
+	   default mode for both now. Disable on own risk. */
+	if(burn_sg_open_o_nonblock)
+		open_mode |= O_NONBLOCK;
+
 	for (i = 0; i < 26; i++) {
 		sprintf(fname, "/dev/hd%c", 'a' + i);
 		/* open O_RDWR so we don't think read only drives are
@@ -56,10 +83,23 @@ void ata_enumerate(void)
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
 			continue;
-		fd = open(fname, O_RDWR | O_NONBLOCK);
-		if (fd == -1)
+		fd = open(fname, open_mode);
+		if (fd == -1) {
+/* <<< debugging
+			fprintf(stderr,
+			"\nlibburn: experimental: fname= %s , errno= %d\n",
+				fname,errno);
+*/
+			/* ts A60814 : i see no way to do this more nicely */ 
+			if (errno == EBUSY && burn_sg_open_abort_busy) {
+				fprintf(stderr,
+	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
+					fname);
+				/* <<< maybe one should plainly exit here */
+				assert("drive busy" == "non fatal");
+			}
 			continue;
-
+		}
 		/* found a drive */
 		ioctl(fd, HDIO_GET_IDENTITY, &tm);
 
@@ -86,6 +126,34 @@ void sg_enumerate(void)
 	int i, fd;
 	char fname[10];
 
+	/* ts A60813 */
+	int open_mode = O_RDWR;
+
+	/* ts A60813
+	   O_EXCL with block devices is an unpublished feature
+	   of Linux kernels. Possibly introduced 2002.
+	   It can only be used if libburn stops opening several
+	   file descriptor on the same block device.
+	   See comment in sg_grab() */
+	if(burn_sg_open_o_excl)
+		open_mode |= O_EXCL;
+	/* ts A60813
+	   O_NONBLOCK was not hardcoded in sg_ but was in ata_.
+	   I myself test mainly sg_ and it seems to be ok with 
+	   O_NONBLOCK. So it should stay default mode. */
+	if(burn_sg_open_o_nonblock)
+		open_mode |= O_NONBLOCK;
+
+	fprintf(stderr,
+		"\nlibburn: experimental: o_excl= %d , o_nonblock= %d, abort_on_busy= %d\n",
+	burn_sg_open_o_excl,burn_sg_open_o_nonblock,burn_sg_open_abort_busy);
+	fprintf(stderr,
+		"libburn: experimental: O_EXCL= %d , O_NONBLOCK= %d\n",
+		!!(open_mode&O_EXCL),!!(open_mode&O_NONBLOCK));
+/* <<< debugging
+          
+*/
+
 	for (i = 0; i < 32; i++) {
 		sprintf(fname, "/dev/sg%d", i);
 		/* open RDWR so we don't accidentally think read only drives
@@ -94,10 +162,24 @@ void sg_enumerate(void)
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
 			continue;
-		fd = open(fname, O_RDWR);
-		if (fd == -1)
-			continue;
+		fd = open(fname, open_mode);
 
+		if (fd == -1) {
+/* <<< debugging
+			fprintf(stderr,
+			"\n cdrskin: experimental: fname= %s , errno= %d\n",
+				fname,errno);
+*/
+			/* ts A60814 : i see no way to do this more nicely */ 
+			if (errno == EBUSY && burn_sg_open_abort_busy) {
+				fprintf(stderr,
+	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
+					fname);
+				/* <<< maybe one should plainly exit here */
+				assert("drive busy" == "non fatal");
+			}
+			continue;
+		}
 		/* found a drive */
 		ioctl(fd, SG_GET_SCSI_ID, &sid);
 		close(fd);
@@ -167,14 +249,47 @@ static void enumerate_common(char *fname)
 	we use the sg reference count to decide whether we can use the
 	drive or not.
 	if refcount is not one, drive is open somewhere else.
+
+	ts A60813: this test is too late. O_EXCL is the stronger solution.
+	After all the test was diabled already in icculus.org/burn CVS.
 */
 int sg_grab(struct burn_drive *d)
 {
 	int fd, count;
 
-	fd = open(d->devname, O_RDWR | O_NONBLOCK);
+	/* ts A60813 */
+	int open_mode = O_RDWR;
+
+	/* ts A60813
+	   O_EXCL with block devices is an unpublished feature
+	   of Linux kernels. Possibly introduced 2002.
+	   It can only be used if libburn stops opening several
+	   file descriptor on the same block device.
+	   See comment below */
+	if(burn_sg_open_o_excl)
+		open_mode |= O_EXCL;
+
+	/* ts A60813
+	   O_NONBLOCK was hardcoded here. So it should stay default mode. */
+	if(burn_sg_open_o_nonblock)
+		open_mode |= O_NONBLOCK;
+
+	/* ts A60813
+	   After enumeration the drive fd is probably still open.
+	   -1337 is the initial value of burn_drive.fd and the value after
+	   relase of drive. Unclear why not the official error return
+	   value -1 of open(2) war used. */
+	if(d->fd == -1337)
+		fd = open(d->devname, open_mode);
+	else
+		fd= d->fd;
+
 	assert(fd != -1337);
 	if (-1 != fd) {
+
+		/* ts A60814:
+		   according to my experiments this test would work now ! */
+
 /*		er = ioctl(fd, SG_GET_ACCESS_COUNT, &count);*/
 		count = 1;
 		if (1 == count) {

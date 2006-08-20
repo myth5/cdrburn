@@ -442,6 +442,24 @@ void burn_finish(void);
 */
 void burn_set_verbosity(int level);
 
+/* ts A60813 */
+/** Set parameters for behavior on opening device files. To be called early
+    after burn_initialize() and before any bus scan. But not mandatory at all.
+    Parameter value 1 enables a feature, 0 disables.  
+    Default is (1,0,0). Have a good reason before you change it.
+    @param exclusive Try to open only devices which are not marked as busy
+                     and try to mark them busy if opened sucessfully. (O_EXCL)
+                     There are kernels which simply don't care about O_EXCL.
+                     Some have it off, some have it on, some are switchable.
+    @param blocking  Try to wait for drives which do not open immediately but
+                     also do not return an error as well. (O_NONBLOCK)
+                     This might stall indefinitely with /dev/hdX hard disks.
+    @param abort_on_busy  Unconditionally abort process when a non blocking
+                          exclusive opening attempt indicates a busy drive.
+                          Use this only after thorough tests with your app.
+*/
+void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy);
+
 /** Returns a newly allocated burn_message structure. This message should be
     freed with burn_message_free() when you are finished with it.
     @return A message or NULL when there are no more messages to retrieve.
