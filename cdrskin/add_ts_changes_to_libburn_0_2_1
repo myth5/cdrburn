@@ -22,15 +22,16 @@ set -x
 #
 # libburn version used:  http://libburn.pykix.org SVN of Aug 15 2006
 # packed up in a tarball just to save it from inadverted changes.
-original="./libburn_svn_A60815.tgz"
+# original="./libburn_svn_A60815.tgz"
+original="./libburn_cdrskin_A60819.tgz"
 
 # The top level directory in that snapshot is named
-intermediate="./libburn"
+intermediate="./libburn_pykix"
 
 # My changes are in libburn-0.2.1.ts.develop , mainly in ./cdrskin
 
 changes="./libburn-0.2.1.ts.develop"
-skin_rev="0.1.4"
+skin_rev="0.1.5"
 
 # The result directory and the name of the result tarballs
 target="./cdrskin-${skin_rev}"
@@ -72,6 +73,7 @@ then
  dummy=dummy
 else
   echo "$0 : FATAL : no file $original" >&2
+  exit 3
 fi
 
 
