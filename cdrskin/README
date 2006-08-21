@@ -1,6 +1,8 @@
 ------------------------------------------------------------------------------
             libburn.pykix.org    scdbackup.sourceforge.net/cdrskin
 ------------------------------------------------------------------------------
+Installation instructions at about line 50. First the legal stuff:
+------------------------------------------------------------------------------
 This all is under GPL. Wether it can become LGPL is currently very unclear.
 (So for now see explanation and GPL reference at the end of this text)
 ------------------------------------------------------------------------------
@@ -20,12 +22,12 @@ following possible.
 cdrskin. By Thomas Schmitt <scdbackup@gmx.net>
 Integrated sub project of libburn.pykix.org but also published via:
 http://scdbackup.sourceforge.net/cdrskin_eng.html
-http://scdbackup.sourceforge.net/cdrskin-0.1.4.tar.gz
+http://scdbackup.sourceforge.net/cdrskin-0.1.5.tar.gz
 Copyright (C) 2006 Thomas Schmitt
 
 ------------------------------------------------------------------------------
 
-On top of libburn there is implemented cdrskin 0.1.4, a limited cdrecord
+On top of libburn there is implemented cdrskin 0.1.5, a limited cdrecord
 compatibility wrapper which allows to use some libburn features from
 the command line.
 Interested users of cdrecord are invited to participate in the development
@@ -50,15 +52,16 @@ systems, including 64 bit systems. (Further reports are welcome.)
 
                    Compilation, First Glimpse, Installation
 
-Obtain cdrskin-0.1.4.tar.gz , go to a directory of your choice and do:
+Obtain cdrskin-0.1.5.tar.gz , take it to a directory of your choice and do:
 
-    tar xzf cdrskin-0.1.4.tar.gz
-    cd cdrskin-0.1.4
+    tar xzf cdrskin-0.1.5.tar.gz
+    cd cdrskin-0.1.5
 
-Or obtain a libburn.pykix.org SVN snapshot, go into toplevel directory libburn,
-and execute the autotools command  ./bootstrap
+Or obtain a libburn.pykix.org SVN snapshot,
+go into the toplevel directory of the snapshot (e.g.  cd libburn_pykix ),
+and execute the autotools script ./bootstrap . Use autools version >= 1.7 .
 
-Within that toplevel directory of either cdrskin-0.1.4 or libburn then execute:
+Within that toplevel directory of either cdrskin-0.1.5 or libburn then execute:
 
     ./configure
     make
