@@ -1,0 +1,86 @@
+------------------------------------------------------------------------------
+            libburn.pykix.org    scdbackup.sourceforge.net/cdrskin
+------------------------------------------------------------------------------
+                                  Changelog
+------------------------------------------------------------------------------
+
+19 Aug 2006  [committed]
+README
+cdrskin/README cdrskin/cdrskin.c cdrskin/add_ts_changes_to_libburn_0_2_1 \
+cdrskin/cdrskin_timestamp.h cdrskin/compile_cdrskin.sh
+cdrskin-0.1.4 "stable" released on base of August 15 2006 version of
+libburn-svn.pykix.org/trunk after initial merge of libburn and cdrskin-0.1.3 .
+
+------------------------------------------------------------------------------
+
+19 Aug 2006  [in the process of being committed right now]
+cdrskin/changelog.txt
+cdrskin-0.1.5 development started.
+Introduced this changelog.
+---------------------------------- Format (still emerging):
+
+Day Month Year [eventual commit mark with revision number]
+affected files , naked, one by line, 
+[eventually = internal snapshot tarball]
+More ore less concise description.
+
+---------------------------------- End of Format
+
+20 Aug 2006  [committed together with next change, i fear]
+libburn/sg.c
+Hopefully fixed a file descriptor resource leak in sg_grab().
+All scanned drives (seem to) stay open once, the grabbed one got re-opened
+and its stored first file descriptor got forgotten. Now we try to detect
+and re-use the still open fd.
+
+21 Aug 2006  [committed]
+libburn/libburn.h
+libburn/sg.c
+libburn/init.c
+= libburn_cdrskin_A60819.tgz
+cdrskin/cdrskin.c [committed later as revision 11]
+O_EXCL experiments imported from cdrskin-0.1.3
+In default configuration and on compliant kernels expect that a busy drive is
+invisible to further cdrskin instances. The user gets hints in case of empty
+bus scan result resp. busy drive given with dev=...
+Wether cdrecord and cdrskin respect each other would have to be evaluated.
+Options to play with:
+ --demand_a_drive   exit !=0 on bus scans with empty result
+ --drive_abort_on_busy  abort process if busy drive is found
+                    (might be triggered by a busy hard disk)
+ --drive_blocking   try to wait for busy drive to become free
+                    (might be stalled by a busy hard disk)
+ --drive_not_exclusive  do not ask kernel to prevent opening
+                    busy drives. Effect is kernel dependend.
+ grab_drive_and_wait=<num>  grab drive, wait given number of
+                    seconds, release drive, and do normal work
+
+21 Aug 2006  [committed]
+libburn/write.c
+Rectified non-ANSI-C comment, complained by gcc.
+
+21 Aug 2006 [committed 13] 
+cdrskin/cdrskin_eng.html
+The homepage moved in from scdbackup's internal doc collection.
+
+21 Aug 2006  [commited with revision 11, i fear]
+cdrskin/cdrskin.c
+Removed flaw:
+Help text of tao_to_sao_tsize= clarified.
+
+21 Aug 2006  [committed 12]
+cdrskin/wiki_plain.txt 
+The initial filling of the cdrskin wiki on libburn.pykix.org .
+I am not sure about the future fate of this text. I plan to keep it up to
+date with the online wiki for now. The online version will be considered
+the original.
+
+21 Aug 2006 [committed 15]
+cdrskin/cdrskin_timestamp.h
+Timestamping the new version.
+
+21 Aug 2006  [committed 14]
+cdrskin/add_ts_changes_to_libburn_0_2_1
+cdrskin/compile_cdrskin.sh
+Readjusted relationship glue of libburn and cdrskin.
+
