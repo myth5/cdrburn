@@ -59,7 +59,7 @@ or
 
 
 /** The official program version */
-#define Cdrskin_prog_versioN "0.1.4"
+#define Cdrskin_prog_versioN "0.1.5"
 
 /** The source code release timestamp */
 #include "cdrskin_timestamp.h"
@@ -103,9 +103,6 @@ or
 #define Cdrskin_libburn_with_fd_sourcE 1
 #define Cdrskin_libburn_largefilE 1
 #define Cdrskin_libburn_padding_does_worK 1
-
-/* <<< just for now: */
-#define Cdrskin_libburn_no_burn_preset_device_opeN 1
 
 #endif /* Cdrskin_libburn_0_2_1 */
 
@@ -1417,14 +1414,19 @@ set_dev:;
      printf(
           " --fifo_start_empty do not wait for full fifo before burn start\n");
      printf(
+          " grab_drive_and_wait=<num>  grab drive, wait given number of\n");
+     printf(
+          "                    seconds, release drive, and do normal work\n");
+     printf(
        " --ignore_signals   try to ignore any signals rather than to abort\n");
      printf(" --no_abort_handler exit even if the drive is in busy state\n");
      printf(
          " --no_rc            as first argument: do not read startup files\n");
      printf(
           " --single_track     accept only last argument as source_address\n");
-     printf(" tao_to_sao_tsize=<num>  substitute -tao by -sao and augment\n");
-     printf("                    input from \"-\" by tsize=<num>\n");
+     printf(
+          " tao_to_sao_tsize=<num>  substitute -tao by -sao and eventually\n");
+     printf("                    augment input from \"-\" by tsize=<num>\n");
      printf("                    (set tao_to_sao_tsize=0 to disable it)\n");
      printf(
         "Preconfigured arguments are read from the following startup files\n");
@@ -3245,7 +3247,7 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
 {
  int i,k,ret;
- double value;
+ double value,grab_and_wait_value= -1.0;
  char *cpt,*value_pt;
 
  /* cdrecord 2.01 options which are not scheduled for implementation, yet */
@@ -3513,6 +3515,10 @@ fs_equals:;
          printf("cdrskin: fifo size : %d\n",skin->fifo_size);
      }
 
+   } else if(strncmp(argv[i],"grab_drive_and_wait=",20)==0) {
+     value_pt= argv[i]+20;
+     grab_and_wait_value= Scanf_io_size(value_pt,0);
+
    } else if(strncmp(argv[i],"-gracetime=",11)==0) {
      value_pt= argv[i]+11;
      goto gracetime_equals;
@@ -3749,6 +3755,20 @@ ignore_unknown:;
      printf("cdrskin: active drive number : %d  '%s'\n",
             skin->driveno,skin->drives[skin->driveno].location);
  }
+ if(grab_and_wait_value>0) {
+   Cdrskin_grab_drive(skin,0);
+   for(k= 0; k<grab_and_wait_value; k++) {
+     fprintf(stderr,
+        "\rcdrskin: holding drive grabbed since %d seconds                 ",
+        k);
+     usleep(1000000);
+   }
+   fprintf(stderr,
+        "\rcdrskin: held drive grabbed for %d seconds                      \n",
+        k);
+   Cdrskin_release_drive(skin,0);
+ }
+     
  if(skin->track_counter>0) {
    skin->do_burn= 1;
 
