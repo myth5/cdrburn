@@ -65,6 +65,7 @@ The project components (list subject to growth, hopefully):
 
 We plan to be a responsive upstream. Bear with us. We are still practicing.
 Our build system is based on autotools which seem to be a bit smarter than me.
+User experience tells us that you will need at least autotools version 1.7.
 
 To build libburn and its subprojects it should be sufficient to go into
 its toplevel directory and execute
