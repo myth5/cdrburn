@@ -50,4 +50,7 @@ void burn_disc_erase_sync(struct burn_drive *d, int fast);
 int burn_drive_get_block_types(struct burn_drive *d,
 			       enum burn_write_types write_type);
 
+/* ts A60822 */
+int burn_drive_is_open(struct burn_drive *d);
+
 #endif /* __DRIVE */

@@ -410,3 +410,14 @@ int burn_drive_is_banned(char *device_address)
 			return 0;
 	return 1;
 }
+
+/* ts A60822 */
+int burn_drive_is_open(struct burn_drive *d)
+{
+	/* a bit more detailed case distinction than needed */
+	if(d->fd == -1337)
+		return 0;
+	if(d->fd < 0)
+		return 0;
+	return 1;
+}
