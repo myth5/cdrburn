@@ -107,7 +107,7 @@ or
 #endif /* Cdrskin_libburn_0_2_1 */
 
 #ifndef Cdrskin_libburn_versioN
-#define Cdrskin_libburn_versioN "0.2.ts"
+#define Cdrskin_libburn_versioN "0.2.1"
 #endif
 
 #ifdef Cdrskin_libburn_largefilE
@@ -628,6 +628,7 @@ struct CdrtracK {
  int source_fd;
  double fixed_size;
  double padding;
+ int track_type;
 
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
      data to libburn. 
@@ -660,7 +661,8 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  struct CdrtracK *o;
  int ret;
  int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
-                        double *fixed_size, double *padding, int flag);
+                        double *fixed_size, double *padding,
+                        int *track_type, int flag);
  int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
                           int *fifo_size, int *fifo_start_empty, int flag);
 
@@ -673,13 +675,15 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->source_fd= -1;
  o->fixed_size= 0.0;
  o->padding= 0.0;
+ o->track_type= 0;
  o->fifo_enabled= 0;
  o->fifo= NULL;
  o->fifo_outlet_fd= -1;
  o->fifo_size= 0;
  o->fifo_start_empty= 0;
  o->libburn_track= NULL;
- ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),0);
+ ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),
+                         &(o->track_type),0);
  if(ret<=0)
    goto failed;
 
@@ -873,7 +877,7 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
    ClN(fprintf(stderr,
  "cdrskin_debug: track %d telling burn_track_define_data() to pad %.f bytes\n",
            trackno+1,lib_padding));
- burn_track_define_data(tr,0,(int) lib_padding,1,BURN_MODE1);
+ burn_track_define_data(tr,0,(int) lib_padding,1,track->track_type);
 
 #ifdef Cdrskin_libburn_with_fd_sourcE
  if(track->source_fd==-1) {
@@ -1724,6 +1728,9 @@ struct CdrskiN {
  double padding;
  int set_by_padsize;
 
+ /** track_type may be set to BURN_MODE1, BURN_AUDIO, etc. */
+ int track_type;
+
  /** The list of tracks with their data sources and parameters */
  struct CdrtracK *tracklist[Cdrskin_track_maX];
  int track_counter;
@@ -1890,11 +1897,13 @@ int Cdrskin_destroy(struct CdrskiN **o, int flag)
 
 /** Return information about current track source */
 int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
-                       double *fixed_size, double *padding, int flag)
+                       double *fixed_size, double *padding,
+                       int *track_type, int flag)
 {
  strcpy(source_path,skin->source_path);
  *fixed_size= skin->fixed_size;
  *padding= skin->padding;
+ *track_type= skin->track_type;
  return(1);
 }
 
@@ -3262,7 +3271,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo", "-format", "-load",
    "-lock", "-msinfo", "-toc", "-multi", "-fix", "-nofix", "-waiti",
    "-immed", "-force", "-raw", "-raw96p", "-raw16",
-   "-clone", "-text", "-audio", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
+   "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
    "-scms", "-shorttrack", "-noshorttrack", "-swab", "-packet", "-noclose",
    ""
@@ -3363,6 +3372,9 @@ set_abort_max_wait:;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
        printf("cdrskin: will put out some -atip style line\n");
 
+   } else if(strcmp(argv[i],"-audio")==0) {
+     skin->track_type= BURN_AUDIO;
+
    } else if(strncmp(argv[i],"-blank=",7)==0) {
      cpt= argv[i]+7;
      goto set_blank;
@@ -3394,7 +3406,7 @@ set_blank:;
 
      /* >>> !!! All Subsequent Tracks Option */
 
-     /* ??? do we have a non-data mode at all ? */;
+     skin->track_type= BURN_MODE1;
 
    } else if(strcmp(argv[i],"--demand_a_drive")==0) {
      /* is handled in Cdrpreskin_setup() */;
