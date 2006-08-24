@@ -1,5 +1,5 @@
 pkgconfigdir=$(libdir)/pkgconfig
-libincludedir=$(includedir)/libburn/@BURN_MAJOR_VERSION@
+libincludedir=$(includedir)/libburn
 
 lib_LTLIBRARIES = libburn.la
 
