@@ -679,7 +679,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->source_fd= -1;
  o->fixed_size= 0.0;
  o->padding= 0.0;
- o->track_type= 0;
+ o->track_type= BURN_MODE1;
  o->fifo_enabled= 0;
  o->fifo= NULL;
  o->fifo_outlet_fd= -1;
@@ -1834,6 +1834,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->fixed_size= 0.0;
  o->padding= 0.0;
  o->set_by_padsize= 0;
+ o->track_type= BURN_MODE1;
  for(i=0;i<Cdrskin_track_maX;i++)
    o->tracklist[i]= NULL;
  o->track_counter= 0;
