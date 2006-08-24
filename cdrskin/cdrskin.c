@@ -173,7 +173,11 @@ or
 #define Cdrskin_strleN 4096
 
 /** The maximum length +1 of a drive address */
+#ifdef Cdrskin_new_api_tesT
+#define Cdrskin_adrleN BURN_DRIVE_ADR_LEN
+#else
 #define Cdrskin_adrleN 80
+#endif
 
 
 /* --------------------------------------------------------------------- */
@@ -2001,6 +2005,9 @@ int Cdrskin_adjust_speed(struct CdrskiN *skin, int flag)
 
 
 /** Obtain access to a libburn drive for writing or information retrieval
+    @param flag Bitfield for control purposes:
+                bit0= bus is unscanned, device is known, 
+                      use burn_drive_scan_and_grab()
     @return <=0 error, 1 success
 */
 int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
@@ -2022,19 +2029,37 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
  }
 #endif /* Cdrskin_grab_abort_brokeN */
 
- /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
- /* Therefore the first grab is just for loading */
- if(!burn_drive_grab(drive, 1)) {
+#ifdef Cdrskin_new_api_tesT
+ if(flag&1) {
+
+   fprintf(stderr,
+      "cdrskin: experimental: Cdrskin_grab_drive() on Cdrskin_new_api_tesT\n");
+
+   ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,1);
+   if(ret<=0)
+     goto unable;
+   skin->driveno= 0;
+ } else {
+#else
+ {
+#endif /* ! Cdrskin_new_api_tesT */
+
+   /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
+   /* Therefore the first grab is just for loading */
+   if(!burn_drive_grab(drive, 1)) {
 unable:;
-   fprintf(stderr, "cdrskin: FATAL : unable to open drive %d\n",skin->driveno);
-   ret= 0; goto ex;
+     fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
+             skin->driveno);
+     ret= 0; goto ex;
+   }
+   skin->drive_is_grabbed= 1;
+   burn_drive_release(drive,0); 
+   skin->drive_is_grabbed= 0;
+
+   /* now grab the drive for real */
+   if(!burn_drive_grab(drive, 1))
+     goto unable;
  }
- skin->drive_is_grabbed= 1;
- burn_drive_release(drive,0); 
- skin->drive_is_grabbed= 0;
- /* now grab the drive for real */
- if(!burn_drive_grab(drive, 1))
-   goto unable;
  skin->drive_is_grabbed= 1;
  ret= 1;
 ex:;
@@ -2463,6 +2488,30 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  if(skin->verbosity>=Cdrskin_verbose_debuG)   
    ClN(fprintf(stderr,
           "cdrskin_debug: redoing startup for speed inquiry stabilization\n"));
+
+
+#ifdef Cdrskin_new_api_tesT
+
+ fprintf(stderr,
+         "cdrskin: experimental: Cdrskin_atip() on Cdrskin_new_api_tesT\n");
+
+ if(strlen(skin->preskin->device_adr)<=0)
+   burn_drive_get_adr(&(skin->drives[skin->driveno]),
+                      skin->preskin->device_adr);
+
+ Cdrskin_release_drive(skin,0);
+ burn_finish();
+ if(!burn_initialize()) {
+   fflush(stdout);
+   fprintf(stderr,"cdrskin : FATAL : Re-initialization of libburn failed\n");
+   {ret= 0; goto ex;}
+ } 
+ ret= Cdrskin_grab_drive(skin,1); /* uses burn_drive_scan_and_grab() */
+ if(ret<=0)
+   return(ret);
+
+#else /* Cdrskin_new_api_tesT */
+
  Cdrskin_release_drive(skin,0);
  burn_finish();
  if(!burn_initialize()) {
@@ -2477,6 +2526,8 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  ret= Cdrskin_grab_drive(skin,0);
  if(ret<=0)
    return(ret);
+
+#endif /* ! Cdrskin_new_api_tesT */
 
 #endif /* Cdrskin_atip_speed_brokeN */
 
