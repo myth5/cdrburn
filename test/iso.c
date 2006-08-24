@@ -4,7 +4,7 @@
 #define _GNU_SOURCE
 
 #include "libisofs.h"
-#include "libburn.h"
+#include "libburn/libburn.h"
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -17,7 +17,7 @@
 #include "tree.h"
 #include "util.h"
 #include "libisofs.h"
-#include "libburn.h"
+#include "libburn/libburn.h"
 
 /* burn-source compatible stuff */
 static int
