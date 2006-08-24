@@ -5,35 +5,25 @@
  * Extra declarations for use with the iso_volume structure.
  */
 
-#ifndef __ISO_VOLUME
-#define __ISO_VOLUME
+#ifndef LIBISO_VOLUME_H
+#define LIBISO_VOLUME_H
 
 #include "libisofs.h"
-
-struct iso_string
-{
-	char *cstr;
-	uint16_t *jstr;
-};
 
 /**
  * Data volume.
  */
 struct iso_volume
 {
-	int refcount;			/**< Number of used references to th
+	int refcount;			/**< Number of used references to this
 					     volume. */
 
-	struct iso_tree_dir *root;	/**< Root of the directory tree for the
+	struct iso_tree_node *root;	/**< Root of the directory tree for the
 					     volume. */
 
-	unsigned rockridge:1;
-	unsigned joliet:1;
-	unsigned iso_level:2;
-
-	struct iso_string volume_id;		/**< Volume identifier. */
-	struct iso_string publisher_id;		/**< Volume publisher. */
-	struct iso_string data_preparer_id;	/**< Volume data preparer. */
+	wchar_t *volume_id;		/**< Volume identifier. */
+	wchar_t *publisher_id;		/**< Volume publisher. */
+	wchar_t *data_preparer_id;	/**< Volume data preparer. */
 };
 
 /**
@@ -48,7 +38,7 @@ struct iso_volset
 	int volset_size;		/**< The number of volumes in this
 					     volume set. */
 
-	struct iso_string volset_id;	/**< The id of this volume set, encoded
+	wchar_t *volset_id;		/**< The id of this volume set, encoded
 					     in the current locale. */
 };
 

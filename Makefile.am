@@ -59,23 +59,22 @@ libburn_libburn_la_SOURCES = \
 libisofs_libisofs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 libisofs_libisofs_la_SOURCES = \
-        libisofs/errors.h \
-        libisofs/errors.c \
-        libisofs/tree.h \
-        libisofs/tree.c \
-        libisofs/volume.h \
-        libisofs/volume.c \
-        libisofs/util.h \
-        libisofs/util.c \
-        libisofs/ecma119.c \
-        libisofs/ecma119.h \
-        libisofs/struct.h \
-        libisofs/struct.c \
-        libisofs/susp.h \
-        libisofs/susp.c \
-        libisofs/rockridge.h \
-        libisofs/rockridge.c \
-	libisofs/libisofs.h
+	libisofs/tree.h \
+	libisofs/tree.c \
+	libisofs/volume.h \
+	libisofs/volume.c \
+	libisofs/util.h \
+	libisofs/util.c \
+	libisofs/ecma119.c \
+	libisofs/ecma119.h \
+	libisofs/ecma119_tree.c \
+	libisofs/ecma119_tree.h \
+	libisofs/susp.h \
+	libisofs/susp.c \
+	libisofs/rockridge.h \
+	libisofs/rockridge.c \
+	libisofs/joliet.c \
+	libisofs/joliet.h 
 
 libinclude_HEADERS = \
 	libburn/libburn.h \

@@ -1,10 +1,10 @@
 /* vim: set noet ts=8 sts=8 sw=8 : */
 
 #include "rockridge.h"
-#include "tree.h"
 #include "util.h"
-#include "volume.h"
 #include "ecma119.h"
+#include "ecma119_tree.h"
+#include "tree.h"
 #include "susp.h"
 
 #include <stdlib.h>
@@ -15,53 +15,50 @@
 #include <sys/stat.h>
 
 /* create a PX field from the permissions on the current node. */
-unsigned char *rrip_make_PX(struct ecma119_write_target *t,
-			    struct iso_tree_node *node)
+uint8_t *rrip_make_PX(struct ecma119_write_target *t,
+		      struct ecma119_tree_node *node)
 {
-	unsigned char *PX = malloc(44);
+	uint8_t *PX = malloc(44);
 
 	PX[0] = 'P';
 	PX[1] = 'X';
 	PX[2] = 44;
 	PX[3] = 1;
-	iso_bb(&PX[4], node->attrib.st_mode, 4);
-	iso_bb(&PX[12], node->attrib.st_nlink, 4);
-	iso_bb(&PX[20], node->attrib.st_uid, 4);
-	iso_bb(&PX[28], node->attrib.st_gid, 4);
-	iso_bb(&PX[36], node->attrib.st_ino, 4);
+	iso_bb(&PX[4], node->iso_self->attrib.st_mode, 4);
+	iso_bb(&PX[12], node->iso_self->attrib.st_nlink, 4);
+	iso_bb(&PX[20], node->iso_self->attrib.st_uid, 4);
+	iso_bb(&PX[28], node->iso_self->attrib.st_gid, 4);
+	iso_bb(&PX[36], node->iso_self->attrib.st_ino, 4);
 	return PX;
 }
 
 /** See IEEE 1282 4.1.1 */
-void rrip_add_PX(struct ecma119_write_target *t, struct iso_tree_node *node)
+void rrip_add_PX(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	susp_append(t, node, rrip_make_PX(t, node));
+	susp_append(t, &node->susp, rrip_make_PX(t, node));
+	if (node->type == ECMA119_DIR) {
+		susp_append(t, &node->dir.self_susp, rrip_make_PX(t, node));
+		susp_append(t, &node->dir.parent_susp, rrip_make_PX(t, node));
+	}
 }
 
-void rrip_add_PX_dir(struct ecma119_write_target *t, struct iso_tree_dir *dir)
+void rrip_add_PN(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	susp_append(t, ISO_NODE(dir), rrip_make_PX(t, ISO_NODE(dir)));
-	susp_append_self(t, dir, rrip_make_PX(t, ISO_NODE(dir)));
-	susp_append_parent(t, dir, rrip_make_PX(t, ISO_NODE(dir)));
-}
-
-void rrip_add_PN(struct ecma119_write_target *t, struct iso_tree_node *node)
-{
-	unsigned char *PN = malloc(20);
+	uint8_t *PN = malloc(20);
 
 	PN[0] = 'P';
 	PN[1] = 'N';
 	PN[2] = 20;
 	PN[3] = 1;
-	iso_bb(&PN[4], node->attrib.st_dev >> 32, 4);
-	iso_bb(&PN[12], node->attrib.st_dev & 0xffffffff, 4);
-	susp_append(t, node, PN);
+	iso_bb(&PN[4], node->iso_self->attrib.st_dev >> 32, 4);
+	iso_bb(&PN[12], node->iso_self->attrib.st_dev & 0xffffffff, 4);
+	susp_append(t, &node->susp, PN);
 }
 
-static void rrip_SL_append_comp(int *n, unsigned char ***comps,
+static void rrip_SL_append_comp(int *n, uint8_t ***comps,
 				char *s, int size, char fl)
 {
-	unsigned char *comp = malloc(size + 2);
+	uint8_t *comp = malloc(size + 2);
 
 	(*n)++;
 	comp[0] = fl;
@@ -75,7 +72,7 @@ static void rrip_SL_append_comp(int *n, unsigned char ***comps,
 }
 
 static void rrip_SL_add_component(char *prev, char *cur, int *n_comp,
-				  unsigned char ***comps)
+				  uint8_t ***comps)
 {
 	int size = cur - prev;
 
@@ -103,24 +100,24 @@ static void rrip_SL_add_component(char *prev, char *cur, int *n_comp,
 	rrip_SL_append_comp(n_comp, comps, prev, size, 0);
 }
 
-void rrip_add_SL(struct ecma119_write_target *t, struct iso_tree_node *node)
+void rrip_add_SL(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
 	int ret, pathsize = 0;
 	char *path = NULL, *cur, *prev;
-	struct iso_tree_file *file = (struct iso_tree_file *)node;
 	int i, j;
 
-	unsigned char **comp = NULL;
+	uint8_t **comp = NULL;
 	int n_comp = 0;
 	int total_comp_len = 0;
 	int written = 0, pos;
 
-	unsigned char *SL;
+	uint8_t *SL;
 
 	do {
 		pathsize += 128;
 		path = realloc(path, pathsize);
-		ret = readlink(file->path, path, pathsize);
+		/* FIXME: what if the file is not on the local fs? */
+		ret = readlink(node->iso_self->loc.path, path, pathsize);
 	} while (ret == pathsize);
 	if (ret == -1) {
 		fprintf(stderr, "Error: couldn't read symlink: %s\n",
@@ -156,7 +153,7 @@ void rrip_add_SL(struct ecma119_write_target *t, struct iso_tree_node *node)
 				memcpy(&SL[pos], comp[j], comp[j][2]);
 				pos += comp[j][2];
 			}
-			susp_append(t, node, SL);
+			susp_append(t, &node->susp, SL);
 			written = i - 1;
 			total_comp_len = comp[i][1];
 		}
@@ -173,7 +170,7 @@ void rrip_add_SL(struct ecma119_write_target *t, struct iso_tree_node *node)
 		memcpy(&SL[pos], comp[j], comp[j][1] + 2);
 		pos += comp[j][1] + 2;
 	}
-	susp_append(t, node, SL);
+	susp_append(t, &node->susp, SL);
 
 	free(path);
 	/* free the components */
@@ -184,10 +181,10 @@ void rrip_add_SL(struct ecma119_write_target *t, struct iso_tree_node *node)
 }
 
 static void rrip_add_NM_single(struct ecma119_write_target *t,
-			       struct iso_tree_node *node,
+			       struct susp_info *susp,
 			       char *name, int size, int flags)
 {
-	unsigned char *NM = malloc(size + 5);
+	uint8_t *NM = malloc(size + 5);
 
 	NM[0] = 'N';
 	NM[1] = 'M';
@@ -197,103 +194,107 @@ static void rrip_add_NM_single(struct ecma119_write_target *t,
 	if (size) {
 		memcpy(&NM[5], name, size);
 	}
-	susp_append(t, node, NM);
+	susp_append(t, susp, NM);
 }
 
-void rrip_add_NM(struct ecma119_write_target *t, struct iso_tree_node *node)
+void
+rrip_add_NM(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	struct iso_tree_file *file = (struct iso_tree_file *)node;
-	int len = strlen(file->name.rockridge);
-	char *pos = file->name.rockridge;
+	char *name = iso_p_fileid(node->iso_self->name);
+	int len = name ? strlen(name) : 0;
+	char *pos = name;
 
-	if (len == 1 && pos[0] == '.') {
-		rrip_add_NM_single(t, node, pos, 0, 1 << 1);
+	if (!len)
 		return;
-	}
-	if (len == 2 && !strncmp(pos, "..", 2)) {
-		rrip_add_NM_single(t, node, pos, 0, 1 << 2);
-		return;
+
+	if (node->type == ECMA119_DIR) {
+		rrip_add_NM_single(t, &node->dir.self_susp, pos, 0, 1 << 1);
+		rrip_add_NM_single(t, &node->dir.parent_susp, pos, 0, 1 << 2);
 	}
 
 	while (len > 250) {
-		rrip_add_NM_single(t, node, pos, 250, 1);
+		rrip_add_NM_single(t, &node->susp, pos, 250, 1);
 		len -= 250;
 		pos += 250;
 	}
-	rrip_add_NM_single(t, node, pos, len, 0);
+	rrip_add_NM_single(t, &node->susp, pos, len, 0);
 }
 
-void rrip_add_CL(struct ecma119_write_target *t, struct iso_tree_node *node)
+void rrip_add_CL(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	unsigned char *CL = calloc(1, 12);
+	uint8_t *CL = calloc(1, 12);
 
 	CL[0] = 'C';
 	CL[1] = 'L';
 	CL[2] = 12;
 	CL[3] = 1;
-	susp_append(t, node, CL);
+	susp_append(t, &node->susp, CL);
 }
 
-void rrip_add_PL(struct ecma119_write_target *t, struct iso_tree_dir *node)
+void
+rrip_add_PL(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	unsigned char *PL = calloc(1, 12);
+	uint8_t *PL = calloc(1, 12);
 
 	PL[0] = 'P';
 	PL[1] = 'L';
 	PL[2] = 12;
 	PL[3] = 1;
-	susp_append_parent(t, node, PL);
+	susp_append(t, &node->dir.parent_susp, PL);
 }
 
-void rrip_add_RE(struct ecma119_write_target *t, struct iso_tree_node *node)
+void
+rrip_add_RE(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	unsigned char *RE = malloc(4);
+	uint8_t *RE = malloc(4);
 
 	RE[0] = 'R';
 	RE[1] = 'E';
 	RE[2] = 4;
 	RE[3] = 1;
-	susp_append(t, node, RE);
+	susp_append(t, &node->susp, RE);
 }
 
-void rrip_add_TF(struct ecma119_write_target *t, struct iso_tree_node *node)
+void
+rrip_add_TF(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	unsigned char *TF = malloc(5 + 3 * 17);
+	uint8_t *TF = malloc(5 + 3 * 7);
 
 	TF[0] = 'T';
 	TF[1] = 'F';
-	TF[2] = 5 + 3 * 17;
+	TF[2] = 5 + 3 * 7;
 	TF[3] = 1;
 	TF[4] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 7);
-	iso_datetime_17(&TF[5], node->attrib.st_mtime);
-	iso_datetime_17(&TF[22], node->attrib.st_atime);
-	iso_datetime_17(&TF[39], node->attrib.st_ctime);
-	susp_append(t, node, TF);
+	iso_datetime_7(&TF[5], node->iso_self->attrib.st_mtime);
+	iso_datetime_7(&TF[12], node->iso_self->attrib.st_atime);
+	iso_datetime_7(&TF[19], node->iso_self->attrib.st_ctime);
+	susp_append(t, &node->susp, TF);
 }
 
-void rrip_finalize(struct ecma119_write_target *t, struct iso_tree_dir *dir)
+void
+rrip_finalize(struct ecma119_write_target *t, struct ecma119_tree_node *dir)
 {
-	struct dir_write_info *inf;
-	struct file_write_info *finf;
 	int i;
 
-	inf = dir->writer_data;
-	if (dir->parent != inf->real_parent) {
-		unsigned char *PL = susp_find(&inf->parent_susp, "PL");
+	assert(dir->type == ECMA119_DIR);
 
-		iso_bb(&PL[4], inf->real_parent->block, 4);
+	if (dir->parent != dir->dir.real_parent) {
+		uint8_t *PL = susp_find(&dir->dir.parent_susp, "PL");
+
+		assert(PL);
+		iso_bb(&PL[4], dir->dir.real_parent->block, 4);
 	}
 
-	for (i = 0; i < dir->nfiles; i++) {
-		finf = dir->files[i]->writer_data;
-		if (finf->real_me) {
-			unsigned char *CL = susp_find(&finf->susp, "CL");
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
 
-			iso_bb(&CL[4], finf->real_me->block, 4);
+		if (ch->type == ECMA119_FILE && ch->file.real_me) {
+			uint8_t *CL = susp_find(&ch->susp, "CL");
+
+			assert(CL);
+			iso_bb(&CL[4], ch->file.real_me->block, 4);
+		} else if (ch->type == ECMA119_DIR) {
+			rrip_finalize(t, ch);
 		}
-	}
-
-	for (i = 0; i < dir->nchildren; i++) {
-		rrip_finalize(t, dir->children[i]);
 	}
 }

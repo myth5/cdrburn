@@ -1,779 +1,680 @@
+/* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 /* vim: set noet ts=8 sts=8 sw=8 : */
 
-#include "tree.h"
-#include "ecma119.h"
-#include "volume.h"
-#include "util.h"
-#include "struct.h"
-#include "rockridge.h"
-#include "libisofs.h"
-#include "libburn/libburn.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <assert.h>
 #include <string.h>
-#include <errno.h>
 #include <wchar.h>
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+#include <err.h>
 
-const char* const ecma119_standard_id = "CD001";
+#include "ecma119.h"
+#include "ecma119_tree.h"
+#include "susp.h"
+#include "rockridge.h"
+#include "joliet.h"
+#include "volume.h"
+#include "tree.h"
+#include "util.h"
+#include "libisofs.h"
+#include "libburn.h"
 
-/* Format definitions */
-const char* const ecma119_vol_fmt = "B5bB"; /* common between all vol descs */
+/* burn-source compatible stuff */
+static int
+bs_read(struct burn_source *bs, unsigned char *buf, int size);
+static off_t
+bs_get_size(struct burn_source *bs);
+static void
+bs_free_data(struct burn_source *bs);
 
-const char* const ecma119_privol_fmt =
-	"B"	/* volume desc type */
-	"5b"	/* standard id */
-	"B"	/* volume desc version */
-	"x"
-	"32b"	/* system id */
-	"32b"	/* volume id */
-	"8x"
-	"=L"	/* volume space size */
-	"32x"
-	"=H"	/* volume set size */
-	"=H"	/* volume sequence number */
-	"=H"	/* block size */
-	"=L"	/* path table size */
-	"<L"	/* l path table 1 */
-	"<L"	/* l path table 2 */
-	">L"	/* m path table 1 */
-	">L"	/* m path table 2 */
-	"34B"	/* root directory record */
-	"128b"	/* volume id */
-	"128b"	/* publisher id */
-	"128b"	/* data preparer id */
-	"128b"	/* application id */
-	"37b"	/* copyright file id */
-	"37b"	/* abstract file id */
-	"37b"	/* bibliographic file id */
-	"T"	/* creation timestamp */
-	"T"	/* modification timestamp */
-	"T"	/* expiration timestamp */
-	"T"	/* effective timestamp */
-	"B"	/* file structure version */
-	"x"
-	"512x"	/* Application Use */
-	"653x";	/* reserved */
+typedef void (*write_fn)(struct ecma119_write_target*, uint8_t*);
 
-const char* const ecma119_supvol_joliet_fmt =
-	"B"	/* volume desc type */
-	"5b"	/* standard id */
-	"B"	/* volume desc version */
-	"B"	/* volume flags */
-	"16h"	/* system id */
-	"16h"	/* volume id */
-	"8x"
-	"=L"	/* volume space size */
-	"32b"	/* escape sequences */
-	"=H"	/* volume set size */
-	"=H"	/* volume sequence number */
-	"=H"	/* block size */
-	"=L"	/* path table size */
-	"<L"	/* l path table 1 */
-	"<L"	/* l path table 2 */
-	">L"	/* m path table 1 */
-	">L"	/* m path table 2 */
-	"34B"	/* root directory record */
-	"64h"	/* volume id */
-	"64h"	/* publisher id */
-	"64h"	/* data preparer id */
-	"64h"	/* application id */
-	"18hx"	/* copyright file id */
-	"18hx"	/* abstract file id */
-	"18hx"	/* bibliographic file id */
-	"T"	/* creation timestamp */
-	"T"	/* modification timestamp */
-	"T"	/* expiration timestamp */
-	"T"	/* effective timestamp */
-	"B"	/* file structure version */
-	"x"
-	"512x"	/* Application Use */
-	"653x";	/* reserved */
+/* return true if the given state is only required for Joliet volumes */
+static int
+is_joliet_state(enum ecma119_write_state);
 
-const char* const ecma119_dir_record_fmt =
-	"B"	/* dir record length */
-	"B"	/* extended attribute length */
-	"=L"	/* block */
-	"=L"	/* size */
-	"S"
-	"B"	/* file flags */
-	"B"	/* file unit size */
-	"B"	/* interleave gap size */
-	"=H"	/* volume sequence number */
-	"B";	/* name length */
-	/* file id ansa SU field have variable length, so they don't get defined
-	 * yet. */
+static void
+next_state(struct ecma119_write_target *t);
 
-/* abstract string functions away from char* to make Joliet stuff easier */
-typedef void (*copy_string)(unsigned char *dest, void *str, int maxlen);
-typedef int (*node_namelen)(struct iso_tree_node *node);
-typedef const void* (*node_getname)(struct iso_tree_node *node);
+/* write t->state_data to the buf, one block at a time */
+static void
+write_data_chunk(struct ecma119_write_target *t, uint8_t *buf);
 
-/* because we don't write SUSP fields in the Joliet Directory Records, it helps
- * to abstract away the task of getting the non_CE_len of a susp_info.
- */
-typedef int (*susp_len)(struct susp_info*);
-typedef int (*total_dirent_len)(struct iso_tree_node*);
+/* writing functions. All these functions assume the buf is large enough */
+static void
+write_pri_vol_desc(struct ecma119_write_target *t, uint8_t *buf);
+static void
+write_vol_desc_terminator(struct ecma119_write_target *t, uint8_t *buf);
+static void
+write_path_table(struct ecma119_write_target *t, int l_type, uint8_t *buf);
+static void
+write_l_path_table(struct ecma119_write_target *t, uint8_t *buf);
+static void
+write_m_path_table(struct ecma119_write_target *t, uint8_t *buf);
+static void
+write_one_dir_record(struct ecma119_write_target *t,
+		     struct ecma119_tree_node *dir,
+		     int file_id,
+		     uint8_t *buf);
+static void
+write_one_dir(struct ecma119_write_target *t,
+	      struct ecma119_tree_node *dir,
+	      uint8_t *buf);
+static void
+write_dirs(struct ecma119_write_target *t, uint8_t *buf);
 
-const char application_id[] = "LIBBURN SUITE (C) 2002 D.FOREMAN/B.JANSENS";
-const char system_id[] = "LINUX";
+/* wrapper functions for writing */
+static void wr_system_area(struct ecma119_write_target*, uint8_t*);
+static void wr_pri_vol_desc(struct ecma119_write_target*, uint8_t*);
+static void wr_vol_desc_term(struct ecma119_write_target*, uint8_t*);
+static void wr_l_path_table(struct ecma119_write_target*, uint8_t*);
+static void wr_m_path_table(struct ecma119_write_target*, uint8_t*);
+static void wr_dir_records(struct ecma119_write_target*, uint8_t*);
+static void wr_files(struct ecma119_write_target*, uint8_t*);
 
-const uint16_t* application_id_joliet = (uint16_t*) "\0j\0a\0p\0p\0i\0d\0\0";
-const uint16_t* system_id_joliet = (uint16_t*) "\0j\0s\0y\0s\0i\0d\0\0";
-
-/* since we have to pass things by address to iso_struct_pack, this makes
- * it easier. */
-const uint8_t zero = 0;
-const uint8_t one = 1;
-
-enum RecordType {
-	RECORD_TYPE_SELF,
-	RECORD_TYPE_PARENT,
-	RECORD_TYPE_NORMAL,
-	RECORD_TYPE_ROOT
+static const write_fn writers[] =
+{
+	NULL,
+	wr_system_area,
+	wr_pri_vol_desc,
+	joliet_wr_sup_vol_desc,
+	wr_vol_desc_term,
+	wr_l_path_table,
+	wr_m_path_table,
+	joliet_wr_l_path_table,
+	joliet_wr_m_path_table,
+	wr_dir_records,
+	joliet_wr_dir_records,
+	wr_files
 };
 
-/* layout functions */
-static void ecma119_reorganize_heirarchy(struct ecma119_write_target *target,
-					 struct iso_tree_dir *dir);
-static void ecma119_alloc_writer_data(struct ecma119_write_target *target,
-				      struct iso_tree_dir *dir);
-static void ecma119_setup_path_tables_iso(struct ecma119_write_target*);
-static void ecma119_setup_path_tables_joliet(struct ecma119_write_target*);
-
-/* burn_source functions */
-static int ecma119_read(struct burn_source*, unsigned char*, int);
-static int ecma119_get_size(struct burn_source*);
-static void ecma119_free_data(struct burn_source*);
-
-/* Writers for the different write_states. */
-static void ecma119_write_system_area(struct ecma119_write_target*,
-					unsigned char *buf);
-static void ecma119_write_privol_desc(struct ecma119_write_target*,
-				      unsigned char *buf);
-static void ecma119_write_supvol_desc_joliet(struct ecma119_write_target*,
-					     unsigned char *buf);
-static void ecma119_write_vol_desc_terminator(struct ecma119_write_target*,
-					unsigned char *buf);
-static void ecma119_write_path_table(struct ecma119_write_target*,
-					unsigned char *buf,
-					int flags,
-					int m_type);
-static void ecma119_write_dir_records(struct ecma119_write_target*,
-					unsigned char *buf,
-					int flags);
-static void ecma119_write_files(struct ecma119_write_target*,
-					unsigned char *buf);
-
-/* helpers for the writers */
-static void ecma119_write_path_table_full(struct ecma119_write_target*,
-					unsigned char *buf,
-					int flags,
-					int mtype);
-static unsigned char *ecma119_write_dir(struct ecma119_write_target*,
-					int flags,
-					struct iso_tree_dir*);
-static void ecma119_write_dir_record(struct ecma119_write_target*,
-					unsigned char *,
-					int flags,
-					struct iso_tree_node*,
-					enum RecordType);
-static void ecma119_write_dir_record_iso(struct ecma119_write_target *t,
-					 uint8_t *buf,
-					 struct iso_tree_node *node,
-					 enum RecordType type);
-static void ecma119_write_dir_record_joliet(struct ecma119_write_target *t,
-					    uint8_t *buf,
-					    struct iso_tree_node *node,
-					    enum RecordType type);
-static void ecma119_write_dir_record_noname(struct ecma119_write_target *t,
-					    uint8_t *buf,
-					    struct iso_tree_node *node,
-					    enum RecordType type,
-					    uint32_t block,
-					    uint32_t size,
-					    int joliet);
-
-
-/* name-mangling routines */
-
-/* return a newly allocated array of pointers to all the children, in
- * in alphabetical order and with mangled names. */
-static struct iso_tree_node **ecma119_mangle_names(struct iso_tree_dir *dir);
-
-/* mangle a single filename according to where the last '.' is:
- * \param name the name to mangle
- * \param num_change the number of characters to mangle
- * \param seq_num the string ("%0<num_change>d", seq_num) to which it should
- *	be mangled
+/* When a writer is created, we 
+ * 1) create an ecma119 tree
+ * 2) add SUSP fields (if necessary)
+ * 3) calculate the size and position of all nodes in the tree
+ * 4) finalize SUSP fields (if necessary)
  */
-static void ecma119_mangle_name(char *name,
-				int num_change,
-				int seq_num);
 
-/* mangle a single filename based on the explicit positions passed. That is,
- * the difference between this and ecma119_mangle_name_iso is that this one
- * doesn't look for the '.' character; it changes the character at the
- * beginning of name. */
-static void ecma119_mangle_name_priv(char *name,
-				     int num_change,
-				     int seq_num);
-
-/* return a newly allocated array of pointers to all the children, in
- * alphabetical order. The difference between this and ecma119_mangle_names
- * is that this function sorts the files according to joliet names and it
- * doesn't mangle the names. */
-static struct iso_tree_node **ecma119_sort_joliet(struct iso_tree_dir *dir);
-
-/* string abstraction functions */
-static int node_namelen_iso(struct iso_tree_node *node)
+static void
+add_susp_fields_rec(struct ecma119_write_target *t,
+		    struct ecma119_tree_node *node)
 {
-	return strlen(iso_tree_node_get_name(node, ISO_NAME_ISO));
-}
+	size_t i;
 
-static int node_namelen_joliet(struct iso_tree_node *node)
-{
-	const char *name = iso_tree_node_get_name(node, ISO_NAME_JOLIET);
-
-	/* return length in bytes, not length in characters */
-	return ucslen((uint16_t*)name) * 2;
-}
-
-static const void *node_getname_iso(struct iso_tree_node *node)
-{
-	return iso_tree_node_get_name(node, ISO_NAME_ISO);
-}
-
-static const void *node_getname_joliet(struct iso_tree_node *node)
-{
-	return iso_tree_node_get_name(node, ISO_NAME_JOLIET);
-}
-
-static int susp_len_iso(struct susp_info *s)
-{
-	return s->non_CE_len;
-}
-
-static int susp_len_joliet(struct susp_info *s)
-{
-	return 0;
-}
-
-static int dirent_len_iso(struct iso_tree_node *n)
-{
-	return n->dirent_len + GET_NODE_INF(n)->susp.non_CE_len;
-}
-
-static int dirent_len_joliet(struct iso_tree_node *n)
-{
-	return 34 + node_namelen_joliet(n);
-}
-
-static void print_dir_info(struct iso_tree_dir *dir,
-			   struct ecma119_write_target *t,
-			   int spaces)
-{
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int i;
-
-	for (i=0; i<spaces; i++) {
-		putchar(' ');
-	}
-
-	printf("non_CE_len=%d, CE_len=%d, self->non_CE_len=%d, "
-	       "parent->non_CE_len=%d, len=%d, blk=%d, jblk=%d\n",
-	       inf->susp.non_CE_len,
-	       inf->susp.CE_len,
-	       inf->self_susp.non_CE_len,
-	       inf->parent_susp.non_CE_len,
-	       inf->len,
-	       (int)dir->block,
-	       (int)inf->joliet_block);
-}
-
-static void print_file_info(struct iso_tree_file *file,
-			    struct ecma119_write_target *t,
-			    int spaces)
-{
-	struct file_write_info *inf = GET_FILE_INF(file);
-	int i;
-
-	for (i=0; i<spaces; i++) {
-		putchar(' ');
-	}
-	printf("dirent size=%d, non_CE_len=%d, CE_len=%d, len=%d, blk=%d\n",
-		(int)file->dirent_len,
-		inf->susp.non_CE_len,
-		inf->susp.CE_len,
-		(int)file->attrib.st_size,
-		(int)file->block);
-}
-
-static struct iso_tree_node **ecma119_mangle_names(struct iso_tree_dir *dir)
-{
-	size_t retsize = dir->nfiles + dir->nchildren;
-	struct iso_tree_node **ret = calloc(1, sizeof(void*) * retsize);
-	int i, j, k;
-
-	j = 0;
-	for (i=0; i<dir->nfiles; i++) {
-		ret[j++] = ISO_NODE(dir->files[i]);
-	}
-	for (i=0; i<dir->nchildren; i++) {
-		ret[j++] = ISO_NODE(dir->children[i]);
-	}
-
-	qsort(ret, retsize, sizeof(void*), iso_node_cmp_iso);
-
-	for (i=0; i<retsize; i++) {
-		int n_change;
-		char *name;
-
-		/* find the number of consecutive equal names */
-		j = 1;
-		while (i+j < retsize && !iso_node_cmp_iso(&ret[i], &ret[i+j]))
-			j++;
-
-		if (j == 1) continue;
-
-		/* mangle the names */
-		n_change = j / 10 + 1;
-		for (k=0; k<j; k++) {
-			name = iso_tree_node_get_name_nconst(ret[i+k],
-							     ISO_NAME_ISO);
-			ecma119_mangle_name(name, n_change, k);
-		}
-
-		/* skip ahead by the number of mangled names */
-		i += j - 1;
-	}
-
-	return ret;
-}
-
-static void ecma119_mangle_name(char *name,
-				int num_change,
-				int seq_num)
-{
-	char *dot = strrchr(name, '.');
-	int dot_pos;
-	int len = strlen(name);
-	int ext_len;
-
-	if (!dot) dot = name + len;
-	dot_pos = dot - name;
-	ext_len = len - dot_pos;
-	if (dot_pos < num_change) {
-		/* we need to shift part of the mangling into the extension */
-		int digits=0, i;
-		int n_ext;
-		int nleft = num_change - ext_len;
-		char *pos = name + len - num_change;
-
-		pos = MAX(pos, dot+1);
-		n_ext = name + len - pos;
-
-		/* digits = 10^ext_len */
-		for (i=0; i<ext_len; i++) {
-			digits *= 10;
-		}
-		ecma119_mangle_name_priv(pos, n_ext, seq_num % digits);
-		ecma119_mangle_name_priv(dot-nleft, nleft, seq_num / digits);
-	} else {
-		ecma119_mangle_name_priv(dot-num_change, num_change, seq_num);
-	}
-}
-
-static void ecma119_mangle_name_priv(char *name,
-				     int num_change,
-				     int seq_num)
-{
-	char fmt[5];
-	char overwritten;
-
-	if (num_change <= 0 || num_change >= 10) {
+	if (!node->iso_self)
 		return;
-	}
 
-	overwritten = name[num_change];
-	sprintf(fmt, "%%0%1dd", num_change);
-	sprintf(name, fmt, seq_num);
-	name[num_change] = overwritten;
+	rrip_add_PX(t, node);
+	rrip_add_NM(t, node);
+	rrip_add_TF(t, node);
+	if (node->iso_self->attrib.st_rdev)
+		rrip_add_PN(t, node);
+	if (S_ISLNK(node->iso_self->attrib.st_mode))
+		rrip_add_SL(t, node);
+	if (node->type == ECMA119_FILE && node->file.real_me)
+		rrip_add_CL(t, node);
+	if (node->type == ECMA119_DIR
+			&& node->dir.real_parent != node->parent) {
+		rrip_add_RE(t, node);
+		rrip_add_PL(t, node);
+	}
+	susp_add_CE(t, node);
+
+	if (node->type == ECMA119_DIR) {
+		for (i = 0; i < node->dir.nchildren; i++) {
+			add_susp_fields_rec(t, node->dir.children[i]);
+		}
+	}
 }
 
-static struct iso_tree_node **ecma119_sort_joliet(struct iso_tree_dir *dir)
+static void
+add_susp_fields(struct ecma119_write_target *t)
 {
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	size_t retsize = dir->nfiles + inf->real_nchildren;
-	struct iso_tree_node **ret = malloc(retsize * sizeof(void*));
-	int i, j;
-
-	j = 0;
-	for (i=0; i<dir->nfiles; i++) {
-		ret[j++] = ISO_NODE(dir->files[i]);
-	}
-	for (i=0; i<inf->real_nchildren; i++) {
-		ret[j++] = ISO_NODE(inf->real_children[i]);
-	}
-	qsort(ret, retsize, sizeof(void*), iso_node_cmp_joliet);
-
-	return ret;
+	susp_add_SP(t, t->root);
+	rrip_add_ER(t, t->root);
+	add_susp_fields_rec(t, t->root);
 }
 
-struct ecma119_write_target *ecma119_target_new(struct iso_volset *volset,
-						int volnum)
+/**
+ * Fill out the dir.len and dir.CE_len fields for each
+ * ecma119_tree_node that is a directory. Also calculate the total number of
+ * directories and the number of files for which we need to write out data.
+ * (dirlist_len and filelist_len)
+ */
+static void
+calc_dir_size(struct ecma119_write_target *t,
+	      struct ecma119_tree_node *dir)
 {
-	struct ecma119_write_target *t;
+	size_t i;
 
-	assert(volnum < volset->volset_size);
+	assert(dir->type == ECMA119_DIR);
 
-	t = calloc(1, sizeof(struct ecma119_write_target));
+	t->dirlist_len++;
+	dir->dir.len = 34 + dir->dir.self_susp.non_CE_len
+			+ 34 + dir->dir.parent_susp.non_CE_len;
+	dir->dir.CE_len = dir->dir.self_susp.CE_len
+			+ dir->dir.parent_susp.CE_len;
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+
+		dir->dir.len += ch->dirent_len + ch->susp.non_CE_len;
+		dir->dir.CE_len += ch->susp.CE_len;
+	}
+	t->total_dir_size += round_up(dir->dir.len + dir->dir.CE_len,
+				      t->block_size);
+
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+		struct iso_tree_node *iso = ch->iso_self;
+		if (ch->type == ECMA119_DIR) {
+			calc_dir_size(t, ch);
+		} else if (iso && iso->attrib.st_size
+			       && iso->loc.type == LIBISO_FILESYS
+			       && iso->loc.path) {
+			t->filelist_len++;
+		}
+	}
+}
+
+/**
+ * Fill out the block field in each ecma119_tree_node that is a directory and
+ * fill out t->dirlist.
+ */
+static void
+calc_dir_pos(struct ecma119_write_target *t,
+	     struct ecma119_tree_node *dir)
+{
+	size_t i;
+
+	assert(dir->type == ECMA119_DIR);
+
+	/* we don't need to set iso_self->block since each tree writes
+	 * its own directories */
+	dir->block = t->curblock;
+	t->curblock += div_up(dir->dir.len + dir->dir.CE_len, t->block_size);
+	t->dirlist[t->curfile++] = dir;
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+		if (ch->type == ECMA119_DIR)
+			calc_dir_pos(t, ch);
+	}
+
+	/* reset curfile when we're finished */
+	if (!dir->parent) {
+		t->curfile = 0;
+	}
+}
+
+/**
+ * Fill out the block field for each ecma119_tree_node that is a file and fill
+ * out t->filelist.
+ */
+static void
+calc_file_pos(struct ecma119_write_target *t,
+	      struct ecma119_tree_node *dir)
+{
+	size_t i;
+
+	assert(dir->type == ECMA119_DIR);
+
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+		if (ch->type == ECMA119_FILE && ch->iso_self) {
+			struct iso_tree_node *iso = ch->iso_self;
+			off_t size = iso->attrib.st_size;
+
+			iso->block = ch->block = t->curblock;
+			t->curblock += div_up(size, t->block_size);
+			if (size && iso->loc.type == LIBISO_FILESYS
+				 && iso->loc.path)
+				t->filelist[t->curfile++] = ch;
+		}
+	}
+
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+		if (ch->type == ECMA119_DIR)
+			calc_file_pos(t, ch);
+	}
+
+	/* reset curfile when we're finished */
+	if (!dir->parent) {
+		t->curfile = 0;
+	}
+}
+
+struct ecma119_write_target*
+ecma119_target_new(struct iso_volset *volset,
+		   int volnum,
+		   int level,
+		   int flags)
+{
+	struct ecma119_write_target *t =
+		calloc(1, sizeof(struct ecma119_write_target));
+	size_t i, j, cur;
+	struct iso_tree_node *iso_root = volset->volume[volnum]->root;
+
+	volset->refcount++;
+	t->root = ecma119_tree_create(t, iso_root);
+	t->joliet = (flags & ECMA119_JOLIET) ? 1 : 0;
+	if (t->joliet)
+		t->joliet_root = joliet_tree_create(t, iso_root);
 	t->volset = volset;
 	t->volnum = volnum;
 	t->now = time(NULL);
+
+	t->rockridge = (flags & ECMA119_ROCKRIDGE) ? 1 : 0;
+	t->iso_level = level;
 	t->block_size = 2048;
 
-	iso_tree_sort(TARGET_ROOT(t));
-	ecma119_alloc_writer_data(t, TARGET_ROOT(t));
-	ecma119_reorganize_heirarchy(t, TARGET_ROOT(t));
+	if (t->rockridge)
+		add_susp_fields(t);
+	calc_dir_size(t, t->root);
+	if (t->joliet) {
+		joliet_calc_dir_size(t, t->joliet_root);
+		t->pathlist_joliet = calloc(1, sizeof(void*) * t->dirlist_len);
+		t->dirlist_joliet = calloc(1, sizeof(void*) * t->dirlist_len);
+	}
+
+	t->dirlist = calloc(1, sizeof(void*) * t->dirlist_len);
+	t->pathlist = calloc(1, sizeof(void*) * t->dirlist_len);
+	t->filelist = calloc(1, sizeof(void*) * t->filelist_len);
+
+	/* fill out the pathlist */
+	t->pathlist[0] = t->root;
+	t->path_table_size = 10; /* root directory record */
+	cur = 1;
+	for (i = 0; i < t->dirlist_len; i++) {
+		struct ecma119_tree_node *dir = t->pathlist[i];
+		for (j = 0; j < dir->dir.nchildren; j++) {
+			struct ecma119_tree_node *ch = dir->dir.children[j];
+			if (ch->type == ECMA119_DIR) {
+				size_t len = 8 + strlen(ch->name);
+				t->pathlist[cur++] = ch;
+				t->path_table_size += len + len % 2;
+			}
+		}
+	}
+
+	t->curblock = 16 /* system area */
+		+ 1	/* volume desc */
+		+ 1;	/* volume desc terminator */
+
+	if (t->joliet) /* supplementary vol desc */
+		t->curblock += div_up (2048, t->block_size);
+
+	t->l_path_table_pos = t->curblock;
+	t->curblock += div_up(t->path_table_size, t->block_size);
+	t->m_path_table_pos = t->curblock;
+	t->curblock += div_up(t->path_table_size, t->block_size);
+	if (t->joliet) {
+		joliet_prepare_path_tables(t);
+		t->l_path_table_pos_joliet = t->curblock;
+		t->curblock += div_up(t->path_table_size_joliet, t->block_size);
+		t->m_path_table_pos_joliet = t->curblock;
+		t->curblock += div_up(t->path_table_size_joliet, t->block_size);
+	}
+
+	calc_dir_pos(t, t->root);
+	if (t->joliet)
+		joliet_calc_dir_pos(t, t->joliet_root);
+	calc_file_pos(t, t->root);
+
+	if (t->rockridge) {
+		susp_finalize(t, t->root);
+		rrip_finalize(t, t->root);
+	}
+
+	t->total_size = t->curblock * t->block_size;
+	t->vol_space_size = t->curblock;
+
+	/* prepare for writing */
+	t->curblock = 0;
+	t->state = ECMA119_WRITE_SYSTEM_AREA;
 
 	return t;
 }
 
-/**
- * Write create all necessary SUSP fields for the given directory and
- * initialise them. Any SUSP fields that require an offset won't be completed
- * yet. Ensure that the size fields in the susp_info structs are correct.
- */
-static void ecma119_susp_dir_layout(struct ecma119_write_target *target,
-				    struct iso_tree_dir *dir,
-				    int flags)
+static int
+is_joliet_state(enum ecma119_write_state state)
 {
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	struct susp_info *susp = &inf->susp;
-	susp->n_susp_fields = 0;
-	susp->susp_fields = NULL;
-
-	if (!target->rockridge) {
-		/* since Rock Ridge is the only SUSP extension supported,
-		 * no need to continue. */
-		return;
-	}
-
-	if (dir->depth == 1) {
-		susp_add_SP(target, dir);
-		susp_add_ER(target, dir);
-	} else {
-		rrip_add_NM(target, ISO_NODE(dir));
-		rrip_add_TF(target, ISO_NODE(dir));
-	}
-	rrip_add_PX_dir(target, dir);
-
-	if (inf->real_parent != dir->parent) {
-		rrip_add_RE(target, ISO_NODE(dir));
-		rrip_add_PL(target, dir);
-	}
-	susp_add_CE(target, ISO_NODE(dir));
+	return state == ECMA119_WRITE_SUP_VOL_DESC_JOLIET
+	    || state == ECMA119_WRITE_L_PATH_TABLE_JOLIET
+	    || state == ECMA119_WRITE_M_PATH_TABLE_JOLIET
+	    || state == ECMA119_WRITE_DIR_RECORDS_JOLIET;
 }
 
-/**
- * Write create all necessary SUSP fields for the given file and
- * initialise them. Any SUSP fields that require an offset won't be completed
- * yet. Ensure that the size fields in the susp_info structs are correct.
- */
-static void ecma119_susp_file_layout(struct ecma119_write_target *target,
-				     struct iso_tree_file *file)
+static void
+next_state(struct ecma119_write_target *t)
 {
-	struct file_write_info *inf = GET_FILE_INF(file);
+	t->state++;
+	while (!t->joliet && is_joliet_state(t->state))
+		t->state++;
 
-	if (!target->rockridge) {
-		return;
-	}
-
-	rrip_add_PX(target, ISO_NODE(file));
-	rrip_add_NM(target, ISO_NODE(file));
-	rrip_add_TF(target, ISO_NODE(file));
-
-	if (inf->real_me) {
-		rrip_add_CL(target, ISO_NODE(file));
-	}
-	if (S_ISLNK(file->attrib.st_mode)) {
-		rrip_add_SL(target, ISO_NODE(file));
-	}
-	if (S_ISCHR(file->attrib.st_mode) || S_ISBLK(file->attrib.st_mode)) {
-		rrip_add_PN(target, ISO_NODE(file));
-	}
-	susp_add_CE(target, ISO_NODE(file));
+	printf ("now in state %d, curblock=%d\n", (int)t->state, (int)t->curblock);
 }
 
-/**
- * Recursively allocate the writer_data pointer for each node in the tree.
- * Also, save the current state of the tree in the inf->real_XXX pointers.
- */
-static void ecma119_alloc_writer_data(struct ecma119_write_target *target,
-				      struct iso_tree_dir *dir)
+static void
+wr_system_area(struct ecma119_write_target *t, uint8_t *buf)
 {
-	struct dir_write_info *inf;
-	int i;
-
-	inf = calloc(1, sizeof(struct dir_write_info));
-	inf->real_parent = dir->parent;
-	inf->real_nchildren = dir->nchildren;
-	inf->real_children = malloc(sizeof(void*) * dir->nchildren);
-	memcpy(inf->real_children, dir->children, dir->nchildren*sizeof(void*));
-	inf->real_depth = dir->depth;
-
-	dir->writer_data = inf;
-
-	for (i=0; i<dir->nchildren; i++) {
-		ecma119_alloc_writer_data(target, dir->children[i]);
+	memset(buf, 0, t->block_size);
+	if (t->curblock == 15) {
+		next_state(t);
 	}
-	for (i=0; i<dir->nfiles; i++) {
-		dir->files[i]->writer_data =
-			calloc(1, sizeof(struct file_write_info));
+}
+static void
+wr_pri_vol_desc(struct ecma119_write_target *t, uint8_t *buf)
+{
+	ecma119_start_chunking(t, write_pri_vol_desc, 2048, buf);
+}
+
+static void
+wr_vol_desc_term(struct ecma119_write_target *t, uint8_t *buf)
+{
+	ecma119_start_chunking(t, write_vol_desc_terminator, 2048, buf);
+}
+
+static void
+wr_l_path_table(struct ecma119_write_target *t, uint8_t *buf)
+{
+	ecma119_start_chunking(t, write_l_path_table, t->path_table_size, buf);
+}
+
+static void
+wr_m_path_table(struct ecma119_write_target *t, uint8_t *buf)
+{
+	ecma119_start_chunking(t, write_m_path_table, t->path_table_size, buf);
+}
+
+static void
+wr_dir_records(struct ecma119_write_target *t, uint8_t *buf)
+{
+	ecma119_start_chunking(t, write_dirs, t->total_dir_size, buf);
+}
+
+static void
+wr_files(struct ecma119_write_target *t, uint8_t *buf)
+{
+	struct state_files *f_st = &t->state_files;
+	size_t nread;
+	struct ecma119_tree_node *f = t->filelist[f_st->file];
+	const char *path = f->iso_self->loc.path;
+
+	if (!f_st->fd) {
+		f_st->data_len = f->iso_self->attrib.st_size;
+		f_st->fd = fopen(path, "r");
+		if (!f_st->fd)
+			err(1, "couldn't open %s for reading", path);
+		assert(t->curblock == f->block);
+	}
+
+	nread = fread(buf, 1, t->block_size, f_st->fd);
+	f_st->pos += t->block_size;
+	if (nread < 0)
+		warn("problem reading from %s", path);
+	else if (nread != t->block_size && f_st->pos < f_st->data_len)
+		warnx("incomplete read from %s", path);
+	if (f_st->pos >= f_st->data_len) {
+		fclose(f_st->fd);
+		f_st->fd = 0;
+		f_st->pos = 0;
+		f_st->file++;
+		if (f_st->file >= t->filelist_len)
+			next_state(t);
 	}
 }
 
-/* ensure that the maximum height of the directory tree is 8, repositioning
- * directories as necessary */
-static void ecma119_reorganize_heirarchy(struct ecma119_write_target *target,
-					 struct iso_tree_dir *dir)
+static void
+write_pri_vol_desc(struct ecma119_write_target *t, uint8_t *buf)
 {
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	struct iso_tree_dir *root = TARGET_ROOT(target);
-	struct iso_tree_file *file;
-	struct file_write_info *finf;
+	struct ecma119_pri_vol_desc *vol = (struct ecma119_pri_vol_desc*)buf;
+	struct iso_volume *volume = t->volset->volume[t->volnum];
+	char *vol_id = wcstoascii(volume->volume_id);
+	char *pub_id = wcstoascii(volume->publisher_id);
+	char *data_id = wcstoascii(volume->data_preparer_id);
+	char *volset_id = wcstoascii(t->volset->volset_id);
 
-	/* save this now in case a recursive call modifies this value */
-	int nchildren = dir->nchildren;
-	int i;
+	vol->vol_desc_type[0] = 1;
+	memcpy(vol->std_identifier, "CD001", 5);
+	vol->vol_desc_version[0] = 1;
+	memcpy(vol->system_id, "SYSID", 5);
+	if (vol_id)
+		strncpy((char*)vol->volume_id, vol_id, 32);
+	iso_bb(vol->vol_space_size, t->vol_space_size, 4);
+	iso_bb(vol->vol_set_size, t->volset->volset_size, 2);
+	iso_bb(vol->vol_seq_number, t->volnum + 1, 2);
+	iso_bb(vol->block_size, t->block_size, 2);
+	iso_bb(vol->path_table_size, t->path_table_size, 4);
+	iso_lsb(vol->l_path_table_pos, t->l_path_table_pos, 4);
+	iso_msb(vol->m_path_table_pos, t->m_path_table_pos, 4);
 
-	if (dir == root) {
-		dir->depth = 1;
-	} else {
-		dir->depth = dir->parent->depth + 1;
+	write_one_dir_record(t, t->root, 3, vol->root_dir_record);
 
-		assert(dir->depth <= 9);
-		if (dir->depth == 9) {
-			dir->depth = 2;
-			dir->parent = root;
-			root->nchildren++;
-			root->children = realloc(root->children,
-					root->nchildren * sizeof(void*));
-			root->children[root->nchildren-1] = dir;
+	strncpy((char*)vol->vol_set_id, volset_id, 128);
+	strncpy((char*)vol->publisher_id, pub_id, 128);
+	strncpy((char*)vol->data_prep_id, data_id, 128);
+	strncpy((char*)vol->application_id, "APPID", 128);
 
-			/* no need to reshuffle the siblings since we know that
-			 * _every_ sibling will also be relocated. */
-			inf->real_parent->nchildren--;
-			if (!inf->real_parent->nchildren) {
-				free(inf->real_parent->children);
-				inf->real_parent->children = NULL;
-			}
-			/* insert a placeholder file for the CL field */
-			file = iso_tree_add_new_file(inf->real_parent,
-						     dir->name.full);
-			finf = calloc(1, sizeof(struct file_write_info));
-			finf->real_me = dir;
-			file->writer_data = finf;
-		}
-	}
-	for (i=0; i<nchildren; i++) {
-		ecma119_reorganize_heirarchy(target, dir->children[i]);
+	iso_datetime_17(vol->vol_creation_time, t->now);
+	iso_datetime_17(vol->vol_modification_time, t->now);
+	iso_datetime_17(vol->vol_effective_time, t->now);
+	vol->file_structure_version[0] = 1;
+
+	free(vol_id);
+	free(volset_id);
+	free(pub_id);
+	free(data_id);
+}
+
+static void
+write_vol_desc_terminator(struct ecma119_write_target *t, uint8_t *buf)
+{
+	struct ecma119_vol_desc_terminator *vol =
+		(struct ecma119_vol_desc_terminator*) buf;
+
+	vol->vol_desc_type[0] = 255;
+	memcpy(vol->std_identifier, "CD001", 5);
+	vol->vol_desc_version[0] = 1;
+}
+
+static void
+write_path_table(struct ecma119_write_target *t, int l_type, uint8_t *buf)
+{
+	void (*write_int)(uint8_t*, uint32_t, int) = l_type ? iso_lsb
+							    : iso_msb;
+	size_t i;
+	struct ecma119_path_table_record *rec;
+	struct ecma119_tree_node *dir;
+	int parent = 0;
+
+	for (i = 0; i < t->dirlist_len; i++) {
+		dir = t->pathlist[i];
+		while ((i) && t->pathlist[parent] != dir->parent)
+			parent++;
+		assert(parent < i || i == 0);
+
+		rec = (struct ecma119_path_table_record*) buf;
+		rec->len_di[0] = dir->parent ? (uint8_t) strlen(dir->name) : 1;
+		rec->len_xa[0] = 0;
+		write_int(rec->block, dir->block, 4);
+		write_int(rec->parent, parent + 1, 2);
+		if (dir->parent)
+			memcpy(rec->dir_id, dir->name, rec->len_di[0]);
+		buf += 8 + rec->len_di[0] + (rec->len_di[0] % 2);
 	}
 }
 
-/* set directory sizes recursively. Also fill out the dirlist_len and
- * filelist_len fields in the ecma119 writer.
- */
-static void ecma119_target_rsize(struct ecma119_write_target *t,
-				 struct iso_tree_dir *dir)
+static void
+write_l_path_table(struct ecma119_write_target *t, uint8_t *buf)
 {
-	int i;
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	struct node_write_info *cinf;
-
-	t->dirlist_len++;
-
-	/* work out the size of the dirents */
-	if (dir->depth == 1) {
-		dir->dirent_len = 34;
-	} else {
-		dir->dirent_len = 33 + node_namelen_iso(ISO_NODE(dir));
-	}
-	dir->dirent_len += dir->dirent_len % 2;
-
-	for (i=0; i<dir->nfiles; i++) {
-		dir->files[i]->dirent_len = 33 + node_namelen_iso(
-						ISO_NODE(dir->files[i]));
-		dir->files[i]->dirent_len += dir->files[i]->dirent_len % 2;
-
-		if (dir->files[i]->path && dir->files[i]->attrib.st_size) {
-			t->filelist_len++;
-		}
-	}
-
-	/* layout all the susp entries and calculate the total size */
-	ecma119_susp_dir_layout(t, dir, 0);
-
-	inf->len = 34 + inf->self_susp.non_CE_len /* for "." and ".." */
-		 + 34 + inf->parent_susp.non_CE_len;
-	inf->susp_len = inf->susp.CE_len
-		      + inf->self_susp.CE_len
-		      + inf->parent_susp.CE_len;
-
-	for (i=0; i<dir->nfiles; i++) {
-		ecma119_susp_file_layout(t, dir->files[i]);
-		cinf = GET_NODE_INF(dir->files[i]);
-		inf->len += dir->files[i]->dirent_len + cinf->susp.non_CE_len;
-		inf->susp_len += cinf->susp.CE_len;
-	}
-	for (i=0; i<dir->nchildren; i++) {
-		ecma119_target_rsize(t, dir->children[i]);
-		cinf = GET_NODE_INF(dir->children[i]);
-		inf->len += dir->children[i]->dirent_len +cinf->susp.non_CE_len;
-		inf->susp_len += cinf->susp.CE_len;
-	}
-	dir->attrib.st_size = inf->len; /* the actual size of the data is
-					 * inf->len + inf->susp_len because we
-					 * append the CE data to the end of the
-					 * directory. But the ISO volume
-					 * doesn't need to know.
-					 */
+	write_path_table(t, 1, buf);
 }
 
-static void ecma119_target_rsize_joliet(struct ecma119_write_target *t,
-					struct iso_tree_dir *dir)
+static void
+write_m_path_table(struct ecma119_write_target *t, uint8_t *buf)
 {
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int i;
-
-	inf->joliet_len = 34 + 34; /* for "." and ".." */
-	for (i=0; i<dir->nfiles; i++) {
-		/* don't count files that are placeholders for Rock Ridge
-		 * relocated directories */
-		if (!GET_FILE_INF(dir->files[i])->real_me) {
-			inf->joliet_len +=
-				dirent_len_joliet(ISO_NODE(dir->files[i]));
-		}
-	}
-	for (i=0; i<inf->real_nchildren; i++) {
-		struct iso_tree_node *ch = ISO_NODE(inf->real_children[i]);
-		inf->joliet_len += dirent_len_joliet(ch);
-		ecma119_target_rsize_joliet(t, inf->real_children[i]);
-	}
+	write_path_table(t, 0, buf);
 }
 
-/* set directory positions recursively. Also fill out the dirlist in the
- * ecma119_write_target */
-static void ecma119_target_dir_layout(struct ecma119_write_target *t,
-				      struct iso_tree_dir *dir)
+/* if file_id is >= 0, we use it instead of the filename. As a magic number,
+ * file_id == 3 means that we are writing the root directory record (in order
+ * to distinguish it from the "." entry in the root directory) */
+static void
+write_one_dir_record(struct ecma119_write_target *t,
+		     struct ecma119_tree_node *node,
+		     int file_id,
+		     uint8_t *buf)
 {
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int i;
+	uint8_t len_dr = (file_id >= 0) ? 34 : node->dirent_len;
+	uint8_t len_fi = (file_id >= 0) ? 1 : strlen(node->name);
+	uint8_t f_id = (uint8_t) ((file_id == 3) ? 0 : file_id);
+	uint8_t *name = (file_id >= 0) ? &f_id : (uint8_t*)node->name;
+	uint32_t len = (node->type == ECMA119_DIR) ? node->dir.len
+		: node->file.real_me ? 0 : node->iso_self->attrib.st_size;
+	struct ecma119_dir_record *rec = (struct ecma119_dir_record*)buf;
 
-	t->dirlist[t->curfile++] = dir;
-	dir->block = t->curblock;
-	t->curblock += DIV_UP(inf->len + inf->susp_len, 2048);
-
-	for (i=0; i<dir->nchildren; i++) {
-		ecma119_target_dir_layout(t, dir->children[i]);
-	}
-}
-
-/* same as ecma119_target_dir_layout, but for Joliet. */
-static void ecma119_target_dir_layout_joliet(struct ecma119_write_target *t,
-					     struct iso_tree_dir *dir)
-{
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int i;
-
-	t->dirlist_joliet[t->curfile++] = dir;
-	inf->joliet_block = t->curblock;
-	t->curblock += DIV_UP(inf->joliet_len, 2048);
-
-	for (i=0; i<inf->real_nchildren; i++) {
-		ecma119_target_dir_layout_joliet(t, inf->real_children[i]);
-	}
-}
-
-/* set file positions recursively. Also fill in the filelist in the
- * ecma119_write_target */
-static void ecma119_target_file_layout(struct ecma119_write_target *t,
-				       struct iso_tree_dir *dir)
-{
-	int i;
-
-	for (i=0; i<dir->nfiles; i++) {
-		if (dir->files[i]->path && dir->files[i]->attrib.st_size) {
-			t->filelist[t->curfile++] = dir->files[i];
-		}
-		dir->files[i]->block = t->curblock;
-		t->curblock += DIV_UP(dir->files[i]->attrib.st_size, 2048);
-	}
-	for (i=0; i<dir->nchildren; i++) {
-		ecma119_target_file_layout(t, dir->children[i]);
-	}
-}
-
-void ecma119_target_layout(struct ecma119_write_target *t)
-{
-	ecma119_target_rsize(t, TARGET_ROOT(t));
-	if (t->joliet) {
-		ecma119_target_rsize_joliet(t, TARGET_ROOT(t));
-	}
-	ecma119_setup_path_tables_iso(t);
-	t->curblock = 16 /* for the system area */
-		+ 1  /* volume desc */
-		+ 1; /* volume desc terminator */
-	if (t->joliet) {
-		t->curblock++; /* joliet supplementary volume desc */
-	}
-
-	t->l_path_table_pos = t->curblock;
-	t->curblock += DIV_UP(t->path_table_size, 2048);
-	t->m_path_table_pos = t->curblock;
-	t->curblock += DIV_UP(t->path_table_size, 2048);
-
-	if (t->joliet) {
-		ecma119_setup_path_tables_joliet(t);
-		t->l_path_table_pos_joliet = t->curblock;
-		t->curblock += DIV_UP(t->path_table_size_joliet, 2048);
-		t->m_path_table_pos_joliet = t->curblock;
-		t->curblock += DIV_UP(t->path_table_size_joliet, 2048);
-	}
-
-	t->dirlist = calloc(1, sizeof(void*) * t->dirlist_len);
-	t->filelist = calloc(1, sizeof(void*) * t->filelist_len);
-	t->curfile = 0;
-	ecma119_target_dir_layout(t, TARGET_ROOT(t));
-
-	if (t->joliet) {
-		t->curfile = 0;
-		t->dirlist_joliet = calloc(1, sizeof(void*) * t->dirlist_len);
-		ecma119_target_dir_layout_joliet(t, TARGET_ROOT(t));
-	}
-
-	t->curfile = 0;
-	ecma119_target_file_layout(t, TARGET_ROOT(t));
-	t->total_size = t->curblock * 2048;
-	t->vol_space_size = t->curblock;
-
+	/* we don't write out susp fields for the root node */
 	if (t->rockridge) {
-		susp_finalize(t, TARGET_ROOT(t));
-		rrip_finalize(t, TARGET_ROOT(t));
+		if (file_id == 0) {
+			susp_write(t, &node->dir.self_susp, &buf[len_dr]);
+			len_dr += node->dir.self_susp.non_CE_len;
+		} else if (file_id == 1) {
+			susp_write(t, &node->dir.parent_susp, &buf[len_dr]);
+			len_dr += node->dir.parent_susp.non_CE_len;
+		} else if (file_id < 0) {
+			susp_write(t, &node->susp, &buf[len_dr]);
+			len_dr += node->susp.non_CE_len;
+		}
+	}
+	if (file_id == 1 && node->parent)
+		node = node->parent;
+
+	rec->len_dr[0] = len_dr;
+	iso_bb(rec->block, node->block, 4);
+	iso_bb(rec->length, len, 4);
+	iso_datetime_7(rec->recording_time, t->now);
+	rec->flags[0] = (node->type == ECMA119_DIR) ? 2 : 0;
+	iso_bb(rec->vol_seq_number, t->volnum + 1, 2);
+	rec->len_fi[0] = len_fi;
+	memcpy(rec->file_id, name, len_fi);
+}
+
+static void
+write_one_dir(struct ecma119_write_target *t,
+	      struct ecma119_tree_node *dir,
+	      uint8_t *buf)
+{
+	size_t i;
+	uint8_t *orig_buf = buf;
+
+	assert(dir->type == ECMA119_DIR);
+	/* write the "." and ".." entries first */
+	write_one_dir_record(t, dir, 0, buf);
+	buf += ((struct ecma119_dir_record*) buf)->len_dr[0];
+
+	write_one_dir_record(t, dir, 1, buf);
+	buf += ((struct ecma119_dir_record*) buf)->len_dr[0];
+
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		write_one_dir_record(t, dir->dir.children[i], -1, buf);
+		buf += ((struct ecma119_dir_record*) buf)->len_dr[0];
 	}
 
-	iso_tree_print_verbose(TARGET_ROOT(t),
-			       (print_dir_callback)print_dir_info,
-			       (print_file_callback)print_file_info,
-			       t, 0);
+	/* write the susp continuation areas */
+	if (t->rockridge) {
+		susp_write_CE(t, &dir->dir.self_susp, buf);
+		buf += dir->dir.self_susp.CE_len;
+		susp_write_CE(t, &dir->dir.parent_susp, buf);
+		buf += dir->dir.parent_susp.CE_len;
+		for (i = 0; i < dir->dir.nchildren; i++) {
+			susp_write_CE(t, &dir->dir.children[i]->susp, buf);
+			buf += dir->dir.children[i]->susp.CE_len;
+		}
+	}
+	assert (buf - orig_buf == dir->dir.len + dir->dir.CE_len);
+}
 
-	/* prepare for writing */
-	t->curblock = -1;
-	t->state = ECMA119_WRITE_SYSTEM_AREA;
+static void
+write_dirs(struct ecma119_write_target *t, uint8_t *buf)
+{
+	size_t i;
+	struct ecma119_tree_node *dir;
+	for (i = 0; i < t->dirlist_len; i++) {
+		dir = t->dirlist[i];
+		write_one_dir(t, dir, buf);
+		buf += round_up(dir->dir.len + dir->dir.CE_len, t->block_size);
+	}
+}
+
+void
+ecma119_start_chunking(struct ecma119_write_target *t,
+	       write_fn writer,
+	       off_t data_size,
+	       uint8_t *buf)
+{
+	if (data_size > t->state_data_size) {
+		data_size = round_up(data_size, t->block_size);
+		t->state_data = realloc(t->state_data, data_size);
+		t->state_data_size = data_size;
+	}
+	memset(t->state_data, 0, t->state_data_size);
+	t->state_data_off = 0;
+	t->state_data_valid = 1;
+	writer(t, t->state_data);
+	write_data_chunk(t, buf);
+}
+
+static void
+write_data_chunk(struct ecma119_write_target *t, uint8_t *buf)
+{
+	memcpy(buf, t->state_data + t->state_data_off, t->block_size);
+	t->state_data_off += t->block_size;
+	if (t->state_data_off >= t->state_data_size) {
+		assert (t->state_data_off <= t->state_data_size);
+		t->state_data_valid = 0;
+		next_state(t);
+	}
+}
+
+static int
+bs_read(struct burn_source *bs, unsigned char *buf, int size)
+{
+	struct ecma119_write_target *t = (struct ecma119_write_target*)bs->data;
+	if (size != t->block_size) {
+		warnx("you must read data in block-sized chunks (%d bytes)",
+			(int)t->block_size);
+		return 0;
+	} else if (t->curblock >= t->vol_space_size) {
+		return 0;
+	}
+	if (t->state_data_valid)
+		write_data_chunk(t, buf);
+	else
+		writers[t->state](t, buf);
+	t->curblock++;
+	return size;
+}
+
+static off_t
+bs_get_size(struct burn_source *bs)
+{
+	struct ecma119_write_target *t = (struct ecma119_write_target*)bs->data;
+	return t->total_size;
+}
+
+static void
+bs_free_data(struct burn_source *bs)
+{
+	struct ecma119_write_target *t = (struct ecma119_write_target*)bs->data;
+	ecma119_tree_free(t->root);
+	free(t->dirlist);
+	free(t->pathlist);
+	free(t->dirlist_joliet);
+	free(t->pathlist_joliet);
+	free(t->filelist);
+	free(t->state_data);
+	if (t->state_files.fd)
+		fclose(t->state_files.fd);
 }
 
 struct burn_source *iso_source_new_ecma119(struct iso_volset *volset,
@@ -781,726 +682,11 @@ struct burn_source *iso_source_new_ecma119(struct iso_volset *volset,
 					   int level,
 					   int flags)
 {
-	struct burn_source *src = calloc(1, sizeof(struct burn_source));
-	struct ecma119_write_target *t = ecma119_target_new(volset, volnum);
-	struct iso_volume *vol = volset->volume[volnum];
-
-	t->iso_level = level;
-	t->rockridge = (flags & ECMA119_ROCKRIDGE) ? 1:0;
-	t->joliet = (flags & ECMA119_JOLIET) ? 1:0;
-
-	vol->iso_level = t->iso_level;
-	vol->rockridge = t->rockridge;
-	vol->joliet = t->joliet;
-
-	ecma119_target_layout(t);
-	src->read = ecma119_read;
-	src->read_sub = NULL;
-	src->get_size = ecma119_get_size;
-	src->free_data = ecma119_free_data;
-	src->data = t;
-	return src;
-}
-
-static int ecma119_read(struct burn_source *src,
-			unsigned char *data,
-			int size)
-{
-	struct ecma119_write_target *t = src->data;
-
-	assert( src->read == ecma119_read && src->get_size == ecma119_get_size
-					  && src->free_data == ecma119_free_data
-					  && size == 2048);
-
-	t->curblock++;
-	memset(data, 0, size);
-	switch(t->state) {
-	case ECMA119_WRITE_SYSTEM_AREA:
-		ecma119_write_system_area(t, data);
-		break;
-	case ECMA119_WRITE_PRI_VOL_DESC:
-		ecma119_write_privol_desc(t, data);
-		break;
-	case ECMA119_WRITE_SUP_VOL_DESC_JOLIET:
-		ecma119_write_supvol_desc_joliet(t, data);
-		break;
-	case ECMA119_WRITE_VOL_DESC_TERMINATOR:
-		ecma119_write_vol_desc_terminator(t, data);
-		break;
-	case ECMA119_WRITE_L_PATH_TABLE:
-		ecma119_write_path_table(t, data, 0, 0);
-		break;
-	case ECMA119_WRITE_M_PATH_TABLE:
-		ecma119_write_path_table(t, data, 0, 1);
-		break;
-	case ECMA119_WRITE_L_PATH_TABLE_JOLIET:
-		ecma119_write_path_table(t, data, ECMA119_JOLIET, 0);
-		break;
-	case ECMA119_WRITE_M_PATH_TABLE_JOLIET:
-		ecma119_write_path_table(t, data, ECMA119_JOLIET, 1);
-		break;
-	case ECMA119_WRITE_DIR_RECORDS:
-		ecma119_write_dir_records(t, data, 0);
-		break;
-	case ECMA119_WRITE_DIR_RECORDS_JOLIET:
-		ecma119_write_dir_records(t, data, ECMA119_JOLIET);
-		break;
-	case ECMA119_WRITE_FILES:
-		ecma119_write_files(t, data);
-		break;
-	case ECMA119_WRITE_DONE:
-		return 0;
-	default:
-		assert(0);
-	}
-
-	return 2048;
-}
-
-static int ecma119_get_size(struct burn_source *src)
-{
-	struct ecma119_write_target *t = src->data;
-
-	assert( src->read == ecma119_read && src->get_size == ecma119_get_size
-					&& src->free_data == ecma119_free_data);
-
-	return t->total_size;
-}
-
-/* free writer_data fields recursively */
-static void ecma119_free_writer_data(struct ecma119_write_target *t,
-				     struct iso_tree_dir *dir)
-{
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int i;
-
-	susp_free_fields(&inf->susp);
-	susp_free_fields(&inf->self_susp);
-	susp_free_fields(&inf->parent_susp);
-
-	if (inf->real_children) {
-		free(inf->real_children);
-	}
-
-	for (i=0; i<dir->nfiles; i++) {
-		struct file_write_info *finf = GET_FILE_INF(dir->files[i]);
-		susp_free_fields(&finf->susp);
-	}
-	for (i=0; i<dir->nchildren; i++) {
-		ecma119_free_writer_data(t, dir->children[i]);
-	}
-}
-
-static void ecma119_free_data(struct burn_source *src)
-{
-	struct ecma119_write_target *t = src->data;
-
-	assert( src->read == ecma119_read && src->get_size == ecma119_get_size
-					&& src->free_data == ecma119_free_data);
-
-	if (t->filelist) free(t->filelist);
-	if (t->dirlist) free(t->dirlist);
-	if (t->pathlist) free(t->pathlist);
-	if (t->dirlist_joliet) free(t->dirlist_joliet);
-	if (t->pathlist_joliet) free(t->pathlist_joliet);
-
-	ecma119_free_writer_data(t, TARGET_ROOT(t));
-
-	free(t);
-	src->data = NULL;
-	src->read = NULL;
-	src->get_size = NULL;
-	src->free_data = NULL;
-}
-
-/*============================================================================*/
-/*				Writing functions			      */
-/*============================================================================*/
-
-static void ecma119_write_system_area(struct ecma119_write_target *t,
-				      unsigned char *buf)
-{
-	if (t->curblock == 15) {
-		t->state = ECMA119_WRITE_PRI_VOL_DESC;
-	}
-}
-
-static void ecma119_write_privol_desc(struct ecma119_write_target *t,
-				      unsigned char *buf)
-{
-	struct iso_tree_node *root = ISO_NODE(TARGET_ROOT(t));
-	struct iso_volume *vol = t->volset->volume[t->volnum];
-	uint8_t one = 1;	/* so that we can take &one */
-	uint32_t zero = 0;
-	time_t never = -1;
-	uint8_t dir_record[34];
-
-	ecma119_write_dir_record(t, dir_record, 0, root, RECORD_TYPE_ROOT);
-	iso_struct_pack(ecma119_privol_fmt, buf,
-			&one,
-			"CD001",
-			&one,
-			system_id,
-			vol->volume_id.cstr,
-			&t->vol_space_size,
-			&t->volset->volset_size,
-			&t->volnum,
-			&t->block_size,
-			&t->path_table_size,
-			&t->l_path_table_pos,
-			&zero,
-			&t->m_path_table_pos,
-			&zero,
-			dir_record,
-			t->volset->volset_id.cstr,
-			vol->publisher_id.cstr,
-			vol->data_preparer_id.cstr,
-			application_id,
-			"",
-			"",
-			"",
-			&t->now,
-			&t->now,
-			&never,
-			&t->now,
-			&one);
-
-	t->state = (t->joliet) ? ECMA119_WRITE_SUP_VOL_DESC_JOLIET :
-				 ECMA119_WRITE_VOL_DESC_TERMINATOR;
-}
-
-static void ecma119_write_supvol_desc_joliet(struct ecma119_write_target *t,
-					     unsigned char *buf)
-{	struct iso_tree_node *root = ISO_NODE(TARGET_ROOT(t));
-	struct iso_volume *vol = t->volset->volume[t->volnum];
-	uint8_t one = 1;	/* so that we can take &one */
-	uint8_t two = 2;
-	uint32_t zero = 0;
-	time_t never = -1;
-	uint8_t dir_record[34];
-
-	ecma119_write_dir_record(t, dir_record, ECMA119_JOLIET,
-				 root, RECORD_TYPE_ROOT);
-	iso_struct_pack(ecma119_supvol_joliet_fmt, buf,
-			&two,
-			"CD001",
-			&one,
-			&zero,
-			system_id_joliet,
-			vol->volume_id.jstr,
-			&t->vol_space_size,
-			"%/E",
-			&t->volset->volset_size,
-			&t->volnum,
-			&t->block_size,
-			&t->path_table_size_joliet,
-			&t->l_path_table_pos_joliet,
-			&zero,
-			&t->m_path_table_pos_joliet,
-			&zero,
-			dir_record,
-			t->volset->volset_id.jstr,
-			vol->publisher_id.jstr,
-			vol->data_preparer_id.jstr,
-			application_id_joliet,
-			&zero,
-			&zero,
-			&zero,
-			&t->now,
-			&t->now,
-			&never,
-			&t->now,
-			&one);
-
-	t->state = ECMA119_WRITE_VOL_DESC_TERMINATOR;
-}
-
-static void ecma119_write_vol_desc_terminator(struct ecma119_write_target *t,
-					      unsigned char *buf)
-{
-	buf[0] = 255;
-	strcpy((char*)&buf[1], "CD001");
-	buf[6] = 1;
-
-	t->state = ECMA119_WRITE_L_PATH_TABLE;
-}
-
-/**
- * Write a full path table to the buffer (it is assumed to be large enough).
- * The path table will be broken into 2048-byte chunks later is necessary.
- */
-static void ecma119_write_path_table_full(struct ecma119_write_target *t,
-					  unsigned char *buf,
-					  int flags,
-					  int m_type)
-{
-	void (*write_int)(uint8_t*, uint32_t, int);
-	struct iso_tree_dir *dir;
-	const char *name;
-	int len, parent, i;
-	size_t off;
-
-	node_namelen namelen;
-	node_getname getname;
-	off_t root_block;
-	struct iso_tree_dir **pathlist;
-
-	if (flags & ECMA119_JOLIET) {
-		namelen = node_namelen_joliet;
-		getname = node_getname_joliet;
-		pathlist = t->pathlist_joliet;
-		root_block = GET_DIR_INF(pathlist[0])->joliet_block;
-	} else {
-		namelen = node_namelen_iso;
-		getname = node_getname_iso;
-		pathlist = t->pathlist;
-		root_block = pathlist[0]->block;
-	}
-
-	write_int = m_type ? iso_msb : iso_lsb;
-
-	/* write the root directory */
-	buf[0] = 1;
-	buf[1] = 0;
-	write_int(&buf[2], root_block, 4);
-	write_int(&buf[6], 1, 2);
-
-	/* write the rest */
-	off = 10;
-	for (i=1; i<t->dirlist_len; i++) {
-		struct iso_tree_dir *dirparent;
-		off_t block;
-
-		dir = pathlist[i];
-		name = getname(ISO_NODE(dir));
-		len = namelen(ISO_NODE(dir));
-		if (flags & ECMA119_JOLIET) {
-			dirparent = GET_DIR_INF(dir)->real_parent;
-			block = GET_DIR_INF(dir)->joliet_block;
-		} else {
-			dirparent = dir->parent;
-			block = dir->block;
-		}
-
-		for (parent=0; parent<i; parent++) {
-			if (pathlist[parent] == dirparent) {
-				break;
-			}
-		}
-		assert(parent<i);
-
-		buf[off + 0] = len;
-		buf[off + 1] = 0;	/* extended attribute length */
-		write_int(&buf[off + 2], block, 4);
-		write_int(&buf[off + 6], parent + 1, 2);
-		memcpy(&buf[off + 8], name, len);
-		off += 8 + len + len % 2;
-	}
-}
-
-#define SDATA t->state_data.path_table
-static void ecma119_write_path_table(struct ecma119_write_target *t,
-				     unsigned char *buf,
-				     int flags,
-				     int m_type)
-{
-	int path_table_size;
-
-	if (flags & ECMA119_JOLIET) {
-		path_table_size = t->path_table_size_joliet;
-	} else {
-		path_table_size = t->path_table_size;
-	}
-
-	if (!SDATA.data) {
-		SDATA.data = calloc(1, ROUND_UP(path_table_size, 2048));
-		ecma119_write_path_table_full(t, SDATA.data, flags, m_type);
-	}
-
-	memcpy(buf, SDATA.data + SDATA.blocks*2048, 2048);
-	SDATA.blocks++;
-
-	if (SDATA.blocks*2048 >= path_table_size) {
-		free(SDATA.data);
-		SDATA.data = NULL;
-		SDATA.blocks = 0;
-		if (!t->joliet && m_type) {
-			t->state = ECMA119_WRITE_DIR_RECORDS;
-		} else {
-			t->state++;
-		}
-	}
-}
-#undef SDATA
-
-#define SDATA t->state_data.dir_records
-static void ecma119_write_dir_records(struct ecma119_write_target *t,
-				      unsigned char *buf,
-				      int flags)
-{
-	struct iso_tree_dir **dirlist;
-
-	if (flags & ECMA119_JOLIET) {
-		dirlist = t->dirlist_joliet;
-	} else {
-		dirlist = t->dirlist;
-	}
-
-	if (!SDATA.data) {
-		struct iso_tree_dir *dir = dirlist[SDATA.dir++];
-		struct dir_write_info *inf = GET_DIR_INF(dir);
-
-		SDATA.data = ecma119_write_dir(t, flags, dir);
-		SDATA.pos = 0;
-
-		if (flags & ECMA119_JOLIET) {
-			SDATA.data_len = inf->joliet_len;
-		} else {
-			SDATA.data_len = inf->len + inf->susp_len;
-		}
-	}
-
-	memcpy(buf, SDATA.data + SDATA.pos, 2048);
-	SDATA.pos += 2048;
-
-	if (SDATA.pos >= SDATA.data_len) {
-		free(SDATA.data);
-		SDATA.data = 0;
-		SDATA.pos = 0;
-		SDATA.data_len = 0;
-		if (SDATA.dir == t->dirlist_len) {
-			SDATA.dir = 0;
-			if (!t->joliet || (flags & ECMA119_JOLIET)) {
-				t->state = t->filelist_len ? ECMA119_WRITE_FILES
-							   : ECMA119_WRITE_DONE;
-			} else {
-				t->state = ECMA119_WRITE_DIR_RECORDS_JOLIET;
-			}
-		}
-	}
-}
-#undef SDATA
-
-#define SDATA t->state_data.files
-static void ecma119_write_files(struct ecma119_write_target *t,
-				unsigned char *buf)
-{
-	int numread;
-
-	if (!SDATA.fd) {
-		struct iso_tree_file *f = t->filelist[SDATA.file++];
-		assert(t->curblock == f->block);
-		SDATA.fd = fopen(f->path, "r");
-		SDATA.data_len = f->attrib.st_size;
-		if (!SDATA.fd) {
-			fprintf(stderr, "Error: couldn't open file %s: %s\n",
-					f->path, strerror(errno));
-		}
-	}
-
-	if (SDATA.fd) {
-		numread = fread(buf, 1, 2048, SDATA.fd);
-	} else {
-		numread = t->block_size;
-	}
-	if (numread == -1) {
-		fprintf(stderr, "Error reading file: %s\n", strerror(errno));
-		return;
-	}
-	SDATA.pos += numread;
-
-	if (!SDATA.pos || SDATA.pos >= SDATA.data_len) {
-		fclose(SDATA.fd);
-		SDATA.data_len = 0;
-		SDATA.fd = NULL;
-		SDATA.pos = 0;
-		if (SDATA.file == t->filelist_len) {
-			SDATA.file = 0;
-			t->state = ECMA119_WRITE_DONE;
-		}
-	}
-}
-#undef SDATA
-
-static unsigned char *ecma119_write_dir(struct ecma119_write_target *t,
-					int flags,
-					struct iso_tree_dir *dir)
-{
-	struct dir_write_info *inf = GET_DIR_INF(dir);
-	int len = ROUND_UP(inf->susp_len + inf->len, 2048);
-	unsigned char *buf;
-	int i, pos;
-	struct iso_tree_node *ch;
-
-	susp_len slen;
-	total_dirent_len dlen;
-	struct iso_tree_node **children;
-	int nchildren;
-
-	assert ( ((flags & ECMA119_JOLIET) && t->curblock == inf->joliet_block)
-			|| t->curblock == dir->block );
-
-	if (flags & ECMA119_JOLIET) {
-		children = ecma119_sort_joliet(dir);
-		nchildren = inf->real_nchildren + dir->nfiles;
-		len = ROUND_UP(inf->joliet_len, 2048);
-		slen = susp_len_joliet;
-		dlen = dirent_len_joliet;
-	} else {
-		children = ecma119_mangle_names(dir);
-		nchildren = dir->nchildren + dir->nfiles;
-		len = ROUND_UP(inf->susp_len + inf->len, 2048);
-		slen = susp_len_iso;
-		dlen = dirent_len_iso;
-	}
-
-	buf = calloc(1, len);
-	pos = 0;
-
-	/* write all the dir records */
-	ecma119_write_dir_record(t, buf+pos, flags, ISO_NODE(dir),
-				 RECORD_TYPE_SELF);
-	pos += 34 + slen(&inf->self_susp);
-	ecma119_write_dir_record(t, buf+pos, flags, ISO_NODE(dir),
-				 RECORD_TYPE_PARENT);
-	pos += 34 + slen(&inf->parent_susp);
-
-	for (i=0; i<nchildren; i++) {
-		ch = children[i];
-
-		/* Joliet directories shouldn't list RR directory placeholders.
-		 */
-		if (flags & ECMA119_JOLIET
-				&& S_ISREG( ch->attrib.st_mode )
-				&& GET_FILE_INF(ch)->real_me) {
-			continue;
-		}
-		ecma119_write_dir_record(t, buf+pos, flags, ch,
-					 RECORD_TYPE_NORMAL);
-		pos += dlen(ch);
-	}
-
-	if (flags & ECMA119_JOLIET) {
-		free(children);
-		return buf;
-	}
-
-	/* write all the SUSP continuation areas */
-	susp_write_CE(t, &inf->self_susp, buf+pos);
-	pos += inf->self_susp.CE_len;
-	susp_write_CE(t, &inf->parent_susp, buf+pos);
-	pos += inf->parent_susp.CE_len;
-	for (i=0; i<nchildren; i++) {
-		struct node_write_info *ninf = GET_NODE_INF(children[i]);
-		susp_write_CE(t, &ninf->susp, buf+pos);
-		pos += ninf->susp.CE_len;
-	}
-	free(children);
-	return buf;
-}
-
-static void ecma119_write_dir_record(struct ecma119_write_target *t,
-				     unsigned char *buf,
-				     int flags,
-				     struct iso_tree_node *node,
-				     enum RecordType type)
-{
-	if (flags & ECMA119_JOLIET) {
-		ecma119_write_dir_record_joliet(t, buf, node, type);
-	} else {
-		ecma119_write_dir_record_iso(t, buf, node, type);
-	}
-}
-
-static void ecma119_write_dir_record_iso(struct ecma119_write_target *t,
-					 uint8_t *buf,
-					 struct iso_tree_node *node,
-					 enum RecordType type)
-{
-	struct node_write_info *inf = GET_NODE_INF(node);
-	uint8_t len_dr, len_fi, flags;
-	uint8_t vol_seq_num = t->volnum;
-
-	if (type == RECORD_TYPE_NORMAL) {
-		len_fi = node_namelen_iso(node);
-		len_dr = 33 + len_fi + 1 - len_fi%2 + inf->susp.non_CE_len;
-		flags = (S_ISDIR(node->attrib.st_mode)) ? 2 : 0;
-		iso_struct_pack(ecma119_dir_record_fmt, buf,
-				&len_dr,
-				&zero,
-				&node->block,
-				&node->attrib.st_size,
-				&t->now,
-				&flags,
-				&zero,
-				&zero,
-				&vol_seq_num,
-				&len_fi);
-		iso_struct_pack_long(&buf[33], len_fi, '<', 'B', 0, 0, 0,
-				     node_getname_iso(node));
-		susp_write(t, &inf->susp, &buf[len_dr - inf->susp.non_CE_len]);
-	} else if (type == RECORD_TYPE_PARENT && node->parent) {
-		ecma119_write_dir_record_noname(t, buf, node, type,
-					node->parent->block,
-					node->parent->attrib.st_size, 0);
-		susp_write(t, &GET_DIR_INF(node)->parent_susp, &buf[34]);
-	} else {
-		ecma119_write_dir_record_noname(t, buf, node, type,
-						node->block,
-						node->attrib.st_size, 0);
-		if (type != RECORD_TYPE_ROOT) {
-			susp_write(t, &GET_DIR_INF(node)->self_susp, &buf[34]);
-		}
-	}
-}
-
-static void ecma119_write_dir_record_joliet(struct ecma119_write_target *t,
-					    uint8_t *buf,
-					    struct iso_tree_node *node,
-					    enum RecordType type)
-{
-	uint8_t len_dr, len_fi, flags;
-	uint8_t vol_seq_num = t->volnum;
-	uint32_t block, size;
-
-	if (type == RECORD_TYPE_NORMAL) {
-		if (S_ISDIR(node->attrib.st_mode)) {
-			block = GET_DIR_INF(node)->joliet_block;
-			size = GET_DIR_INF(node)->joliet_len;
-			flags = 2;
-		} else {
-			block = node->block;
-			size = node->attrib.st_size;
-			flags = 0;
-		}
-		len_fi = node_namelen_joliet(node);
-		len_dr = 34 + len_fi;
-		iso_struct_pack(ecma119_dir_record_fmt, buf,
-				&len_dr,
-				&zero,
-				&block,
-				&size,
-				&t->now,
-				&flags,
-				&zero,
-				&zero,
-				&vol_seq_num,
-				&len_fi);
-		iso_struct_pack_long(&buf[33], len_fi, '<', 'B', 0, 0, 0,
-				     node->name.joliet);
-	} else if (type == RECORD_TYPE_PARENT && node->parent) {
-		struct iso_tree_dir *p = GET_DIR_INF(node)->real_parent;
-		struct dir_write_info *inf = GET_DIR_INF(p);
-		ecma119_write_dir_record_noname(t, buf, node, type,
-				inf->joliet_block,
-				inf->joliet_len,
-				1);
-	} else {
-		struct dir_write_info *inf = GET_DIR_INF(node);
-		ecma119_write_dir_record_noname(t, buf, node, type,
-						inf->joliet_block,
-						inf->joliet_len,
-						1);
-	}
-}
-
-/* this writes a directory record for a file whose RecordType is not
- * RECORD_TYPE_NORMAL. Since this implies that we don't need to write a file
- * id, the only difference between Joliet and non-Joliet records is whetheror
- * not we write the SUSP fields. */
-static void ecma119_write_dir_record_noname(struct ecma119_write_target *t,
-					    uint8_t *buf,
-					    struct iso_tree_node *node,
-					    enum RecordType type,
-					    uint32_t block,
-					    uint32_t size,
-					    int joliet)
-{
-	int file_id;
-	uint8_t len_dr;
-	uint8_t flags = 2;
-	uint8_t len_fi = 1;
-	uint8_t zero = 0;
-	struct dir_write_info *inf = GET_DIR_INF(node);
-
-	assert( type != RECORD_TYPE_NORMAL );
-	switch(type) {
-	case RECORD_TYPE_ROOT:
-		file_id = 0;
-		len_dr = 34;
-		break;
-	case RECORD_TYPE_SELF:
-		file_id = 0;
-		len_dr = 34 + (joliet ? 0 : inf->self_susp.non_CE_len);
-		break;
-	case RECORD_TYPE_PARENT:
-		file_id = 1;
-		len_dr = 34 + (joliet ? 0 : inf->parent_susp.non_CE_len);
-		break;
-	case RECORD_TYPE_NORMAL: /* shut up warning */
-		assert(0);
-	}
-
-	assert(iso_struct_calcsize(ecma119_dir_record_fmt) == 33);
-	iso_struct_pack(ecma119_dir_record_fmt, buf,
-			&len_dr,
-			&zero,
-			&block,
-			&size,
-			&t->now,
-			&flags,		/* file flags */
-			&zero,
-			&zero,
-			&len_fi,	/* vol seq number */
-			&len_fi);	/* len_fi */
-	buf[33] = file_id;
-}
-
-static void ecma119_setup_path_tables_iso(struct ecma119_write_target *t)
-{
-	int i, j, cur;
-	struct iso_tree_node **children;
-
-	t->pathlist = calloc(1, sizeof(void*) * t->dirlist_len);
-	t->pathlist[0] = TARGET_ROOT(t);
-	t->path_table_size = 10; /* root directory record */
-
-	cur = 1;
-	for (i=0; i<t->dirlist_len; i++) {
-		struct iso_tree_dir *dir = t->pathlist[i];
-		children = ecma119_mangle_names(dir);
-		for (j=0; j<dir->nchildren + dir->nfiles; j++) {
-			if (S_ISDIR(children[j]->attrib.st_mode)) {
-				int len = 8 + node_namelen_iso(children[j]);
-				t->pathlist[cur++] = ISO_DIR(children[j]);
-				t->path_table_size += len + len % 2;
-			}
-		}
-		free(children);
-	}
-}
-
-static void ecma119_setup_path_tables_joliet(struct ecma119_write_target *t)
-{
-	int i, j, cur;
-	struct iso_tree_node **children;
-
-	t->pathlist_joliet = calloc(1, sizeof(void*) * t->dirlist_len);
-	t->pathlist_joliet[0] = TARGET_ROOT(t);
-	t->path_table_size_joliet = 10; /* root directory record */
-
-	cur = 1;
-	for (i=0; i<t->dirlist_len; i++) {
-		struct iso_tree_dir *dir = t->pathlist_joliet[i];
-		struct dir_write_info *inf = GET_DIR_INF(dir);
-		children = ecma119_sort_joliet(dir);
-		for (j=0; j<inf->real_nchildren + dir->nfiles; j++) {
-			if (S_ISDIR(children[j]->attrib.st_mode)) {
-				int len = 8 + node_namelen_joliet(children[j]);
-				t->pathlist_joliet[cur++] =
-					ISO_DIR(children[j]);
-				t->path_table_size_joliet += len + len % 2;
-			}
-		}
-	}
+	struct burn_source *ret = calloc(1, sizeof(struct burn_source));
+	ret->refcount = 1;
+	ret->read = bs_read;
+	ret->get_size = bs_get_size;
+	ret->free_data = bs_free_data;
+	ret->data = ecma119_target_new(volset, volnum, level, flags);
+	return ret;
 }

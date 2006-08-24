@@ -1,11 +1,11 @@
 pkgconfigdir=$(libdir)/pkgconfig
 libincludedir=$(includedir)/libburn
 
+##bin_PROGRAMS = test
+
 lib_LTLIBRARIES = libisofs.la
 
 libisofs_la_SOURCES = \
-	errors.h \
-	errors.c \
 	tree.h \
 	tree.c \
 	volume.h \
@@ -14,20 +14,25 @@ libisofs_la_SOURCES = \
 	util.c \
 	ecma119.c \
 	ecma119.h \
-	struct.h \
-	struct.c \
+	ecma119_tree.c \
+	ecma119_tree.h \
 	susp.h \
 	susp.c \
 	rockridge.h \
-	rockridge.c 
+	rockridge.c \
+	joliet.c \
+	joliet.h 
 
 libinclude_HEADERS = libisofs.h
 
-noinst_PROGRAMS = test
-test_SOURCES = test.c
-test_LDADD = $(libisofs_la_OBJECTS)
+##test_SOURCES = test.c
+##test_LDADD = libisofs.la
 
-INCLUDES = -I..
+##noinst_PROGRAMS = test
+##test_SOURCES = test.c
+##test_LDADD = $(libisofs_la_OBJECTS)
+
+##INCLUDES = -I../burn/libburn
 
 ## ========================================================================= ##
 indent_files = $(libisofs_la_SOURCES) 

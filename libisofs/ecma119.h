@@ -1,3 +1,4 @@
+/* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 /* vim: set noet ts=8 sts=8 sw=8 : */
 
 /** 
@@ -7,70 +8,17 @@
  * volume.
  */
 
-#ifndef __ISO_ECMA119
-#define __ISO_ECMA119
+#ifndef LIBISO_ECMA119_H
+#define LIBISO_ECMA119_H
 
-#include <stdio.h>
 #include <sys/time.h>
+#include <stdint.h>
+#include <stdio.h> /* for FILE */
+#include <sys/types.h>
 #include "susp.h"
 
-/**
- * Persistent data for writing directories according to the ecma119 standard.
- */
-struct dir_write_info
-{
-	struct susp_info susp;		/**< \see node_write_info */
-	struct susp_info self_susp;	/**< SUSP data for this directory's
-					  *  "." entry.
-					  */
-	struct susp_info parent_susp;	/**< SUSP data for this directory's
-					  * ".." entry.
-					  */
-
-	int len;		/**< The combined length of all children's
-				  *  Directory Record lengths. This includes
-				  *  the System Use areas.
-				  */
-	int susp_len;		/**< The combined length of all children's
-				  *  SUSP Continuation Areas.
-				  */
-
-	/* the parent/child information prior to relocation */
-	struct iso_tree_dir *real_parent;
-	int real_nchildren;
-	struct iso_tree_dir **real_children;
-	int real_depth;
-
-	/* joliet information */
-	int joliet_block;	/**< The block at which the Joliet version of
-				  *  this directory will be written.
-				  */
-	int joliet_len;		/**< The combined length of all children's
-				  *  Joliet Directory Record lengths.
-				  */
-};
-
-/**
- * Persistent data for writing files according to the ecma119 standard.
- */
-struct file_write_info
-{
-	struct susp_info susp;	/**< \see node_write_info */
-
-	struct iso_tree_dir *real_me;	/**< If this is non-NULL, the file is
-					  *  a placeholder for a relocated
-					  *  directory and this field points to
-					  *  that relocated directory.
-					  */
-};
-
-/**
- * The fields in common between file_write_info and dir_write_info.
- */
-struct node_write_info
-{
-	struct susp_info susp;	/**< The SUSP data for this file. */
-};
+struct ecma119_tree_node;
+struct joliet_tree_node;
 
 /**
  * The possible states that the ecma119 writer can be in.
@@ -100,11 +48,13 @@ enum ecma119_write_state
  */
 struct ecma119_write_target
 {
+	struct ecma119_tree_node *root;
+	struct joliet_tree_node *joliet_root;
 	struct iso_volset *volset;
 	int volnum;
 
 	time_t now;		/**< Time at which writing began. */
-	int total_size;		/**< Total size of the output. This only
+	off_t total_size;	/**< Total size of the output. This only
 				  *  includes the current volume. */
 	uint32_t vol_space_size;
 
@@ -120,73 +70,63 @@ struct ecma119_write_target
 	uint32_t m_path_table_pos;
 	uint32_t l_path_table_pos_joliet;
 	uint32_t m_path_table_pos_joliet;
+	uint32_t total_dir_size;
+	uint32_t total_dir_size_joliet;
 
-	struct iso_tree_dir **dirlist;	/* A pre-order list of directories
+	struct ecma119_tree_node **dirlist;
+					/**< A pre-order list of directories
 					 * (this is the order in which we write
 					 * out directory records).
 					 */
-	struct iso_tree_dir **pathlist;	/* A breadth-first list of directories.
-					 * This is used for writing out the path
-					 * tables.
+	struct ecma119_tree_node **pathlist;
+					/**< A breadth-first list of
+					 * directories. This is used for
+					 * writing out the path tables.
 					 */
-	int dirlist_len;		/* The length of the previous 2 lists.
+	size_t dirlist_len;		/**< The length of the previous 2 lists.
 					 */
 
-	struct iso_tree_file **filelist;/* A pre-order list of files with
+	struct ecma119_tree_node **filelist;
+					/**< A pre-order list of files with
 					 *  non-NULL paths and non-zero sizes.
 					 */
-	int filelist_len;		/* Length of the previous list. */
+	size_t filelist_len;		/* Length of the previous list. */
 
-	int curfile;			/* Used as a helper field for writing
+	int curfile;			/**< Used as a helper field for writing
 					   out filelist and dirlist */
 
 	/* Joliet versions of the above lists. Since Joliet doesn't require
-	 * directory relocation, the order of these list might be different from
-	 * the lists above. */
-	struct iso_tree_dir **dirlist_joliet;
-	struct iso_tree_dir **pathlist_joliet;
+	 * directory relocation, the order of these lists might be different
+	 * from the lists above (but they will be the same length).
+	 */
+	struct joliet_tree_node **dirlist_joliet;
+	struct joliet_tree_node **pathlist_joliet;
 
 	enum ecma119_write_state state;	/* The current state of the writer. */
 
-	/* persistent data for the various states. Each struct should not be
-	 * touched except for the writer of the relevant stage. When the writer
-	 * of the relevant stage is finished, it should set all fields to 0.
+	/* Most writers work by
+	 * 1) making sure state_data is big enough for their data
+	 * 2) writing _all_ their data into state_data
+	 * 3) relying on write_data_chunk to write the data block
+	 *    by block.
 	 */
-	union
-	{
-		struct
-		{
-			int blocks;
-			unsigned char *data;
-		} path_table;
-		struct
-		{
-			size_t pos;	/* The number of bytes we have written
-					 * so far in the current directory.
-					 */
-			size_t data_len;/* The number of bytes in the current
-					 * directory.
-					 */
-			unsigned char *data; /* The data (combined Directory
-					 * Records and susp_CE areas) of the
-					 * current directory.
-					 */
-			int dir;	/* The index in dirlist that we are
-					 * currently writing. */
-		} dir_records;
-		struct
-		{
-			size_t pos;	/* The number of bytes we have written
-					 * so far in the current file.
-					 */
-			size_t data_len;/* The number of bytes in the currently
-					 * open file.
-					 */
-			FILE *fd;	/* The currently open file. */
-			int file;	/* The index in filelist that we are
-					 * currently writing. */
-		} files;
-	} state_data;
+	uint8_t *state_data;
+	off_t state_data_size;
+	off_t state_data_off;
+	int state_data_valid;
+
+	/* for writing out files */
+	struct state_files {
+		off_t pos;	/* The number of bytes we have written
+				 * so far in the current file.
+				 */
+		off_t data_len;/* The number of bytes in the currently
+				 * open file.
+				 */
+		FILE *fd;	/* The currently open file. */
+		int file;	/* The index in filelist that we are
+				 * currently writing (or about to write). */
+	} state_files;
 };
 
 /**
@@ -198,23 +138,130 @@ struct ecma119_write_target
  * \post The directory heirarchy has been reorganised to be ecma119-compatible.
  */
 struct ecma119_write_target *ecma119_target_new(struct iso_volset *volset,
-						int volnum);
+						int volnum,
+						int level,
+						int flags);
 
-/** Macros to help with casting between node_write_info and dir/file_write_info.
+#define BP(a,b) [(b) - (a) + 1]
+
+struct ecma119_pri_vol_desc
+{
+	uint8_t vol_desc_type		BP(1, 1);
+	uint8_t std_identifier		BP(2, 6);
+	uint8_t vol_desc_version	BP(7, 7);
+	uint8_t unused1			BP(8, 8);
+	uint8_t system_id		BP(9, 40);
+	uint8_t volume_id		BP(41, 72);
+	uint8_t unused2			BP(73, 80);
+	uint8_t vol_space_size		BP(81, 88);
+	uint8_t unused3			BP(89, 120);
+	uint8_t vol_set_size		BP(121, 124);
+	uint8_t vol_seq_number		BP(125, 128);
+	uint8_t block_size		BP(129, 132);
+	uint8_t path_table_size		BP(133, 140);
+	uint8_t l_path_table_pos	BP(141, 144);
+	uint8_t opt_l_path_table_pos	BP(145, 148);
+	uint8_t m_path_table_pos	BP(149, 152);
+	uint8_t opt_m_path_table_pos	BP(153, 156);
+	uint8_t root_dir_record		BP(157, 190);
+	uint8_t	vol_set_id		BP(191, 318);
+	uint8_t publisher_id		BP(319, 446);
+	uint8_t data_prep_id		BP(447, 574);
+	uint8_t application_id		BP(575, 702);
+	uint8_t copyright_file_id	BP(703, 739);
+	uint8_t abstract_file_id	BP(740, 776);
+	uint8_t bibliographic_file_id	BP(777, 813);
+	uint8_t vol_creation_time	BP(814, 830);
+	uint8_t vol_modification_time	BP(831, 847);
+	uint8_t vol_expiration_time	BP(848, 864);
+	uint8_t vol_effective_time	BP(865, 881);
+	uint8_t file_structure_version	BP(882, 882);
+	uint8_t reserved1		BP(883, 883);
+	uint8_t app_use			BP(884, 1395);
+	uint8_t reserved2		BP(1396, 2048);
+};
+
+struct ecma119_sup_vol_desc
+{
+	uint8_t vol_desc_type		BP(1, 1);
+	uint8_t std_identifier		BP(2, 6);
+	uint8_t vol_desc_version	BP(7, 7);
+	uint8_t vol_flags		BP(8, 8);
+	uint8_t system_id		BP(9, 40);
+	uint8_t volume_id		BP(41, 72);
+	uint8_t unused2			BP(73, 80);
+	uint8_t vol_space_size		BP(81, 88);
+	uint8_t esc_sequences		BP(89, 120);
+	uint8_t vol_set_size		BP(121, 124);
+	uint8_t vol_seq_number		BP(125, 128);
+	uint8_t block_size		BP(129, 132);
+	uint8_t path_table_size		BP(133, 140);
+	uint8_t l_path_table_pos	BP(141, 144);
+	uint8_t opt_l_path_table_pos	BP(145, 148);
+	uint8_t m_path_table_pos	BP(149, 152);
+	uint8_t opt_m_path_table_pos	BP(153, 156);
+	uint8_t root_dir_record		BP(157, 190);
+	uint8_t	vol_set_id		BP(191, 318);
+	uint8_t publisher_id		BP(319, 446);
+	uint8_t data_prep_id		BP(447, 574);
+	uint8_t application_id		BP(575, 702);
+	uint8_t copyright_file_id	BP(703, 739);
+	uint8_t abstract_file_id	BP(740, 776);
+	uint8_t bibliographic_file_id	BP(777, 813);
+	uint8_t vol_creation_time	BP(814, 830);
+	uint8_t vol_modification_time	BP(831, 847);
+	uint8_t vol_expiration_time	BP(848, 864);
+	uint8_t vol_effective_time	BP(865, 881);
+	uint8_t file_structure_version	BP(882, 882);
+	uint8_t reserved1		BP(883, 883);
+	uint8_t app_use			BP(884, 1395);
+	uint8_t reserved2		BP(1396, 2048);
+};
+
+struct ecma119_vol_desc_terminator
+{
+	uint8_t vol_desc_type		BP(1, 1);
+	uint8_t std_identifier		BP(2, 6);
+	uint8_t vol_desc_version	BP(7, 7);
+	uint8_t reserved		BP(8, 2048);
+};
+
+struct ecma119_dir_record
+{
+	uint8_t len_dr			BP(1, 1);
+	uint8_t len_xa			BP(2, 2);
+	uint8_t block			BP(3, 10);
+	uint8_t length			BP(11, 18);
+	uint8_t recording_time		BP(19, 25);
+	uint8_t flags			BP(26, 26);
+	uint8_t file_unit_size		BP(27, 27);
+	uint8_t interleave_gap_size	BP(28, 28);
+	uint8_t vol_seq_number		BP(29, 32);
+	uint8_t len_fi			BP(33, 33);
+	uint8_t file_id			BP(34, 34); /* 34 to 33+len_fi */
+	/* padding field (if len_fi is even) */
+	/* system use (len_dr - len_su + 1 to len_dr) */
+};
+
+struct ecma119_path_table_record
+{
+	uint8_t len_di			BP(1, 1);
+	uint8_t len_xa			BP(2, 2);
+	uint8_t block			BP(3, 6);
+	uint8_t parent			BP(7, 8);
+	uint8_t dir_id			BP(9, 9); /* 9 to 8+len_di */
+	/* padding field (if len_di is odd) */
+};
+
+/**
+ * A utility function for writers that want to write their data all at once
+ * rather than block-by-block. This creates a buffer of size \p size, passes
+ * it to the given writer, then hands out block-sized chunks.
  */
-#define DIR_INF(a) ( (struct dir_write_info*) (a) )
-#define FILE_INF(a) ( (struct file_write_info*) (a) )
-#define NODE_INF(a) ( (struct node_write_info*) (a) )
+void
+ecma119_start_chunking(struct ecma119_write_target *t,
+		       void (*)(struct ecma119_write_target*, uint8_t*),
+		       off_t size,
+		       uint8_t *buf);
 
-#define GET_DIR_INF(a) ( (struct dir_write_info*) (a)->writer_data )
-#define GET_FILE_INF(a) ( (struct file_write_info*) (a)->writer_data )
-#define GET_NODE_INF(a) ( (struct node_write_info*) (a)->writer_data )
-
-#define TARGET_ROOT(t) ( (t)->volset->volume[(t)->volnum]->root )
-
-#define NODE_NAMELEN(n,i) strlen(iso_tree_node_get_name(ISO_NODE(n), i))
-#define NODE_JOLLEN(n) ucslen(iso_tree_node_get_name(ISO_NODE(n), \
-						     ISO_NAME_JOLIET))
-
-
-#endif /* __ISO_ECMA119 */
+#endif /* LIBISO_ECMA119_H */

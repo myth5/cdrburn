@@ -3,8 +3,8 @@
 
 #define _GNU_SOURCE
 
-#include "libisofs/libisofs.h"
-#include "libburn/libburn.h"
+#include "libisofs.h"
+#include "libburn.h"
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <string.h>
-#include <errno.h>
+#include <err.h>
 
 #define SECSIZE 2048
 
@@ -44,13 +44,12 @@ int main(int argc, char **argv)
 {
 	struct iso_volset *volset;
 	struct iso_volume *volume;
+	struct iso_tree_node *root;
 	struct burn_source *src;
 	unsigned char buf[2048];
 	FILE *fd;
 	int c;
 	int level=1, flags=0;
-	DIR *dir;
-	struct dirent *ent;
 
 	while ((c = getopt(argc, argv, optstring)) != -1) {
 		switch(c) {
@@ -87,45 +86,15 @@ int main(int argc, char **argv)
 	}
 	fd = fopen(argv[optind+1], "w");
 	if (!fd) {
-		perror("error opening output file");
-		exit(1);
+		err(1, "error opening output file");
 	}
 
-	volume = iso_volume_new( "VOLID", "PUBID", "PREPID" );
+	root = iso_tree_radd_dir(NULL, argv[optind]);
+	if (!root) {
+		err(1, "error opening input directory");
+	}
+	volume = iso_volume_new_with_root( "VOLID", "PUBID", "PREPID", root );
 	volset = iso_volset_new( volume, "VOLSETID" );
-	dir = opendir(argv[optind]);
-	if (!dir) {
-		perror("error opening input directory");
-		exit(1);
-	}
-
-	while ( (ent = readdir(dir)) ) {
-		struct stat st;
-		char *name;
-
-		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) {
-			continue;
-		}
-
-		name = malloc(strlen(argv[optind]) + strlen(ent->d_name) + 2);
-		strcpy(name, argv[optind]);
-		strcat(name, "/");
-		strcat(name, ent->d_name);
-		if (lstat(name, &st) == -1) {
-			fprintf(stderr, "error opening file %s: %s\n",
-					name, strerror(errno));
-			exit(1);
-		}
-
-		if (S_ISDIR(st.st_mode)) {
-			iso_tree_radd_dir(iso_volume_get_root(volume), name);
-		} else {
-			iso_tree_add_file(iso_volume_get_root(volume), name);
-		}
-		free(name);
-	}
-
-	iso_tree_print(iso_volume_get_root(volume), 0);
 
 	src = iso_source_new_ecma119(volset, 0, level, flags);
 

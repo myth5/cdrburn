@@ -1,169 +1,104 @@
-/* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 /* vim: set noet ts=8 sts=8 sw=8 : */
 
 /**
  * \file tree.h
  *
- * Extra declarations for use with the iso_tree_dir and iso_tree_file
- * structures.
+ * Declare the structure of a libisofs filesystem tree. The files in this
+ * tree can come from either the local filesystem or from another .iso image
+ * (for multisession).
+ *
+ * This tree preserves as much information as it can about the files; names
+ * are stored in wchar_t and we preserve POSIX attributes. This tree does
+ * *not* include information that is necessary for writing out, for example,
+ * an ISO level 1 tree. That information will go in a different tree because
+ * the structure is sufficiently different.
  */
 
-#ifndef __ISO_TREE
-#define __ISO_TREE
+#ifndef LIBISO_TREE_H
+#define LIBISO_TREE_H
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <stdint.h>
+#include <wchar.h>
 
 #include "libisofs.h"
 
-/**
- * File or directory names or identifiers.
- */
-struct iso_names
-{
-	char *full;		/**< Full version: either part of the path or
-				     user input. */
-	char *iso1;		/**< ISO level 1 identifier. */
-	char *iso2;		/**< ISO level 2 identifier. */
-	char *rockridge;	/**< Rock Ridge file or directory name. */
-	uint16_t *joliet;	/**< Joliet identifier. */
+enum file_location {
+	LIBISO_FILESYS,
+	LIBISO_PREVSESSION,
+	LIBISO_NONE		/**< for files/dirs that were added with
+				  * iso_tree_add_new_XXX. */
 };
 
 /**
- * Directory on a volume.
+ * This tells us where to read the data from a file. Either we read from the
+ * local filesystem or we just point to the block on a previous session.
  */
-struct iso_tree_dir
+struct iso_file_location
 {
-	struct iso_tree_dir *parent;	/**< \see iso_tree_node */
-	struct iso_volume *volume;	/**< \see iso_tree_node */
-	struct iso_names name;		/**< \see iso_tree_node */
-	struct stat attrib;		/**< \see iso_tree_node */
-	off_t block;			/**< \see iso_tree_node */
-	uint8_t dirent_len;		/**< \see iso_tree_node */
-	void *writer_data;		/**< \see iso_tree_node */
-
-	int depth;			/**< The depth of this directory in the
-					  *  Directory Heirarchy. This is 1 for
-					  *  the root directory.
-					  */
-
-	int nchildren;			/**< Number of child directories. */
-	int nfiles;			/**< Number of files in this directory.
-					  */
-	struct iso_tree_dir **children;	/**< Child directories. */
-	struct iso_tree_file **files;	/**< Files in this directory. */
+	enum file_location type;
+  /*	union {*/
+		char *path;	/* in the current locale */
+		uint32_t block;
+  /*	};*/
 };
 
 /**
- * File on a volume.
- */
-struct iso_tree_file
-{
-	struct iso_tree_dir *parent;	/**< \see iso_tree_node */
-	struct iso_volume *volume;	/**< \see iso_tree_node */
-	struct iso_names name;		/**< \see iso_tree_node */
-	struct stat attrib;		/**< \see iso_tree_node */
-	off_t block;			/**< \see iso_tree_node */
-	uint8_t dirent_len;		/**< \see iso_tree_node */
-	void *writer_data;		/**< \see iso_tree_node */
-
-	char *path;			/**< Location of the file in the
-					  *  local filesystem. This can be a
-					  *  full or relative path. If this is
-					  *  NULL, then the file doesn't exist
-					  *  in the local filesystem and its
-					  *  size must be zero.
-					  *
-					  *  FIXME: Allow references to files
-					  *  on other volumes belonging to the
-					  *  same volset as this file.
-					  */
-};
-
-/**
- * Fields in common between iso_tree_file and iso_tree_dir.
+ * A node in the filesystem tree.
  */
 struct iso_tree_node
 {
-	struct iso_tree_dir *parent;	/**< The parent of this node. Must be
-					  *  non-NULL unless we are the
-					  *  root directory on a volume.
-					  */
-	struct iso_volume *volume;	/**< The volume to which this node
-					  *  belongs.
-					  */
-	struct iso_names name;		/**< The name of this node in its parent
-					  *  directory. Must be non-NULL unless
-					  *  we are the root directory on a
-					  *  volume.
-					  */
-	struct stat attrib;		/**< The POSIX attributes of this
-					  *  node as documented in "man 2 stat".
-					  *
-					  *  Any node that is not a regular
-					  *  file or a directory must have
-					  *  \p attrib.st_size set to zero. Any
-					  *  node that is a directory will have
-					  *  \p attrib.st_size filled out by the
-					  *  writer.
-					  */
+	struct iso_volume *volume;
+	struct iso_tree_node *parent;
+	wchar_t *name;
+	struct stat attrib;	/**< The POSIX attributes of this node as
+				  * documented in "man 2 stat". */
+	struct iso_file_location loc;
+				/**< Only used for regular files and symbolic
+				 * links (ie. files for which we might have to
+				 * copy data). */
 
-	/* information used for writing */
-	off_t block;			/**< The block at which this node's
-					  *  data will be written.
-					  */
-	uint8_t dirent_len;		/**< The size of this node's
-					  *  Directory Record in its parent.
-					  *  This does not include System Use
-					  *  fields, if present.
-					  */
-	void *writer_data;		/**< This is writer-specific data. It
-					  *  must be set to NULL when a node
-					  *  is created and it should be NULL
-					  *  again when the node is freed.
-					  */
+	size_t nchildren;	/**< The number of children of this
+				  * directory (if this is a directory). */
+	struct iso_tree_node **children;
+
+	size_t block;		/**< The block at which this file will
+				  * reside on disk. We store this here as
+				  * well as in the various mangled trees
+				  * because many different trees might point
+				  * to the same file and they need to share the
+				  * block location. */
 };
-
-/** A macro to simplify casting between nodes and files/directories. */
-#define ISO_NODE(a) ( (struct iso_tree_node*) (a) )
-
-/** A macro to simplify casting between nodes and directories. */
-#define ISO_DIR(a) ( (struct iso_tree_dir*) (a) )
-
-/** A macro to simplify casting between nodes and files. */
-#define ISO_FILE(a) ( (struct iso_tree_file*) (a) )
 
 /**
  * Create a new root directory for a volume.
  *
- * \param volume The volume for which to create a new root directory.
+ * \param vol The volume for which to create a new root directory.
  *
- * \pre \p volume is non-NULL.
- * \post \p volume has a non-NULL, empty root directory.
- * \return \p volume's new non-NULL, empty root directory.
+ * \pre \p vol is non-NULL.
+ * \post \p vol has a non-NULL, empty root directory with permissions 777.
+ * \return \p vol's new non-NULL, empty root directory.
  */
-struct iso_tree_dir *iso_tree_new_root(struct iso_volume *volume);
+struct iso_tree_node *iso_tree_new_root(struct iso_volume *vol);
 
 /**
  * Create a new, empty, file.
  *
- * \param parent The parent of the new file.
+ * \param parent The parent directory of the new file. If this is null, create
+ *        and return a new file node without adding it to any tree.
  * \param name The name of the new file, encoded in the current locale.
- *
- * \pre \p parent is non-NULL.
  * \pre \p name is non-NULL and it does not match any other file or directory
- *	name in \p parent.
- * \post \p parent contains a file with the following properties:
- *	- the file's (full) name is \p name
- *	- the file's POSIX permissions are the same as \p parent's
- *	- the file is a regular file
- *	- the file is empty
+ *      name in \p parent.
+ * \post \p parent (if non-NULL) contains a file with the following properties:
+ *      - the file's name is \p name (converted to wchar_t)
+ *      - the file's POSIX permissions are the same as \p parent's
+ *      - the file is a regular file
+ *      - the file is empty
  *
  * \return \p parent's newly created file.
  */
-struct iso_tree_file *iso_tree_add_new_file(struct iso_tree_dir *parent,
+struct iso_tree_node *iso_tree_add_new_file(struct iso_tree_node *parent,
 					    const char *name);
 
 /**
@@ -173,37 +108,7 @@ struct iso_tree_file *iso_tree_add_new_file(struct iso_tree_dir *parent,
  *
  * \pre \p root is non-NULL.
  */
-void iso_tree_free(struct iso_tree_dir *root);
-
-/**
- * Recursively sort all the files and child directories in a directory.
- *
- * \param root The root of the directory heirarchy to sort.
- *
- * \pre \p root is non-NULL.
- * \post For each directory \p dir in the directory heirarchy descended fro
- *	root, the fields in \p dir.children and \p dir.files are alphabetically
- *	sorted according to \p name.full.
- *
- * \see iso_names
- */
-void iso_tree_sort(struct iso_tree_dir *root);
-
-/**
- * Compare the names of 2 nodes, \p *v1 and \p *v2. This is compatible with
- * qsort.
- */
-int iso_node_cmp(const void *v1, const void *v2);
-
-/**
- * Compare the joliet names of 2 nodes, compatible with qsort.
- */
-int iso_node_cmp_joliet(const void *v1, const void *v2);
-
-/**
- * Compare the iso names of 2 nodes, compatible with qsort.
- */
-int iso_node_cmp_iso(const void *v1, const void *v2);
+void iso_tree_free(struct iso_tree_node *root);
 
 /**
  * A function that prints verbose information about a directory.
@@ -214,7 +119,7 @@ int iso_node_cmp_iso(const void *v1, const void *v2);
  *
  * \see iso_tree_print_verbose
  */
-typedef void (*print_dir_callback) (const struct iso_tree_dir *dir,
+typedef void (*print_dir_callback) (const struct iso_tree_node *dir,
 				    void *data,
 				    int spaces);
 /**
@@ -226,7 +131,7 @@ typedef void (*print_dir_callback) (const struct iso_tree_dir *dir,
  *
  * \see iso_tree_print_verbose
  */
-typedef void (*print_file_callback) (const struct iso_tree_file *file,
+typedef void (*print_file_callback) (const struct iso_tree_node *file,
 				     void *data,
 				     int spaces);
 
@@ -243,17 +148,12 @@ typedef void (*print_file_callback) (const struct iso_tree_file *file,
  * \pre \p root is not NULL.
  * \pre Neither of the callback functions modifies the directory heirarchy.
  */
-void iso_tree_print_verbose(const struct iso_tree_dir *root,
+void iso_tree_print_verbose(const struct iso_tree_node *root,
 			    print_dir_callback dir,
 			    print_file_callback file,
 			    void *callback_data,
 			    int spaces);
 
-/**
- * Get a non-const version of the node name. This is used for name-mangling
- * iso names. It should only be used internally in libisofs; all other users
- * should only access the const name.
- */
-char *iso_tree_node_get_name_nconst(const struct iso_tree_node *node,
-				    enum iso_name_version ver);
-#endif /* __ISO_TREE */
+#define ISO_ISDIR(n) S_ISDIR(n->attrib.st_mode)
+
+#endif /* LIBISO_TREE_H */

@@ -1,19 +1,24 @@
 /* vim: set noet ts=8 sts=8 sw=8 : */
 
 #include "susp.h"
-#include "tree.h"
 #include "util.h"
 #include "ecma119.h"
+#include "ecma119_tree.h"
 
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 
-static void susp_insert_direct(struct ecma119_write_target *t,
-			       struct susp_info *susp, unsigned char *data,
-			       int pos)
+void susp_insert(struct ecma119_write_target *t,
+		 struct susp_info *susp,
+		 uint8_t *data,
+		 int pos)
 {
 	int i;
+
+	if (pos < 0) {
+		pos = susp->n_susp_fields;
+	}
 
 	assert(pos <= susp->n_susp_fields);
 	susp->n_susp_fields++;
@@ -27,60 +32,13 @@ static void susp_insert_direct(struct ecma119_write_target *t,
 }
 
 void susp_append(struct ecma119_write_target *t,
-		 struct iso_tree_node *node, unsigned char *data)
+		 struct susp_info *susp,
+		 uint8_t *data)
 {
-	struct dir_write_info *inf = node->writer_data;
-	struct susp_info *susp = &inf->susp;
-
-	susp_insert_direct(t, susp, data, susp->n_susp_fields);
+	susp_insert(t, susp, data, susp->n_susp_fields);
 }
 
-void susp_append_self(struct ecma119_write_target *t,
-		      struct iso_tree_dir *dir, unsigned char *data)
-{
-	struct dir_write_info *inf = dir->writer_data;
-	struct susp_info *susp = &inf->self_susp;
-
-	susp_insert_direct(t, susp, data, susp->n_susp_fields);
-}
-
-void susp_append_parent(struct ecma119_write_target *t,
-			struct iso_tree_dir *dir, unsigned char *data)
-{
-	struct dir_write_info *inf = dir->writer_data;
-	struct susp_info *susp = &inf->parent_susp;
-
-	susp_insert_direct(t, susp, data, susp->n_susp_fields);
-}
-
-void susp_insert(struct ecma119_write_target *t,
-		 struct iso_tree_node *node, unsigned char *data, int pos)
-{
-	struct dir_write_info *inf = node->writer_data;
-	struct susp_info *susp = &inf->susp;
-
-	susp_insert_direct(t, susp, data, pos);
-}
-
-void susp_insert_self(struct ecma119_write_target *t,
-		      struct iso_tree_dir *dir, unsigned char *data, int pos)
-{
-	struct dir_write_info *inf = dir->writer_data;
-	struct susp_info *susp = &inf->self_susp;
-
-	susp_insert_direct(t, susp, data, pos);
-}
-
-void susp_insert_parent(struct ecma119_write_target *t,
-			struct iso_tree_dir *dir, unsigned char *data, int pos)
-{
-	struct dir_write_info *inf = dir->writer_data;
-	struct susp_info *susp = &inf->parent_susp;
-
-	susp_insert_direct(t, susp, data, pos);
-}
-
-unsigned char *susp_find(struct susp_info *susp, const char *name)
+uint8_t *susp_find(struct susp_info *susp, const char *name)
 {
 	int i;
 
@@ -92,11 +50,15 @@ unsigned char *susp_find(struct susp_info *susp, const char *name)
 	return NULL;
 }
 
-/* utility function for susp_add_CE because susp_add_CE needs to act 3 times
- * on directories (for the "." and ".." entries. */
+/** Utility function for susp_add_CE because susp_add_CE needs to act 3 times
+ * on directories (for the "." and ".." entries.
+ *
+ * \param len The amount of space available for the System Use area.
+ */
 #define CE_LEN 28
 static unsigned char *susp_add_single_CE(struct ecma119_write_target *t,
-					 struct susp_info *susp, int len)
+					 struct susp_info *susp,
+					 int len)
 {
 	int susp_length = 0, tmp_len;
 	int i;
@@ -138,32 +100,35 @@ static unsigned char *susp_add_single_CE(struct ecma119_write_target *t,
 	return NULL;
 }
 
+static void
+try_add_CE(struct ecma119_write_target *t,
+	   struct susp_info *susp,
+	   size_t dirent_len)
+{
+	uint8_t *CE = susp_add_single_CE(t, susp, 255 - dirent_len);
+	if (CE)
+		susp_insert(t, susp, CE, susp->n_fields_fit - 1);
+}
+
 /** See IEEE P1281 Draft Version 1.12/5.2. Because this function depends on the
  * length of the other SUSP fields, it should always be calculated last. */
-void susp_add_CE(struct ecma119_write_target *t, struct iso_tree_node *node)
+void
+susp_add_CE(struct ecma119_write_target *t, struct ecma119_tree_node *node)
 {
-	struct dir_write_info *inf = node->writer_data;
-	unsigned char *CE;
-
-	CE = susp_add_single_CE(t, &inf->susp, 255 - node->dirent_len);
-	if (CE)
-		susp_insert(t, node, CE, inf->susp.n_fields_fit - 1);
-	if (S_ISDIR(node->attrib.st_mode)) {
-		CE = susp_add_single_CE(t, &inf->self_susp, 255 - 34);
-		if (CE)
-			susp_insert_self(t, (struct iso_tree_dir *)node, CE,
-					 inf->self_susp.n_fields_fit - 1);
-		CE = susp_add_single_CE(t, &inf->parent_susp, 255 - 34);
-		if (CE)
-			susp_insert_parent(t, (struct iso_tree_dir *)node, CE,
-					   inf->parent_susp.n_fields_fit - 1);
+	try_add_CE(t, &node->susp, node->dirent_len);
+	if (node->type == ECMA119_DIR) {
+		try_add_CE(t, &node->dir.self_susp, 34);
+		try_add_CE(t, &node->dir.parent_susp, 34);
 	}
 }
 
 /** See IEEE P1281 Draft Version 1.12/5.3 */
-void susp_add_SP(struct ecma119_write_target *t, struct iso_tree_dir *dir)
+void
+susp_add_SP(struct ecma119_write_target *t, struct ecma119_tree_node *dir)
 {
 	unsigned char *SP = malloc(7);
+
+	assert(dir->type == ECMA119_DIR);
 
 	SP[0] = 'S';
 	SP[1] = 'P';
@@ -172,7 +137,7 @@ void susp_add_SP(struct ecma119_write_target *t, struct iso_tree_dir *dir)
 	SP[4] = 0xbe;
 	SP[5] = 0xef;
 	SP[6] = 0;
-	susp_append_self(t, dir, SP);
+	susp_append(t, &dir->dir.self_susp, SP);
 }
 
 #if 0
@@ -190,10 +155,13 @@ static void susp_add_ST(struct ecma119_write_target *t,
 }
 #endif
 
-/** See IEEE P1281 Draft Version 1.12/5.5 */
-void susp_add_ER(struct ecma119_write_target *t, struct iso_tree_dir *dir)
+/** See IEEE P1281 Draft Version 1.12/5.5 FIXME: this is rockridge */
+void
+rrip_add_ER(struct ecma119_write_target *t, struct ecma119_tree_node *dir)
 {
 	unsigned char *ER = malloc(182);
+
+	assert(dir->type == ECMA119_DIR);
 
 	ER[0] = 'E';
 	ER[1] = 'R';
@@ -208,71 +176,71 @@ void susp_add_ER(struct ecma119_write_target *t, struct iso_tree_dir *dir)
 	       "FILE SYSTEM SEMANTICS.", 72);
 	memcpy(&ER[89], "PLEASE CONTACT THE IEEE STANDARDS DEPARTMENT, "
 	       "PISCATAWAY, NJ, USA FOR THE 1282 SPECIFICATION.", 93);
-	susp_append_self(t, dir, ER);
+	susp_append(t, &dir->dir.self_susp, ER);
+}
+
+/* calculate the location of the CE areas. Since CE areas don't need to be
+ * aligned to a block boundary, we contatenate all CE areas from a single
+ * directory and dump them immediately after all the directory records.
+ *
+ * Requires that the following be known:
+ *  - position of the current directory (dir->block)
+ *  - length of the current directory (dir->dir.len)
+ *  - sum of the children's CE lengths (dir->dir.CE_len)
+ */
+static void
+susp_fin_1_CE(struct ecma119_write_target *t,
+		   struct susp_info *susp,
+		   size_t block,
+		   size_t *offset)
+{
+	uint8_t *CE = susp->susp_fields[susp->n_fields_fit - 1];
+
+	if (!susp->CE_len) {
+		return;
+	}
+	iso_bb(&CE[4], block + (*offset) / t->block_size, 4);
+	iso_bb(&CE[12], (*offset) % t->block_size, 4);
+	*offset += susp->CE_len;
 }
 
 static void susp_fin_CE(struct ecma119_write_target *t,
-			struct iso_tree_dir *dir)
+			struct ecma119_tree_node *dir)
 {
-	struct dir_write_info *inf = (struct dir_write_info *)
-		dir->writer_data;
-	struct node_write_info *cinf;
-	unsigned char *CE;
 	int i;
-	int CE_offset = inf->len;
+	size_t CE_offset = dir->dir.len;
 
-	if (inf->self_susp.CE_len) {
-		CE = inf->self_susp.susp_fields[inf->self_susp.n_fields_fit -
-						1];
-		iso_bb(&CE[4], dir->block + CE_offset / 2048, 4);
-		iso_bb(&CE[12], CE_offset % 2048, 4);
-		CE_offset += inf->self_susp.CE_len;
-	}
-	if (inf->parent_susp.CE_len) {
-		CE = inf->parent_susp.susp_fields[inf->parent_susp.
-						  n_fields_fit - 1];
-		iso_bb(&CE[4], dir->block + CE_offset / 2048, 4);
-		iso_bb(&CE[12], CE_offset % 2048, 4);
-		CE_offset += inf->parent_susp.CE_len;
-	}
+	assert(dir->type == ECMA119_DIR);
 
-	for (i = 0; i < dir->nchildren; i++) {
-		cinf = dir->children[i]->writer_data;
-		if (!cinf->susp.CE_len) {
-			continue;
-		}
-		CE = cinf->susp.susp_fields[cinf->susp.n_fields_fit - 1];
-		iso_bb(&CE[4], dir->block + CE_offset / 2048, 4);
-		iso_bb(&CE[12], CE_offset % 2048, 4);
-		CE_offset += cinf->susp.CE_len;
+	susp_fin_1_CE(t, &dir->dir.self_susp, dir->block, &CE_offset);
+	susp_fin_1_CE(t, &dir->dir.parent_susp, dir->block, &CE_offset);
+
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		struct ecma119_tree_node *ch = dir->dir.children[i];
+		susp_fin_1_CE(t, &ch->susp, dir->block, &CE_offset);
 	}
-	for (i = 0; i < dir->nfiles; i++) {
-		cinf = dir->files[i]->writer_data;
-		if (!cinf->susp.CE_len) {
-			continue;
-		}
-		CE = cinf->susp.susp_fields[cinf->susp.n_fields_fit - 1];
-		iso_bb(&CE[4], dir->block + CE_offset / 2048, 4);
-		iso_bb(&CE[12], CE_offset % 2048, 4);
-		CE_offset += cinf->susp.CE_len;
-	}
-	assert(CE_offset == inf->len + inf->susp_len);
+	assert(CE_offset == dir->dir.len + dir->dir.CE_len);
 }
 
-void susp_finalize(struct ecma119_write_target *t, struct iso_tree_dir *dir)
+void
+susp_finalize(struct ecma119_write_target *t, struct ecma119_tree_node *dir)
 {
 	int i;
 
-	if (dir->depth != 1) {
+	assert(dir->type = ECMA119_DIR);
+
+	if (dir->dir.depth != 1) {
 		susp_fin_CE(t, dir);
 	}
 
-	for (i = 0; i < dir->nchildren; i++) {
-		susp_finalize(t, dir->children[i]);
+	for (i = 0; i < dir->dir.nchildren; i++) {
+		if (dir->dir.children[i]->type == ECMA119_DIR)
+			susp_finalize(t, dir->dir.children[i]);
 	}
 }
 
-void susp_write(struct ecma119_write_target *t, struct susp_info *susp,
+void susp_write(struct ecma119_write_target *t,
+		struct susp_info *susp,
 		unsigned char *buf)
 {
 	int i;
