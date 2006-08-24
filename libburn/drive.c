@@ -415,9 +415,48 @@ int burn_drive_is_banned(char *device_address)
 int burn_drive_is_open(struct burn_drive *d)
 {
 	/* a bit more detailed case distinction than needed */
-	if(d->fd == -1337)
+	if (d->fd == -1337)
 		return 0;
-	if(d->fd < 0)
+	if (d->fd < 0)
 		return 0;
 	return 1;
 }
+
+/* ts A60823 */
+/** Aquire a drive with known persistent address. 
+*/
+int burn_drive_scan_and_grab(struct burn_drive_info *drives[], char* adr,
+			     int load)
+{
+	unsigned int n_drives;
+	int ret;
+
+	burn_drive_clear_whitelist();
+	burn_drive_add_whitelist(adr);
+	while (!burn_drive_scan(drives, &n_drives));
+	if (n_drives <= 0)
+		return 0;
+	if (load) {
+		/* RIP-14.5 + LITE-ON 48125S produce a false status
+		   if tray was unloaded */
+ 		/* Therefore the first grab is just for loading */
+		ret= burn_drive_grab(drives[0]->drive, 1);
+		if (ret != 1) 
+			return -1;
+		burn_drive_release(drives[0]->drive,0);
+	}
+	ret = burn_drive_grab(drives[0]->drive, load);
+	if (ret != 1)
+		return -1;
+	return 1;
+}
+
+/* ts A60823 */
+/** Inquire the persistent address of the given drive. */
+int burn_drive_get_adr(struct burn_drive_info *drive, char adr[])
+{
+	assert(strlen(drive->location) < BURN_DRIVE_ADR_LEN);
+	strcpy(adr,drive->location);
+	return 1;
+}
+

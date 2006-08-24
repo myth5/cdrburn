@@ -469,6 +469,38 @@ struct burn_message* burn_get_message(void);
 /** Frees a burn_message structure */
 void burn_message_free(struct burn_message *msg);
 
+/* ts A60823 */
+/** Aquire a drive with known persistent address.This is the sysadmin friendly
+    way to open one drive and to leave all others untouched. It bundles
+    the following API calls to form a non-obtrusive way to use libburn:
+      burn_drive_add_whitelist() , burn_drive_scan() , burn_drive_grab()
+    You are *strongly urged* to use this call whenever you know the drive
+    address in advance.
+    If not, then you have to use directly above calls. In that case, you are
+    *strongly urged* to end the libburn session as soon as possible,
+    including a call to burn_finish(). This is to release any unintended
+    drive which might get exclusively occupied and not released by
+    burn_drive_scan().
+    You may start a new libburn session and should then use the function
+    described here with an address obtained after burn_drive_scan() via
+    a call of  burn_drive_get_adr(&(drives[driveno]), adr) .
+    @param drives On success returns a one element array with the drive
+                  (cdrom/burner). Thus use with driveno 0 only. On failure
+                  the array has no valid elements at all.
+                  The returned array should be freed via burn_drive_info_free()
+                  when it is no longer needed, and before calling a scan
+                  function again.
+                  This is a result from call burn_drive_scan(). See there.
+                  Use with driveno 0 only.
+    @param adr    The persistent address of the desired drive. Either obtained
+                  by burn_drive_get_adr() or guessed skillfully by application
+                  resp. its user.
+    @param load   Nonzero to make the drive attempt to load a disc (close its
+                  tray door, etc).
+    @return       1 = success , 0 = drive not found , -1 = other error
+*/    
+int burn_drive_scan_and_grab(struct burn_drive_info *drives[], char* adr,
+                             int load);
 
 /* ts A51221 */
 /** Maximum number of particularly permissible drive addresses */
@@ -495,10 +527,23 @@ void burn_drive_clear_whitelist(void);
 */
 int burn_drive_scan(struct burn_drive_info *drives[],
 		    unsigned int *n_drives);
+
 /** Frees a burn_drive_info array returned by burn_drive_scan
     @param info The array to free
 */
 void burn_drive_info_free(struct burn_drive_info *info);
+
+/* ts A60823 */
+/** Maximum length+1 to expect with a persistent drive address string */
+#define BURN_DRIVE_ADR_LEN 1024
+
+/** Inquire the persistent address of the given drive.
+    @param drive The drive to inquire. Usually some  &(drives[driveno])
+    @param adr   An application provided array of at least BURN_DRIVE_ADR_LEN
+                 characters size. The persistent address gets copied to it.
+*/
+int burn_drive_get_adr(struct burn_drive_info *drive, char adr[]);
+
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc). It may be neccesary to call this function more than once
