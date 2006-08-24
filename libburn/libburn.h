@@ -795,7 +795,7 @@ void burn_source_free(struct burn_source *s);
 struct burn_source *burn_file_source_new(const char *path,
 					 const char *subpath);
 
-/** Creates a data source for an image file (resp. a track) from an open
+/** Creates a data source for an image file (a track) from an open
     readable filedescriptor, an eventually open readable subcodes file
     descriptor and eventually a fixed size in bytes.
     @param datafd The source of data.
