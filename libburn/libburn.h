@@ -423,8 +423,11 @@ struct burn_progress {
 /** Initialize the library.
     This must be called before using any other functions in the library. It
     may be called more than once with no effect.
-    If is possible to 'restart' the library by shutting it down and
-    re-initializing it, though there is no good reason to do that.
+    It is possible to 'restart' the library by shutting it down and
+    re-initializing it. This is necessary if you follow the older and
+    more general way of accessing a drive via burn_drive_scan() and
+    burn_drive_grab(). See burn_drive_scan_and_grab() with its strong
+    urges and its explanations.
     @return Nonzero if the library was able to initialize; zero if
             initialization failed.
 */
