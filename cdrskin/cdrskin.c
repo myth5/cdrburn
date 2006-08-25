@@ -35,6 +35,51 @@ The implementation of an option would probably consist of
   existing methods
 See option blank= for an example.
 
+------------------------------------------------------------------------------
+About compliance with *strong urge* of API towards burn_drive_scan_and_grab() 
+
+cdrskin was the initiator of the whitelist functionality within libburn.
+Now it has problems to obviously comply with the new API best practice
+presciptions literally. Therefore this explanation:
+
+On start it restricts the library to a single drive if it already knows the
+persistent address by option dev= . This is done with a combination of
+burn_drive_add_whitelist() and burn_drive_scan(). Not compliant to the
+literal strong urge but in fact exactly fulfilling the reason for that
+urge in the API: any scanned drive might be opened exclusively after
+burn_drive_scan(). It is kernel dependent wether this behavior is on, off
+or switchable. The sysdamin will want it on - but only for one drive.
+
+So with dev=... cdrskin complies to the spirit of the strong urge.
+Without dev=... it has to leave out the whitelist in order to enable bus
+scanning and implicit drive address 0. A tradition of 9 months shall not
+be broken. So burns without dev= will stay possible - and are now harmless.
+*
+Only if the new API compliance is enabled by macro  Cdrskin_new_api_tesT .
+There is a flaw to be solved in libburn until new API compliance is in all
+aspects as good as the old handcrafted attempt to be sysadmin friendly.
+In many aspects it is already superior, note well.
+As soon as the flaw http://libburn.pykix.org/ticket/10 is removed,
+cdrskin will switch to its new way of API best practice compliance.
+*
+
+This is because Cdrskin_grab_drive() enforces a restart of the library
+with the desired drive's persistent address. This restart then really uses
+the strongly urged function burn_drive_scan_and_grab().
+Thus, cdrskin complies with the new spirit of API by closing down libburn
+as soon as the persistent drive address is known and the drive is to be
+used with a long running operation. To my knowlege all long running
+operations in cdrskin need a grabbed drive.
+
+This spaghetti approach seems necessary to keep small the impact of new API
+urge on cdrskin's stability. cdrskin suffers from having donated the body
+parts which have been transplanted to libburn in order to create
+ burn_drive_scan_and_grab() . The desired sysadmin friendlyness was already
+achieved by most cdrskin runs. The remaining problem situations should now
+be defused by releasing any short time grabbed flocks of drives during the
+restart of libburn.
+ 
+------------------------------------------------------------------------------
 
 Compilation within cdrskin-* :
 
@@ -1794,6 +1839,7 @@ struct CdrskiN {
 };
 
 int Cdrskin_destroy(struct CdrskiN **o, int flag);
+int Cdrskin_grab_drive(struct CdrskiN *skin, int flag);
 int Cdrskin_release_drive(struct CdrskiN *skin, int flag);
 
 
@@ -2005,7 +2051,53 @@ int Cdrskin_adjust_speed(struct CdrskiN *skin, int flag)
 }
 
 
-/** Obtain access to a libburn drive for writing or information retrieval
+/** Shutdown library and restart again on single drive which gets grabbed.
+    Does only work with a valid skin->driveno or with an already set
+    skin->preskin->device_adr . 
+    @param flag Bitfield for control purposes:
+                bit0= skin->driveno points to a valid drive. The library
+                      will get reopened with that drive listed as only one
+                      and already grabbed.
+    @return  1 = success , 
+             0 = failure, drive is released, library initialized
+            -1 = failure, library is finished (and could not get initialized)
+*/    
+int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
+{
+ int ret;
+
+ if(skin->drive_is_grabbed)
+   Cdrskin_release_drive(skin,0);
+ if(flag&1)
+   burn_drive_get_adr(&(skin->drives[skin->driveno]),
+                      skin->preskin->device_adr);
+ if(strlen(skin->preskin->device_adr)<=0) {
+   fprintf(stderr,
+           "cdrskin: FATAL : unable to determine persistent drive address\n");
+   ret= 0; goto ex;
+ }
+ burn_finish();
+ if(!burn_initialize()) {
+   fflush(stdout);
+   fprintf(stderr,"cdrskin : FATAL : Re-initialization of libburn failed\n");
+   {ret= -1; goto ex;}
+ }
+ ret= Cdrskin_grab_drive(skin,1); /* uses burn_drive_scan_and_grab() */
+ if(ret<=0)
+   {ret=0; goto ex;}
+
+ ret= 1;
+ex:
+ return(ret);
+}
+
+
+/** Obtain access to a libburn drive for writing or information retrieval.
+    Extended behavior with Cdrskin_new_api_tesT:
+    If libburn is not restricted to a single persistent address then it
+    gets shutdown and restarted with the wanted drive only. Thus, after
+    this call, libburn is supposed to have open only the grabbed drive.
+    All other drives should be free for other use.
     @param flag Bitfield for control purposes:
                 bit0= bus is unscanned, device is known, 
                       use burn_drive_scan_and_grab()
@@ -2037,15 +2129,27 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
 #ifdef Cdrskin_new_api_tesT
 
+
  if(flag&1) {
    fprintf(stderr,
-      "cdrskin: experimental: Cdrskin_grab_drive() on Cdrskin_new_api_tesT\n");
+      "cdrskin: experimental: Cdrskin_grab_drive() from shutdown libburn\n");
 
    ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,1);
-   if(ret<=0)
+   if(ret<=0) {
+     fprintf(stderr,"cdrskin: experimental: burn_drive_scan_and_grab ret=%d\n",
+                   ret);
      goto unable;
+   }
    skin->driveno= 0;
  } else {
+   fprintf(stderr,
+      "cdrskin: experimental: Cdrskin_grab_drive() on active libburn\n");
+   if(strlen(skin->preskin->device_adr)<=0) {
+     fprintf(stderr,
+        "cdrskin: experimental: Cdrskin_grab_drive() restarting libburn\n");
+     ret= Cdrskin_reinit_lib_with_adr(skin,1);
+     goto ex; /* this calls Cdrskin_grab() with persistent address or fails */
+   }
 
 #else
 
@@ -4019,11 +4123,11 @@ int main(int argc, char **argv)
    fprintf(stderr,"cdrskin: NOTE : no usable drive detected.\n");
    if(getuid()!=0) {
      fprintf(stderr,
-      "cdrskin: HINT : Busy drives are invisible. (Busy = open O_EXCL)\n");
-     fprintf(stderr,
       "cdrskin: HINT : Run this program as superuser with option --devices\n");
      fprintf(stderr,
       "cdrskin: HINT : Allow rw-access to the dev='...' file of the burner.\n");
+     fprintf(stderr,
+      "cdrskin: HINT : Busy drives are invisible. (Busy = open O_EXCL)\n");
    }
  }
 
