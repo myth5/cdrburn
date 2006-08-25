@@ -22,6 +22,8 @@
 static struct burn_drive drive_array[255];
 static int drivetop = -1;
 
+int burn_drive_is_open(struct burn_drive *d);
+
 void burn_drive_free(void)
 {
 	int i;
@@ -29,6 +31,8 @@ void burn_drive_free(void)
 
 	for (i = 0; i < drivetop + 1; i++) {
 		d = &drive_array[i];
+		if (burn_drive_is_open(d))
+			close(d->fd);
 		free((void *)d->idata);
 		free((void *)d->mdata);
 		free((void *)d->toc_entry);
