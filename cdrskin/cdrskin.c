@@ -2016,10 +2016,14 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
  int restore_handler= 0,ret;
  struct burn_drive *drive;
 
+ if(skin->drive_is_grabbed)
+   Cdrskin_release_drive(skin,0);
+
  drive= skin->drives[skin->driveno].drive;
  skin->grabbed_drive= drive;
 
 #ifdef Cdrskin_grab_abort_brokeN
+
  /* There seems to be no way to get a drive out of status BURN_DRIVE_GRABBING 
     So try to block out signals if there is a signal handler installed */
  if(skin->preskin->abort_handler==1 || 
@@ -2028,11 +2032,12 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    Cleanup_set_handlers(NULL,NULL,2);
    restore_handler= 1;
  }
+
 #endif /* Cdrskin_grab_abort_brokeN */
 
 #ifdef Cdrskin_new_api_tesT
- if(flag&1) {
 
+ if(flag&1) {
    fprintf(stderr,
       "cdrskin: experimental: Cdrskin_grab_drive() on Cdrskin_new_api_tesT\n");
 
@@ -2041,8 +2046,11 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
      goto unable;
    skin->driveno= 0;
  } else {
+
 #else
+
  {
+
 #endif /* ! Cdrskin_new_api_tesT */
 
    /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
