@@ -18,6 +18,7 @@
 #include "util.h"
 #include "sg.h"
 #include "structure.h"
+#include "back_hacks.h"
 
 static struct burn_drive drive_array[255];
 static int drivetop = -1;
@@ -151,7 +152,10 @@ void burn_disc_erase_sync(struct burn_drive *d, int fast)
 	burn_print(1, "erasing drive %s %s\n", d->idata->vendor,
 		   d->idata->product);
 
-	if (d->status != BURN_DISC_FULL)
+	/* ts A60825 : allow on parole to blank appendable CDs */
+	if ( ! (d->status == BURN_DISC_FULL ||
+		(d->status == BURN_DISC_APPENDABLE &&
+		 ! libburn_back_hack_42) ) )
 		return;
 	d->cancel = 0;
 	d->busy = BURN_DRIVE_ERASING;

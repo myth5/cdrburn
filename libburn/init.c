@@ -10,6 +10,10 @@
 #include "libburn.h"
 #include "drive.h"
 
+/* ts A60825 : The storage location for back_hacks.h variables. */
+#define BURN_BACK_HACKS_INIT 1
+#include "back_hacks.h"
+
 int burn_running = 0;
 
 /* ts A60813 : wether to use O_EXCL and/or O_NONBLOCK in libburn/sg.c */
@@ -25,6 +29,7 @@ int burn_sg_open_o_nonblock = 1;
 /* Caution: this is implemented by a rough hack and eventually leads
 	    to unconditional abort of the process  */
 int burn_sg_open_abort_busy = 0;
+
 
 int burn_initialize(void)
 {

@@ -11,6 +11,7 @@ libburn_libburn_la_LDFLAGS = \
 libburn_libburn_la_SOURCES = \
 	libburn/async.c \
 	libburn/async.h \
+	libburn/back_hacks.h \
 	libburn/crc.c \
 	libburn/crc.h \
 	libburn/debug.c \
