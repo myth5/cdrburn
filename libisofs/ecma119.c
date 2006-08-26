@@ -612,7 +612,7 @@ ecma119_start_chunking(struct ecma119_write_target *t,
 	       off_t data_size,
 	       uint8_t *buf)
 {
-	if (data_size > t->state_data_size) {
+	if (data_size != t->state_data_size) {
 		data_size = round_up(data_size, t->block_size);
 		t->state_data = realloc(t->state_data, data_size);
 		t->state_data_size = data_size;

@@ -212,7 +212,6 @@ write_one_dir_record(struct ecma119_write_target *t,
 	iso_bb(rec->vol_seq_number, t->volnum + 1, 2);
 	rec->len_fi[0] = len_fi;
 	memcpy(rec->file_id, name, len_fi);
-
 }
 
 static void
@@ -304,6 +303,8 @@ write_dirs(struct ecma119_write_target *t, uint8_t *buf)
 {
 	size_t i;
 	struct joliet_tree_node *dir;
+
+	assert (t->curblock == t->dirlist_joliet[0]->block);
 	for (i = 0; i < t->dirlist_len; i++) {
 		dir = t->dirlist_joliet[i];
 		write_one_dir(t, dir, buf);
