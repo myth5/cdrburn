@@ -38,6 +38,9 @@ See option blank= for an example.
 ------------------------------------------------------------------------------
 About compliance with *strong urge* of API towards burn_drive_scan_and_grab() 
 
+For a more comprehensive example of the advised way to behave with libburn
+see  test/burniso.c  test/blank.c  test/devices.c .
+ 
 cdrskin was the initiator of the whitelist functionality within libburn.
 Now it has problems to obviously comply with the new API best practice
 presciptions literally. Therefore this explanation:
@@ -78,7 +81,7 @@ parts which have been transplanted to libburn in order to create
 achieved by most cdrskin runs. The remaining problem situations should now
 be defused by releasing any short time grabbed flocks of drives during the
 restart of libburn.
- 
+
 ------------------------------------------------------------------------------
 
 Compilation within cdrskin-* :
@@ -2079,7 +2082,14 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
            "cdrskin: FATAL : unable to determine persistent drive address\n");
    ret= 0; goto ex;
  }
+
+/* >>> A60827: this causes a SIGSEGV when releasing the re-initialized drive
+               skin->drives[skin->driveno].drive after burn (then as
+               skin->grabbed_drive, but already being 0xb0 in Cdrskin_grab) )
+
  burn_drive_info_free(skin->drives);
+*/
+
  burn_finish();
  if(!burn_initialize()) {
    fflush(stdout);
