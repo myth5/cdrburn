@@ -484,8 +484,8 @@ void burn_message_free(struct burn_message *msg);
     address in advance.
     If not, then you have to use directly above calls. In that case, you are
     *strongly urged* to end the libburn session as soon as possible,
-    including a call to burn_finish(). This is to release any unintended
-    drive which might get exclusively occupied and not released by
+    including a call to burn_finish(). This is to close any unintended
+    drive which might get exclusively occupied and not closed by
     burn_drive_scan().
     You may start a new libburn session and should then use the function
     described here with an address obtained after burn_drive_scan() via
