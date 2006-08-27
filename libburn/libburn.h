@@ -81,7 +81,8 @@ struct burn_track;
     2352 bytes per sector.  may be | with 4ch or preemphasis.
     NOT TO BE CONFUSED WITH BURN_MODE_RAW
     Audio data must be 44100Hz 16bit stereo with no riff or other header at
-    beginning.  Extra header data will cause pops or clicks.
+    beginning.  Extra header data will cause pops or clicks.  Audio data should
+    also be in little-endian byte order.  Big-endian audio data causes static.
 */
 #define BURN_AUDIO		(1 << 6)
 /** Track mode modifier - 4 channel audio. */
