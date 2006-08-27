@@ -1473,6 +1473,7 @@ set_dev:;
      printf(
        " --ignore_signals   try to ignore any signals rather than to abort\n");
      printf(" --no_abort_handler exit even if the drive is in busy state\n");
+     printf(" --no_blank_appendable  refuse to blank appendable CD-RW\n");
      printf(
          " --no_rc            as first argument: do not read startup files\n");
      printf(
@@ -1756,6 +1757,7 @@ struct CdrskiN {
 
  int do_blank;
  int blank_fast;
+ int no_blank_appendable;
 
  int do_burn;
  int burnfree;
@@ -1869,6 +1871,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->do_atip= 0;
  o->do_blank= 0;
  o->blank_fast= 0;
+ o->no_blank_appendable= 0;
  o->do_burn= 0;
  strcpy(o->write_mode_name,"SAO");
  o->write_type= BURN_WRITE_SAO;
@@ -2076,6 +2079,7 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
            "cdrskin: FATAL : unable to determine persistent drive address\n");
    ret= 0; goto ex;
  }
+ burn_drive_info_free(skin->drives);
  burn_finish();
  if(!burn_initialize()) {
    fflush(stdout);
@@ -2586,7 +2590,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
    sleep(2);
  Cdrskin_report_disc_status(skin,s,0);
- if(s==BURN_DISC_APPENDABLE) {
+ if(s==BURN_DISC_APPENDABLE && skin->no_blank_appendable) {
    is_not_really_erasable= 1;
  } else if(s==BURN_DISC_EMPTY) {
    if(skin->verbosity>=Cdrskin_verbose_progresS)
@@ -2735,7 +2739,8 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
    sleep(2);
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,0);
- if (s != BURN_DISC_FULL) {
+ if(s!=BURN_DISC_FULL && 
+    (s!=BURN_DISC_APPENDABLE || skin->no_blank_appendable)) {
    Cdrskin_release_drive(skin,0);
    if(s==BURN_DISC_BLANK) {
      fprintf(stderr,
@@ -3731,6 +3736,9 @@ gracetime_equals:;
 
    } else if(strcmp(argv[i],"--no_abort_handler")==0) {
      /* is handled in Cdrpreskin_setup() */;
+
+   } else if(strcmp(argv[i],"--no_blank_appendable")==0) {
+     skin->no_blank_appendable= 1;
 
    } else if(strcmp(argv[i],"--no_rc")==0) {
      /* is handled in Cdrpreskin_setup() */;
