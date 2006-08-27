@@ -89,12 +89,12 @@ int burn_app_aquire_by_adr(char *drive_adr)
 {
 	int ret;
 	
-	printf("Aquiring drive '%s' ... ",drive_adr);
+	printf("Aquiring drive '%s' ...\n",drive_adr);
 	ret = burn_drive_scan_and_grab(&drives,drive_adr,1);
 	if (ret <= 0)
 		printf("Failed\n");
 	else
-		printf("Done\n");
+		printf("done\n");
 	return ret;
 }
 
@@ -111,7 +111,7 @@ int burn_app_aquire_by_driveno(int driveno)
 	char adr[BURN_DRIVE_ADR_LEN];
 	int ret;
 
-	printf("Scanning for devices ... ");
+	printf("Scanning for devices ...\n");
 	while (!burn_drive_scan(&drives, &n_drives)) ;
 	if (n_drives <= 0) {
 		printf("Failed (no drives found)\n");
@@ -155,10 +155,15 @@ int burn_app_aquire_by_driveno(int driveno)
 	}
 	printf("Detected '%s' as persistent address of drive number %d\n",
 		adr,driveno);
+
+/* In cdrskin this causes a delayed sigsegv. I understand we risk only
+   a small memory leak by not doing:
+
 	burn_drive_info_free(drives);
+*/
 	burn_finish();
 	printf(
-	      "Re-Initializing library to release any unintended drives ... ");
+	     "Re-Initializing library to release any unintended drives ...\n");
 	if (burn_initialize())
 		printf("done\n");
 	else {
@@ -301,6 +306,7 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 			++i;
 			if (i >= argc) {
 				printf("--drive requires an argument\n");
+				exit(3);
 			} else if (isdigit(argv[i][0])) {
 				*drive_adr = no_drive_adr;
 				*driveno = atoi(argv[i]);
@@ -314,9 +320,10 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 
 		} else if (!strcmp(argv[i], "--stdin_size")) {
 			++i;
-			if (i >= argc)
+			if (i >= argc) {
 				printf("--stdin_size requires an argument\n");
-			else
+				exit(3);
+			} else
 				*size = atoi(argv[i]);
 		} else if (!strcmp(argv[i], "--verbose")) {
 			++i;
@@ -346,7 +353,7 @@ int main(int argc, char **argv)
 
 	parse_args(argc, argv, &drive_adr, &driveno, &iso, &stdin_size);
 
-	printf("Initializing library ... ");
+	printf("Initializing library ...\n");
 	if (burn_initialize())
 		printf("done\n");
 	else {
