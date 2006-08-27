@@ -39,11 +39,32 @@ static unsigned char MMC_TRACK_INFO[] = { 0x52, 0, 0, 0, 0, 0, 0, 16, 0, 0 };
 static unsigned char MMC_SEND_CUE_SHEET[] =
 	{ 0x5D, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+
+static int mmc_function_spy_do_tell = 0;
+
+int mmc_function_spy(char * text)
+{
+
+	if (mmc_function_spy_do_tell)
+		fprintf(stderr,"libburn: experimental: mmc_function_spy: %s\n",
+			text);
+	return 1;
+}
+
+int mmc_function_spy_ctrl(int do_tell)
+{
+	mmc_function_spy_do_tell= !!do_tell;
+	return 1;
+}
+
+
 void mmc_send_cue_sheet(struct burn_drive *d, struct cue_sheet *s)
 {
 	struct buffer buf;
 	struct command c;
 
+
+	mmc_function_spy("mmc_send_cue_sheet");
 	c.retry = 1;
 	c.oplen = sizeof(MMC_SEND_CUE_SHEET);
 	memcpy(c.opcode, MMC_SEND_CUE_SHEET, sizeof(MMC_SEND_CUE_SHEET));
@@ -64,6 +85,7 @@ int mmc_get_nwa(struct burn_drive *d)
 	struct command c;
 	unsigned char *data;
 
+	mmc_function_spy("mmc_get_nwa");
 	c.retry = 1;
 	c.oplen = sizeof(MMC_TRACK_INFO);
 	memcpy(c.opcode, MMC_TRACK_INFO, sizeof(MMC_TRACK_INFO));
@@ -79,6 +101,7 @@ int mmc_get_nwa(struct burn_drive *d)
 
 void mmc_close_disc(struct burn_drive *d, struct burn_write_opts *o)
 {
+	mmc_function_spy("mmc_close_disc");
 	assert(o->drive == d);
 	o->multi = 0;
 	spc_select_write_params(d, o);
@@ -87,6 +110,7 @@ void mmc_close_disc(struct burn_drive *d, struct burn_write_opts *o)
 
 void mmc_close_session(struct burn_drive *d, struct burn_write_opts *o)
 {
+	mmc_function_spy("mmc_close_session");
 	assert(o->drive == d);
 	o->multi = 3;
 	spc_select_write_params(d, o);
@@ -97,6 +121,7 @@ void mmc_close(struct burn_drive *d, int session, int track)
 {
 	struct command c;
 
+	mmc_function_spy("mmc_close_session");
 	c.retry = 1;
 	c.oplen = sizeof(MMC_CLOSE);
 	memcpy(c.opcode, MMC_CLOSE, sizeof(MMC_CLOSE));
@@ -113,6 +138,7 @@ void mmc_get_event(struct burn_drive *d)
 	struct buffer buf;
 	struct command c;
 
+	mmc_function_spy("mmc_get_event");
 	c.retry = 1;
 	c.oplen = sizeof(MMC_GET_EVENT);
 	memcpy(c.opcode, MMC_GET_EVENT, sizeof(MMC_GET_EVENT));
@@ -133,6 +159,7 @@ void mmc_write_12(struct burn_drive *d, int start, struct buffer *buf)
 	struct command c;
 	int len;
 
+	mmc_function_spy("mmc_write_12");
 	len = buf->sectors;
 	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
 	burn_print(100, "trying to write %d at %d\n", len, start);
@@ -159,6 +186,7 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 	struct command c;
 	int len;
 
+	mmc_function_spy("mmc_write");
 	pthread_mutex_lock(&d->access_lock);
 	cancelled = d->cancel;
 	pthread_mutex_unlock(&d->access_lock);
@@ -203,6 +231,7 @@ void mmc_read_toc(struct burn_drive *d)
 	int i;
 	unsigned char *tdata;
 
+	mmc_function_spy("mmc_read_toc");
 	memcpy(c.opcode, MMC_GET_TOC, sizeof(MMC_GET_TOC));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_GET_TOC);
@@ -293,6 +322,7 @@ void mmc_read_disc_info(struct burn_drive *d)
 	unsigned char *data;
 	struct command c;
 
+	mmc_function_spy("mmc_read_disc_info");
 	memcpy(c.opcode, MMC_GET_DISC_INFO, sizeof(MMC_GET_DISC_INFO));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_GET_DISC_INFO);
@@ -329,6 +359,7 @@ void mmc_read_atip(struct burn_drive *d)
 	struct buffer buf;
 	struct command c;
 
+	mmc_function_spy("mmc_read_atip");
 	memcpy(c.opcode, MMC_GET_ATIP, sizeof(MMC_GET_ATIP));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_GET_ATIP);
@@ -350,6 +381,7 @@ void mmc_read_sectors(struct burn_drive *d,
 	int errorblock, req;
 	struct command c;
 
+	mmc_function_spy("mmc_read_sectors");
 	assert(len >= 0);
 /* if the drive isn't busy, why the hell are we here? */
 	assert(d->busy);
@@ -405,6 +437,7 @@ void mmc_erase(struct burn_drive *d, int fast)
 {
 	struct command c;
 
+	mmc_function_spy("mmc_erase");
 	memcpy(c.opcode, MMC_ERASE, sizeof(MMC_ERASE));
 	c.opcode[1] = 16;	/* IMMED set to 1 */
 	c.opcode[1] |= !!fast;
@@ -420,6 +453,7 @@ void mmc_read_lead_in(struct burn_drive *d, struct buffer *buf)
 	int len;
 	struct command c;
 
+	mmc_function_spy("mmc_read_lead_in");
 	len = buf->sectors;
 	memcpy(c.opcode, MMC_READ_CD, sizeof(MMC_READ_CD));
 	c.retry = 1;
@@ -442,6 +476,7 @@ void mmc_perform_opc(struct burn_drive *d)
 {
 	struct command c;
 
+	mmc_function_spy("mmc_perform_opc");
 	memcpy(c.opcode, MMC_SEND_OPC, sizeof(MMC_SEND_OPC));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_SEND_OPC);
@@ -455,6 +490,7 @@ void mmc_set_speed(struct burn_drive *d, int r, int w)
 {
 	struct command c;
 
+	mmc_function_spy("mmc_set_speed");
 	memcpy(c.opcode, MMC_SET_SPEED, sizeof(MMC_SET_SPEED));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_SET_SPEED);
@@ -473,6 +509,7 @@ void mmc_get_configuration(struct burn_drive *d)
 	int len;
 	struct command c;
 
+	mmc_function_spy("mmc_get_configuration");
 	memcpy(c.opcode, MMC_GET_CONFIGURATION, sizeof(MMC_GET_CONFIGURATION));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_GET_CONFIGURATION);
@@ -497,6 +534,7 @@ void mmc_sync_cache(struct burn_drive *d)
 {
 	struct command c;
 
+	mmc_function_spy("mmc_sync_cache");
 	memcpy(c.opcode, MMC_SYNC_CACHE, sizeof(MMC_SYNC_CACHE));
 	c.retry = 1;
 	c.oplen = sizeof(MMC_SYNC_CACHE);

@@ -37,6 +37,11 @@ extern int burn_sg_open_o_nonblock;
 extern int burn_sg_open_abort_busy;
 
 
+/* ts A60821
+   <<< debug: for tracing calls which might use open drive fds */
+int mmc_function_spy(char * text);
+
+
 static int sgio_test(int fd)
 {
 	unsigned char test_ops[] = { 0, 0, 0, 0, 0, 0 };
@@ -233,6 +238,10 @@ static void enumerate_common(char *fname)
 	memset(&out.params, 0, sizeof(struct params));
 	t = burn_drive_register(&out);
 
+/* ts A60821
+   <<< debug: for tracing calls which might use open drive fds */
+	mmc_function_spy("enumerate_common : -------- doing grab");
+
 /* try to get the drive info */
 	if (sg_grab(t)) {
 		burn_print(2, "getting drive info\n");
@@ -242,6 +251,10 @@ static void enumerate_common(char *fname)
 	} else {
 		burn_print(2, "unable to grab new located drive\n");
 	}
+
+/* ts A60821
+   <<< debug: for tracing calls which might use open drive fds */
+	mmc_function_spy("enumerate_common : ----- would release ");
 
 }
 
@@ -259,6 +272,11 @@ int sg_grab(struct burn_drive *d)
 
 	/* ts A60813 */
 	int open_mode = O_RDWR;
+
+/* ts A60821
+   <<< debug: for tracing calls which might use open drive fds */
+	mmc_function_spy("sg_grab");
+
 
 	/* ts A60813
 	   O_EXCL with block devices is an unpublished feature
@@ -279,9 +297,15 @@ int sg_grab(struct burn_drive *d)
 	   -1337 is the initial value of burn_drive.fd and the value after
 	   relase of drive. Unclear why not the official error return
 	   value -1 of open(2) war used. */
-	if(d->fd == -1337)
+				/* ts A60822: was  if(d->fd == -1337) { */
+	if(! burn_drive_is_open(d)) {
+
+		/* ts A60821
+   		<<< debug: for tracing calls which might use open drive fds */
+		mmc_function_spy("sg_grab ----------- opening");
+
 		fd = open(d->devname, open_mode);
-	else
+	} else
 		fd= d->fd;
 
 	assert(fd != -1337);
@@ -313,10 +337,19 @@ int sg_grab(struct burn_drive *d)
 
 int sg_release(struct burn_drive *d)
 {
+	/* ts A60821
+   	<<< debug: for tracing calls which might use open drive fds */
+	mmc_function_spy("sg_release");
+
 	if (d->fd < 1) {
 		burn_print(1, "release an ungrabbed drive.  die\n");
 		return 0;
 	}
+
+	/* ts A60821
+   	<<< debug: for tracing calls which might use open drive fds */
+	mmc_function_spy("sg_release ----------- closing");
+
 	close(d->fd);
 	d->fd = -1337;
 	return 0;
@@ -327,6 +360,15 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 	int done = 0;
 	int err;
 	sg_io_hdr_t s;
+
+	
+/* ts A60821
+   <<< debug: for tracing calls which might use open drive fds */
+	char buf[161];
+	sprintf(buf,"sg_issue_command   d->fd= %d  d->released= %d\n",
+		d->fd,d->released);
+	mmc_function_spy(buf);
+
 
 	c->error = 0;
 /*
