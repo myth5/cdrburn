@@ -111,8 +111,8 @@ void burn_drive_release(struct burn_drive *d, int le)
 		burn_print(1, "second release on drive!\n");
 	assert(!d->busy);
 	if (le)
-		d->eject(d);
-	d->unlock(d);
+		d->unlock(d);
+	d->eject(d);
 
 	d->release(d);
 
