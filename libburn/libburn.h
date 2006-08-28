@@ -314,6 +314,10 @@ struct burn_drive_info
 	char revision[5];
 	/** Location of the drive in the filesystem. */
 	char location[17];
+	/** This is currently the string which is used as persistent
+	    drive address. But be warned: there is NO GUARANTEE that this
+	    will stay so. Always use function  burn_drive_get_adr() to
+	    inquire a persisten address.       ^^^^^^ ALWAYS ^^^^^^ */
 
 	/** Can the drive read DVD-RAM discs */
 	unsigned int read_dvdram:1;

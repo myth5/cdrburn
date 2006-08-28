@@ -152,6 +152,10 @@ or
 #define Cdrskin_libburn_largefilE 1
 #define Cdrskin_libburn_padding_does_worK 1
 
+#ifdef Cdrskin_new_api_tesT
+#define Cdrskin_libburn_has_drive_get_adR 1
+#endif
+
 #endif /* Cdrskin_libburn_0_2_1 */
 
 #ifndef Cdrskin_libburn_versioN
@@ -2327,10 +2331,21 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
 int Cdrskin_driveno_of_location(struct CdrskiN *skin, char *devicename,
                                 int *driveno, int flag)
 {
- int i;
+ int i,ret;
+ char adr[Cdrskin_adrleN];
 
  for(i=0;i<skin->n_drives;i++) {
-   if(strcmp(skin->drives[i].location,devicename)==0) {
+
+#ifdef Cdrskin_libburn_has_drive_get_adR
+   ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
+   if(ret<=0)
+ continue;
+#else 
+   ret= 1; /* to please gcc -Wall */
+   strcpy(adr,skin->drives[i].location);
+#endif
+
+   if(strcmp(adr,devicename)==0) {
      *driveno= i;
      return(1);
    }
@@ -2422,11 +2437,21 @@ int Cdrskin_driveno_to_btldev(struct CdrskiN *skin, int driveno,
                               char btldev[Cdrskin_adrleN], int flag)
 {
  int k,ret,still_untranslated= 1,hret;
- char *loc= NULL,buf[Cdrskin_adrleN];
+ char *loc= NULL,buf[Cdrskin_adrleN],adr[Cdrskin_adrleN];
 
  if(driveno<0 || driveno>skin->n_drives)
    goto fallback;
+
+#ifdef Cdrskin_libburn_has_drive_get_adR
+ ret= burn_drive_get_adr(&(skin->drives[driveno]), adr);
+ if(ret<=0)
+   goto fallback;
+ loc= adr;
+#else 
+ adr[0]= 0; /* to please gcc -Wall */
  loc= skin->drives[driveno].location;
+#endif
+
  if(loc==NULL)
    goto fallback;
  if(strncmp(loc,"/dev/sg",7)==0) {
@@ -2499,6 +2524,7 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
 {
  int ret,i,busno,first_on_bus;
  char shellsafe[5*Cdrskin_strleN+2],perms[40],btldev[Cdrskin_adrleN];
+ char adr[Cdrskin_adrleN];
  struct stat stbuf;
 
  if(flag&1) {
@@ -2506,7 +2532,18 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
           skin->n_drives);
    printf("-----------------------------------------------------------------------------\n");
    for(i=0;i<skin->n_drives;i++) {
-     if(stat(skin->drives[i].location,&stbuf)==-1) {
+
+#ifdef Cdrskin_libburn_has_drive_get_adR
+     ret= burn_drive_get_adr(&(skin->drives[i]), adr);
+     if(ret<=0) {
+       /* >>> one should massively complain */;
+   continue;
+     }
+#else
+     strcpy(adr,skin->drives[i].location);
+#endif
+
+     if(stat(adr,&stbuf)==-1) {
        sprintf(perms,"errno=%d",errno);
      } else {
        strcpy(perms,"------");
@@ -2517,10 +2554,10 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
        if(stbuf.st_mode&S_IROTH) perms[4]= 'r';
        if(stbuf.st_mode&S_IWOTH) perms[5]= 'w';
      }
-     if(strlen(skin->drives[i].location)>=Cdrskin_strleN)
+     if(strlen(adr)>=Cdrskin_strleN)
        Text_shellsafe("failure:oversized string",shellsafe,0);
      else
-       Text_shellsafe(skin->drives[i].location,shellsafe,0);
+       Text_shellsafe(adr,shellsafe,0);
      printf("%d  dev=%s  %s :  '%s'  '%s'\n",
             i,shellsafe,perms,skin->drives[i].vendor,skin->drives[i].product);
    }
@@ -3383,6 +3420,7 @@ ex:;
 int Cdrskin_eject(struct CdrskiN *skin, int flag)
 {
  int ret;
+ char adr[Cdrskin_adrleN];
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
@@ -3407,13 +3445,21 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
      "cdrskin: HINT : to run cdrskin under your normal user identity.\n");
    return(0);
  }
+
+#ifdef Cdrskin_libburn_has_drive_get_adR
+ ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
+ if(ret<=0)
+   adr[0]= 0;
+#else
+ strcpy(adr,skin->drives[skin->driveno].location);
+#endif
+
  if(strlen(skin->eject_device)>0)
    sprintf(cmd,"eject %s",Text_shellsafe(skin->eject_device,shellsafe,0));
- else if(strcmp(skin->drives[skin->driveno].location,"/dev/sg0")==0)
+ else if(strcmp(adr,"/dev/sg0")==0)
    sprintf(cmd,"eject /dev/sr0");
  else
-   sprintf(cmd,"eject %s",Text_shellsafe(skin->drives[skin->driveno].location,
-                                         shellsafe,0));
+   sprintf(cmd,"eject %s",Text_shellsafe(adr,shellsafe,0));
  ret= system(cmd);
  if(ret==0)
    return(1);
@@ -3436,7 +3482,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
 {
  int i,k,ret;
  double value,grab_and_wait_value= -1.0;
- char *cpt,*value_pt;
+ char *cpt,*value_pt,adr[Cdrskin_adrleN];
 
  /* cdrecord 2.01 options which are not scheduled for implementation, yet */
  static char ignored_partial_options[][41]= {
@@ -3877,6 +3923,12 @@ track_too_large:;
          printf(
         "cdrskin: NOTE : augmenting non-tao write mode by tao_to_sao_tsize\n");
          printf("cdrskin: NOTE : fixed size : %.f\n",skin->fixed_size);
+/* >>> upcoming problem fix
+       } else if(skin->fixed_size<=0) {
+         fprintf(stderr,
+ "cdrskin: FATAL : \"-\" (stdin) needs a fixed tsize= or tao_to_sao_tsize=\n");
+         return(0);
+*/
        }
      } else if(skin->preskin->allow_fd_source==0 && 
                argv[i][0]=='#' && (argv[i][1]>='0' && argv[i][1]<='9')) {
@@ -3945,9 +3997,19 @@ ignore_unknown:;
                                &(skin->driveno),0);
    if(ret<=0)
      return(ret);
-   if(skin->verbosity>=Cdrskin_verbose_cmD)
+   if(skin->verbosity>=Cdrskin_verbose_cmD) {
+
+#ifdef Cdrskin_libburn_has_drive_get_adR
+     ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
+     if(ret<=0)
+       adr[0]= 0;
+#else
+     strcpy(adr,skin->drives[skin->driveno].location);
+#endif
+
      printf("cdrskin: active drive number : %d  '%s'\n",
-            skin->driveno,skin->drives[skin->driveno].location);
+            skin->driveno,adr);
+   }
  }
  if(grab_and_wait_value>0) {
    Cdrskin_grab_drive(skin,0);
