@@ -12,12 +12,31 @@
 */
 #define Burniso_try_to_simulatE 1
 
+/**                               Overview 
+
+    Before you can do anything, you have to initialize libburn by
+       burn_initialize()
+    as it is done in main() at the end of this file. Then you aquire a
+    drive in an appropriate way conforming to the API. The two main
+    approaches are shown here in application functions:
+       burn_app_aquire_by_adr()    demonstrates usage as of cdrecord traditions
+       burn_app_aquire_by_driveno()     demonstrates a scan-and-choose approach
+    With that aquired drive you can burn to CD-R or blank CD-RW.
+    This is demonstrated in:
+       burn_app_payload()
+    When everything is done, main() shuts down libburn by
+       burn_drive_info_free()
+       burn_finish()
+*/
+
 
 /*  test/burniso.c , API illustration of burning a single data track to CD
     Copyright (C) ???? - 2006 Derek Foreman
     Copyright (C) 2005 - 2006 Thomas Schmitt
     This is provided under GPL only. Don't ask for anything else for now. 
     Read. Try. Think. Play. Write yourself some code. Be free of our copyright.
+
+    Be also invited to study the code of cdrskin/cdrskin.c et al.
 */
 
 
@@ -53,6 +72,7 @@ static unsigned int n_drives;
 
 /** Wether to burn for real or to *try* to simulate a burn */
 static int simulate_burn = Burniso_try_to_simulatE ;
+
 
 
 /** You need to aquire a drive before burning. The API offers this as one
@@ -109,7 +129,7 @@ int burn_app_aquire_by_adr(char *drive_adr)
 int burn_app_aquire_by_driveno(int driveno)
 {
 	char adr[BURN_DRIVE_ADR_LEN];
-	int ret;
+	int ret, i;
 
 	printf("Scanning for devices ...\n");
 	while (!burn_drive_scan(&drives, &n_drives)) ;
@@ -118,13 +138,6 @@ int burn_app_aquire_by_driveno(int driveno)
 		return 0;
 	}
 	printf("done\n");
-	if (n_drives <= driveno) {
-		fprintf(stderr,
-			"Found only %d drives. Number %d not available.\n",
-			n_drives,driveno);
-		return 0;
-	}
-
 
 	/* Interactive programs may choose the drive number at this moment.
 
@@ -139,6 +152,29 @@ int burn_app_aquire_by_driveno(int driveno)
 		 easy to fix. Please report them but also strive for
 		 workarounds on application level.
 	*/
+	printf("\nOverview of accessible drives (%d found) :\n",
+		n_drives);
+	printf("-----------------------------------------------------------------------------\n");
+	for (i = 0; i < n_drives; i++) {
+		if (burn_drive_get_adr(&(drives[i]), adr) <=0)
+			strcpy(adr, "-get_adr_failed-");
+		printf("%d  --drive '%s'  :  '%s'  '%s'\n",
+			i,adr,drives[i].vendor,drives[i].product);
+	}
+printf("-----------------------------------------------------------------------------\n\n");
+
+	if (driveno < 0) {
+		printf("Pseudo-drive \"-\" given : bus scanning done.\n");
+		return 2; /* only return 1 will cause a burn */
+	}
+
+	/* We already made our choice via command line. (default is 0) */
+	if (n_drives <= driveno || driveno < 0) {
+		fprintf(stderr,
+			"Found only %d drives. Number %d not available.\n",
+			n_drives,driveno);
+		return 0;
+	}
 
 
 	/* Now save yourself from sysadmins' revenge */
@@ -176,7 +212,14 @@ int burn_app_aquire_by_driveno(int driveno)
 }
 
 
-/** Brings the preformatted image (ISO 9660 or whatever) onto media.
+/** Brings the preformatted image (ISO 9660, afio, ext2, whatever) onto media.
+
+    To make sure your image is readable on any Linux machine, you should
+    add at least 300 kB of padding. This program will not do this for you.
+    For a file on disk, do:
+      dd if=/dev/zero bs=1K count=300 >>my_image_file
+    For on-the-fly streams it suffices to add the 300 kB to the argument for
+    --stdin_size (which is then needed due to lack of TAO mode).
 
     Without a signal handler it is quite dangerous to abort the process
     while this function is active. See cdrskin/cdrskin.c and its usage
@@ -194,7 +237,7 @@ int burn_app_aquire_by_driveno(int driveno)
     i believe. But cdrecord had long years of time to complete itself.
     We are still practicing. Help us with that. :))
 */
-void burn_iso(struct burn_drive *drive, const char *path, off_t size)
+void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 {
 	struct burn_source *src;
 	struct burn_disc *disc;
@@ -259,21 +302,28 @@ void burn_iso(struct burn_drive *drive, const char *path, off_t size)
 
 #ifdef Burniso_raw_mode_which_i_do_not_likE
 	/* This yields higher CD capacity but hampers my IDE controller
-	   with burning on one drive and reading on another simultaneously */
+	   with burning on one drive and reading on another simultaneously.
+	   My burner does not obey the order --try_to_simulate in this mode.
+        */
 	burn_write_opts_set_write_type(o, BURN_WRITE_RAW, BURN_BLOCK_RAW96R);
-#endif
+#else
 
 	/* This is by what cdrskin competes with cdrecord -sao which
 	   i understand is the mode preferrably advised by Joerg Schilling */
 	burn_write_opts_set_write_type(o, BURN_WRITE_SAO, BURN_BLOCK_SAO);
+
+#endif
 	if(simulate_burn)
 		printf("\n*** Will TRY to SIMULATE burning ***\n\n");
 	burn_write_opts_set_simulate(o, simulate_burn);
 	burn_structure_print_disc(disc);
 	burn_drive_set_speed(drive, 0, 0);
-	burn_disc_write(o, disc);
-	burn_write_opts_free(o);
+	burn_write_opts_set_underrun_proof(o, 1);
 
+	printf("Burning starts. Expect up to a minute of zero progress.\n");
+	burn_disc_write(o, disc);
+
+	burn_write_opts_free(o);
 	while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING) ;
 	while (burn_drive_get_status(drive, &p)) {
 		printf("S: %d/%d ", p.session, p.sessions);
@@ -307,6 +357,9 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 			if (i >= argc) {
 				printf("--drive requires an argument\n");
 				exit(3);
+			} else if (strcmp(argv[i], "-") == 0) {
+				*drive_adr = no_drive_adr;
+				*driveno = -1;
 			} else if (isdigit(argv[i][0])) {
 				*drive_adr = no_drive_adr;
 				*driveno = atoi(argv[i]);
@@ -336,18 +389,35 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 		} else
 			*iso = argv[i];
 	}
-	if (help || !*iso) {
+	if (help || ( (!*iso) && *driveno >= 0) ) {
 		printf("Usage: %s\n", argv[0]);
-		printf("       [--drive <address>|<driveno>] [--stdin_size <bytes>] [--verbose <level>]\n");
+		printf("       [--drive <address>|<driveno>|\"-\"]\n");
+		printf("       [--stdin_size <bytes>] [--verbose <level>]\n");
 		printf("       [--burn_for_real|--try_to_simulate] <imagefile>|\"-\"\n");
-		exit(EXIT_FAILURE);
+		printf("Examples\n");
+		printf("A bus scan (needs rw-permissions to see a drive):\n");
+		printf("  %s --drive -\n",argv[0]);
+		printf("Burn a file to drive chosen by number:\n");
+		printf("  %s --drive 0 --burn_for_real my_image_file\n",
+			argv[0]);
+		printf("Burn a file to drive chosen by persistent address:\n");
+		printf("  %s --drive /dev/hdc --burn_for_real my_image_file\n",
+			argv[0]);
+		printf("Burn a compressed afio archive on-the-fly, pad up to 700 MB:\n");
+		printf("  ( cd my_directory ; find . -print | afio -oZ - ) | \\\n");
+                printf("  %s --drive /dev/hdc --burn_for_real --stdin_size 734003200  -\n",
+			argv[0]);
+		printf("To be read from *not mounted* CD via:\n");
+		printf("   afio -tvZ /dev/hdc\n");
+		printf("Program tar would need a clean EOF which our padded CD cannot deliver.\n");
+		exit(4);
 	}
 }
 
 
 int main(int argc, char **argv)
 {
-	int driveno = 0;
+	int driveno = 0, ret;
 	char *iso = NULL, *drive_adr= NULL;
 	off_t stdin_size= 650*1024*1024;
 
@@ -362,12 +432,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (burn_app_aquire_drive(drive_adr,driveno)<=0) {
+	ret= burn_app_aquire_drive(drive_adr,driveno);
+	if (ret<=0) {
 		fprintf(stderr,"\nFATAL: Failed to aquire drive.\n");
 		return 2;
 	}
-
-	burn_iso(drives[driveno].drive, iso, stdin_size);
+	if (ret == 1)
+		burn_app_payload(drives[driveno].drive, iso, stdin_size);
 
 	burn_drive_info_free(drives);
 	burn_finish();
