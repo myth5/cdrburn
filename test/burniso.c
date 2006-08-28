@@ -5,8 +5,8 @@
 #include <libburn/libburn.h>
 
 /** IMPORTANT: By default this program tries to make a simulated burn
-               on the CD recorder. Some obey, some do not.
-               If you want to burn really readable CD for sure by default,
+	       on the CD recorder. Some obey, some do not.
+	       If you want to burn really readable CD for sure by default,
 	       then set this macro to 0 .
 	       Explicit options: --burn_for_real  and  --try_to_simulate
 */
@@ -144,7 +144,7 @@ int burn_app_aquire_by_driveno(int driveno)
 	/* Now save yourself from sysadmins' revenge */
 
 	/* If n_drives == 1 this would be not really necessary, though.
-           You could now call burn_drive_grab() and avoid libburn restart.
+	   You could now call burn_drive_grab() and avoid libburn restart.
 	   We don't try to be smart here and follow the API's strong urge. */
 
 	if (burn_drive_get_adr(&(drives[driveno]), adr) <=0) {
