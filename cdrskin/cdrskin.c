@@ -3923,12 +3923,10 @@ track_too_large:;
          printf(
         "cdrskin: NOTE : augmenting non-tao write mode by tao_to_sao_tsize\n");
          printf("cdrskin: NOTE : fixed size : %.f\n",skin->fixed_size);
-/* >>> upcoming problem fix
        } else if(skin->fixed_size<=0) {
          fprintf(stderr,
  "cdrskin: FATAL : \"-\" (stdin) needs a fixed tsize= or tao_to_sao_tsize=\n");
          return(0);
-*/
        }
      } else if(skin->preskin->allow_fd_source==0 && 
                argv[i][0]=='#' && (argv[i][1]>='0' && argv[i][1]<='9')) {
