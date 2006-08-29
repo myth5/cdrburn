@@ -6,7 +6,7 @@ A cdrecord compatible command line interface for libburn.
 
 Originally inspired by libburn-0.2/test/burniso.c 
 (c) Derek Foreman <derek@signalmarketing.com> and Ben Jansens <xor@orodu.net>
-Provided under GPL.
+Provided under GPL. See future commitment below.
 
 This project is neither directed against original cdrecord nor does it exploit
 any source code of said program. It rather tries to be an alternative method
@@ -82,6 +82,15 @@ achieved by most cdrskin runs. The remaining problem situations should now
 be defused by releasing any short time grabbed flocks of drives during the
 restart of libburn.
 
+------------------------------------------------------------------------------
+This program is currently copyright Thomas Schmitt only.
+I, Thomas Schmitt, commit myself to grant to anybody on mere request the right
+to use this under BSD license, i.e. completely free of the special obligations
+of GPL. But note well, it is here and now only granted under GPL.
+Any person with a BSD license is explictely entitled to grant a GPL with
+or without changes to a BSD licensed original. Nothing else is intended
+by me. It is only that i want to grant others the same rights that i claim
+effectively for me. And for me i do claim the rights of a BSD license.
 ------------------------------------------------------------------------------
 
 Compilation within cdrskin-* :
