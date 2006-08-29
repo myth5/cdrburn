@@ -2090,6 +2090,7 @@ int Cdrskin_adjust_speed(struct CdrskiN *skin, int flag)
                 bit0= skin->driveno points to a valid drive. The library
                       will get reopened with that drive listed as only one
                       and already grabbed.
+                bit1= do not load drive tray
     @return  1 = success , 
              0 = failure, drive is released, library initialized
             -1 = failure, library is finished (and could not get initialized)
@@ -2122,7 +2123,7 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
    fprintf(stderr,"cdrskin : FATAL : Re-initialization of libburn failed\n");
    {ret= -1; goto ex;}
  }
- ret= Cdrskin_grab_drive(skin,1); /* uses burn_drive_scan_and_grab() */
+ ret= Cdrskin_grab_drive(skin,1|(flag&2));/* uses burn_drive_scan_and_grab() */
  if(ret<=0)
    {ret=0; goto ex;}
 
@@ -2141,6 +2142,7 @@ ex:
     @param flag Bitfield for control purposes:
                 bit0= bus is unscanned, device is known, 
                       use burn_drive_scan_and_grab()
+                bit1= do not load drive tray
     @return <=0 error, 1 success
 */
 int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
@@ -2174,7 +2176,8 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    fprintf(stderr,
       "cdrskin: experimental: Cdrskin_grab_drive() from shutdown libburn\n");
 
-   ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,1);
+   ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,
+                                 !(flag&2));
    if(ret<=0) {
      fprintf(stderr,"cdrskin: experimental: burn_drive_scan_and_grab ret=%d\n",
                    ret);
@@ -2187,7 +2190,7 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    if(strlen(skin->preskin->device_adr)<=0) {
      fprintf(stderr,
         "cdrskin: experimental: Cdrskin_grab_drive() restarting libburn\n");
-     ret= Cdrskin_reinit_lib_with_adr(skin,1);
+     ret= Cdrskin_reinit_lib_with_adr(skin,1|(flag&2));
      goto ex; /* this calls Cdrskin_grab() with persistent address or fails */
    }
 
@@ -3447,7 +3450,7 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
- if(Cdrskin_grab_drive(skin,0)>0)
+ if(Cdrskin_grab_drive(skin,2)>0)
     Cdrskin_release_drive(skin,1);
  if(skin->verbosity>=Cdrskin_verbose_debuG)   
   ClN(fprintf(stderr,"cdrskin_debug: supposing drive eject to have worked\n"));
