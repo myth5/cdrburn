@@ -2232,14 +2232,17 @@ ex:;
 }
 
 
-/** Release grabbed libburn drive */
+/** Release grabbed libburn drive 
+    @param flag Bitfield for control purposes:
+                bit0= eject
+*/
 int Cdrskin_release_drive(struct CdrskiN *skin, int flag)
 {
  if((!skin->drive_is_grabbed) || skin->grabbed_drive==NULL) {
    fprintf(stderr,"cdrskin: CAUGHT : release of non-grabbed drive.\n");
    return(0);
  }
- burn_drive_release(skin->grabbed_drive,skin->do_eject);
+ burn_drive_release(skin->grabbed_drive,(flag&1));
  skin->drive_is_grabbed= 0;
  skin->grabbed_drive= NULL;
  return(1);
@@ -3441,17 +3444,19 @@ ex:;
 */
 int Cdrskin_eject(struct CdrskiN *skin, int flag)
 {
- int ret;
- char adr[Cdrskin_adrleN];
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
+ if(Cdrskin_grab_drive(skin,0)>0)
+    Cdrskin_release_drive(skin,1);
  if(skin->verbosity>=Cdrskin_verbose_debuG)   
   ClN(fprintf(stderr,"cdrskin_debug: supposing drive eject to have worked\n"));
  return(1);
 
 #else /* Cdrskin_burn_drive_eject_brokeN */
 
+ int ret;
+ char adr[Cdrskin_adrleN];
  char cmd[5*Cdrskin_strleN+16],shellsafe[5*Cdrskin_strleN+2];
  
  if(!skin->do_eject)
