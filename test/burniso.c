@@ -21,11 +21,14 @@
     approaches are shown here in application functions:
        burn_app_aquire_by_adr()    demonstrates usage as of cdrecord traditions
        burn_app_aquire_by_driveno()     demonstrates a scan-and-choose approach
-    With that aquired drive you can burn to CD-R or blank CD-RW.
-    This is demonstrated in:
+    With that aquired drive you blank a CD-RW
+       burn_app_blank_disc()
+    Between blanking and burning one eventually has to reload the drive status
+       burn_app_regrab()
+    With the aquired drive you can burn to CD-R or blank CD-RW
        burn_app_payload()
-    When everything is done, main() shuts down libburn by
-       burn_drive_info_free()
+    When everything is done, main() releases the drive and shuts down libburn:
+       burn_drive_release();
        burn_finish()
 */
 
@@ -51,11 +54,6 @@
 #include <stdlib.h>
 
 
-/* Some in-advance definitions to allow a more comprehensive ordering
-   of the functions and their explanations in here */
-int burn_app_aquire_by_adr(char *drive_adr);
-int burn_app_aquire_by_driveno(int drive_no);
-
 
 /** This is a rough example. For simplicity it uses global variables.
     Drives are systemwide global, so we do not give away much of good style.
@@ -74,6 +72,13 @@ static unsigned int n_drives;
 static int simulate_burn = Burniso_try_to_simulatE ;
 
 
+/* Some in-advance definitions to allow a more comprehensive ordering
+   of the functions and their explanations in here */
+int burn_app_aquire_by_adr(char *drive_adr);
+int burn_app_aquire_by_driveno(int *drive_no);
+
+
+/* ------------------------------- API gestures ---------------------------- */
 
 /** You need to aquire a drive before burning. The API offers this as one
     compact call and alternatively as application controllable gestures of
@@ -90,7 +95,7 @@ static int simulate_burn = Burniso_try_to_simulatE ;
     locking of block devices. Others possibly don't. Some kernels do
     nevertheless impose locking on open drives anyway (e.g. SuSE 9.0, 2.4.21).
 */
-int burn_app_aquire_drive(char *drive_adr, int driveno)
+int burn_app_aquire_drive(char *drive_adr, int *driveno)
 {
 	int ret;
 
@@ -100,6 +105,7 @@ int burn_app_aquire_drive(char *drive_adr, int driveno)
 		ret = burn_app_aquire_by_driveno(driveno);
 	return ret;
 }
+
 
 /** If the persistent drive address is known, then this approach is much
     more un-obtrusive to the systemwide livestock of drives. Only the
@@ -118,6 +124,7 @@ int burn_app_aquire_by_adr(char *drive_adr)
 	return ret;
 }
 
+
 /** This method demonstrates how to use libburn without knowing a persistent
     drive address in advance. It has to make sure that after assessing the
     list of available drives, all drives get closed again. Only then it is
@@ -126,7 +133,7 @@ int burn_app_aquire_by_adr(char *drive_adr)
     restarting it again with the much more un-obtrusive approach to use
     a persistent address and thus to only touch the one desired drive.
 */
-int burn_app_aquire_by_driveno(int driveno)
+int burn_app_aquire_by_driveno(int *driveno)
 {
 	char adr[BURN_DRIVE_ADR_LEN];
 	int ret, i;
@@ -163,16 +170,16 @@ int burn_app_aquire_by_driveno(int driveno)
 	}
 printf("-----------------------------------------------------------------------------\n\n");
 
-	if (driveno < 0) {
+	if (*driveno < 0) {
 		printf("Pseudo-drive \"-\" given : bus scanning done.\n");
 		return 2; /* only return 1 will cause a burn */
 	}
 
 	/* We already made our choice via command line. (default is 0) */
-	if (n_drives <= driveno || driveno < 0) {
+	if (n_drives <= *driveno || *driveno < 0) {
 		fprintf(stderr,
 			"Found only %d drives. Number %d not available.\n",
-			n_drives,driveno);
+			n_drives, *driveno);
 		return 0;
 	}
 
@@ -183,14 +190,14 @@ printf("------------------------------------------------------------------------
 	   You could now call burn_drive_grab() and avoid libburn restart.
 	   We don't try to be smart here and follow the API's strong urge. */
 
-	if (burn_drive_get_adr(&(drives[driveno]), adr) <=0) {
+	if (burn_drive_get_adr(&(drives[*driveno]), adr) <=0) {
 		fprintf(stderr,
 		"Cannot inquire persistent drive address of drive number %d\n",
-			driveno);
+			*driveno);
 		return 0;
 	}
 	printf("Detected '%s' as persistent address of drive number %d\n",
-		adr,driveno);
+		adr,*driveno);
 
 /* In cdrskin this causes a delayed sigsegv. I understand we risk only
    a small memory leak by not doing:
@@ -208,7 +215,93 @@ printf("------------------------------------------------------------------------
 		return 0;
 	}
 	ret = burn_app_aquire_by_adr(adr);
+	if (ret > 0)
+		*driveno = 0;
 	return ret;
+}
+
+
+/** Makes a previously used CD-RW ready for thorough re-usal.
+
+    To our knowledge it is hardly possible to abort an ongoing blank operation
+    because after start it is entirely handled by the drive.
+    So expect a blank run to survive the end of the blanking process and be
+    patient for the usual timespan of a normal blank run. Only after that
+    time has surely elapsed, only then you should start any rescue attempts
+    with the drive. If necessary at all.
+*/
+int burn_app_blank_disc(struct burn_drive *drive, int blank_fast)
+{
+	enum burn_disc_status s;
+	struct burn_progress p;
+	int do_blank = 0;
+
+#ifdef Blank_late_grab_obsoletion_revoke_and_faiL
+        /* This is obsoleted now by the burn_app_aquire* functions.
+           There is no real benefit in grabbing late.
+           Beneficial is to scan only one drive.
+        */ 
+	if (!burn_drive_grab(drive, 1)) {
+		fprintf(stderr, "Unable to open the drive!\n");
+		return;
+	}
+#endif /* Blank_late_grab_obsoletion_revoke_and_faiL */
+
+	while (burn_drive_get_status(drive, NULL))
+		usleep(1000);
+
+	while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
+		usleep(1000);
+	printf(
+	 "Drive media status:  %d  (see  libburn/libburn.h  BURN_DISC_*)\n",s);
+	do_blank = 0;
+	if (s == BURN_DISC_BLANK) {
+		fprintf(stderr,
+		  "IDLE: Blank CD media detected. Will leave it untouched\n");
+	} else if (s == BURN_DISC_FULL || s == BURN_DISC_APPENDABLE) {
+		do_blank = 1;
+	} else if (s == BURN_DISC_EMPTY) {
+		fprintf(stderr,"FATAL: No media detected in drive\n");
+	} else {
+		fprintf(stderr,
+			"FATAL: Cannot recognize drive and media state\n");
+	}
+	if(do_blank && !burn_disc_erasable(drive)) {
+		fprintf(stderr,
+		       "FATAL : Media is not of erasable type\n");
+		do_blank = 0;
+	}
+	if (!do_blank)
+		return 2;
+
+	printf(
+	    "Beginning to %s-blank CD media. Will display sector numbers.\n",
+		(blank_fast?"fast":"full"));
+	printf(
+          "Expect some garbage numbers and some 0 sector numbers at first.\n");
+	burn_disc_erase(drive, blank_fast);
+	while (burn_drive_get_status(drive, &p)) {
+		printf("%d\n", p.sector);
+		sleep(2);
+	}
+	printf("Done\n");
+	return 1;
+
+}
+
+
+/** This gesture is necessary to get the drive info after blanking */
+int burn_app_regrab(struct burn_drive *drive) {
+	int ret;
+
+	printf("Releasing and regrabbing drive ...\n");
+	burn_drive_release(drive, 0);
+	ret = burn_drive_grab(drive, 0);
+	if (ret != 0)
+	 	printf("done\n");
+	else
+	 	printf("Failed\n");
+	return !!ret;
 }
 
 
@@ -237,7 +330,7 @@ printf("------------------------------------------------------------------------
     i believe. But cdrecord had long years of time to complete itself.
     We are still practicing. Help us with that. :))
 */
-void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
+int burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 {
 	struct burn_source *src;
 	struct burn_disc *disc;
@@ -262,7 +355,7 @@ void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 
 	if (burn_track_set_source(tr, src) != BURN_SOURCE_OK) {
 		printf("problem with the source\n");
-		return;
+		return 0;
 	}
 	burn_session_add_track(session, tr, BURN_POS_END);
 	burn_source_free(src);
@@ -274,7 +367,7 @@ void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 	*/
 	if (!burn_drive_grab(drive, 1)) {
 		printf("Unable to open the drive!\n");
-		return;
+		return 0;
 	}
 #endif /* Burniso_late_grab_obsoletion_revoke_and_faiL */
 
@@ -285,7 +378,6 @@ void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 	while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
 		usleep(1000);
 	if (s != BURN_DISC_BLANK) {
-		burn_drive_release(drive, 0);
 		if (s == BURN_DISC_FULL || s == BURN_DISC_APPENDABLE) 
 			fprintf(stderr,
 		       "FATAL: Media with data detected. Need blank media.\n");
@@ -294,7 +386,7 @@ void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 		else
 			fprintf(stderr,
 			    "FATAL: Cannot recognize drive and media state\n");
-		return;
+		return 0;
 	}
 
 	o = burn_write_opts_new(drive);
@@ -333,26 +425,41 @@ void burn_app_payload(struct burn_drive *drive, const char *path, off_t size)
 		sleep(2);
 	}
 	printf("\n");
-	burn_drive_release(drive, 0);
 	burn_track_free(tr);
 	burn_session_free(session);
 	burn_disc_free(disc);
 	if(simulate_burn)
 		printf("\n*** Did TRY to SIMULATE burning ***\n\n");
+	return 0;
 }
+
 
 /** Converts command line arguments into a few program parameters.
 */
 void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
-		 char **iso, off_t *size)
+		int *do_blank, char **iso, off_t *size)
 {
-	int i;
+	int i, insuffient_parameters = 0;
 	int help = 0;
-	static char no_drive_adr[]= {""};
+	static char no_drive_adr[] = {""}, no_iso[] = {""};
 
 	*drive_adr = no_drive_adr;
+	*driveno = 0;
+	*do_blank = 0;
+	*iso = no_iso;
+	*size = 650*1024*1024;
+
 	for (i = 1; i < argc; ++i) {
-		if (!strcmp(argv[i], "--drive")) {
+		if (!strcmp(argv[i], "--blank_fast")) {
+			*do_blank = 1;
+
+		} else if (!strcmp(argv[i], "--blank_full")) {
+			*do_blank = 2;
+
+		} else if (!strcmp(argv[i], "--burn_for_real")) {
+			simulate_burn = 0;
+
+		} else if (!strcmp(argv[i], "--drive")) {
 			++i;
 			if (i >= argc) {
 				printf("--drive requires an argument\n");
@@ -365,12 +472,6 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 				*driveno = atoi(argv[i]);
 			} else
 				*drive_adr = argv[i];
-		} else if (!strcmp(argv[i], "--burn_for_real")) {
-			simulate_burn = 0;
-
-		} else if (!strcmp(argv[i], "--try_to_simulate")) {
-			simulate_burn = 1;
-
 		} else if (!strcmp(argv[i], "--stdin_size")) {
 			++i;
 			if (i >= argc) {
@@ -378,6 +479,9 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 				exit(3);
 			} else
 				*size = atoi(argv[i]);
+		} else if (!strcmp(argv[i], "--try_to_simulate")) {
+			simulate_burn = 1;
+
 		} else if (!strcmp(argv[i], "--verbose")) {
 			++i;
 			if (i >= argc)
@@ -389,11 +493,14 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 		} else
 			*iso = argv[i];
 	}
-	if (help || ( (!*iso) && *driveno >= 0) ) {
+	if ((*iso)[0] ==0 && *driveno >= 0 && *do_blank == 0)
+		insuffient_parameters = 1;
+	if (help || insuffient_parameters ) {
 		printf("Usage: %s\n", argv[0]);
 		printf("       [--drive <address>|<driveno>|\"-\"]\n");
-		printf("       [--stdin_size <bytes>] [--verbose <level>]\n");
-		printf("       [--burn_for_real|--try_to_simulate] <imagefile>|\"-\"\n");
+		printf("       [--verbose <level>] [--blank_fast|--blank_full]\n");
+		printf("       [--burn_for_real|--try_to_simulate] [--stdin_size <bytes>]\n");
+		printf("       <imagefile>|\"-\"\n");
 		printf("Examples\n");
 		printf("A bus scan (needs rw-permissions to see a drive):\n");
 		printf("  %s --drive -\n",argv[0]);
@@ -410,18 +517,21 @@ void parse_args(int argc, char **argv, char **drive_adr, int *driveno,
 		printf("To be read from *not mounted* CD via:\n");
 		printf("   afio -tvZ /dev/hdc\n");
 		printf("Program tar would need a clean EOF which our padded CD cannot deliver.\n");
-		exit(4);
+		if (insuffient_parameters)
+			exit(4);
 	}
 }
 
 
 int main(int argc, char **argv)
 {
-	int driveno = 0, ret;
-	char *iso = NULL, *drive_adr= NULL;
-	off_t stdin_size= 650*1024*1024;
+	/* Note: the effective default values are set in parse_args() */
+	int driveno = 0, ret, do_blank= 0;
+	char *iso = "", *drive_adr= "";
+	off_t stdin_size= 0;
 
-	parse_args(argc, argv, &drive_adr, &driveno, &iso, &stdin_size);
+	parse_args(argc, argv, &drive_adr, &driveno, &do_blank, 
+		   &iso, &stdin_size);
 
 	printf("Initializing library ...\n");
 	if (burn_initialize())
@@ -432,15 +542,39 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	ret= burn_app_aquire_drive(drive_adr,driveno);
+	/** Note: driveno might change its value in this call */
+	ret= burn_app_aquire_drive(drive_adr, &driveno);
+
 	if (ret<=0) {
 		fprintf(stderr,"\nFATAL: Failed to aquire drive.\n");
-		return 2;
+		{ ret = 2; goto finish_libburn; }
 	}
-	if (ret == 1)
-		burn_app_payload(drives[driveno].drive, iso, stdin_size);
+	if (do_blank) {
+		ret = burn_app_blank_disc(drives[driveno].drive,
+					  do_blank == 1);
+		if (ret<=0)
+			{ ret = 4; goto release_drive; }
+		ret = burn_app_regrab(drives[driveno].drive);
+		if (ret<=0) {
+			fprintf(stderr,
+	        "FATAL: Cannot release and grab again drive after blanking\n");
+			{ ret = 5; goto finish_libburn; }
+		}
+	}
+	if (iso[0] != 0) {
+		ret = burn_app_payload(drives[driveno].drive, iso, stdin_size);
+		if (ret<=0)
+			{ ret = 6; goto release_drive; }
+	}
+	ret = 0;
+release_drive:;
+	burn_drive_release(drives[driveno].drive, 0);
 
-	burn_drive_info_free(drives);
+finish_libburn:;
+	/* This app does not bother to know about exact scan state. 
+	   Better to accept a memory leak here. We are done anyway. */
+	/* burn_drive_info_free(drives); */
+
 	burn_finish();
-	return 0;
+	return ret;
 }
