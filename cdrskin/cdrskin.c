@@ -3450,6 +3450,8 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
+ if(!skin->do_eject)
+   return(1);
  if(Cdrskin_grab_drive(skin,2)>0)
     Cdrskin_release_drive(skin,1);
  if(skin->verbosity>=Cdrskin_verbose_debuG)   
