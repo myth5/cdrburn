@@ -682,6 +682,10 @@ struct CdrfifO {
 
 /* --------------------------------------------------------------------- */
 
+/** cdrecord pads up to 600 kB in any case. 
+    libburn yields blank result on tracks <~ 600 kB */
+static double Cdrtrack_minimum_sizE= 600*1024;
+
 
 /** This structure represents a track resp. a data source */
 struct CdrtracK {
@@ -829,6 +833,12 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
          track->fixed_size= stbuf.st_size;
      }
    }
+ }
+ if(track->fixed_size<Cdrtrack_minimum_sizE) {
+   fprintf(stderr,
+           "cdrskin: NOTE : Enforcing minimum track size of %.f bytes\n",
+           Cdrtrack_minimum_sizE);
+   track->fixed_size= Cdrtrack_minimum_sizE;
  }
  track->source_fd= *fd;
  return(*fd>=0);
