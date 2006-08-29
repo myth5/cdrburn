@@ -163,6 +163,7 @@ or
 
 #ifdef Cdrskin_new_api_tesT
 #define Cdrskin_libburn_has_drive_get_adR 1
+#define Cdrskin_libburn_does_ejecT 1
 #endif
 
 #endif /* Cdrskin_libburn_0_2_1 */
@@ -192,7 +193,9 @@ or
 
 /** Work around the fact that neither /dev/sg0 (kernel 2.4 + ide-scsi) nor 
     /dev/hdc (kernel 2.6) get ejected by libburn */
+#ifndef Cdrskin_libburn_does_ejecT
 #define Cdrskin_burn_drive_eject_brokeN 1
+#endif
 
 /** Work around the fact that after loading media speed report is wrong */
 #define Cdrskin_atip_speed_brokeN 1
