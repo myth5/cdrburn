@@ -85,6 +85,7 @@ libinclude_HEADERS = \
 
 ## Build test applications
 noinst_PROGRAMS = \
+	test/libburner \
 	test/blank \
 	test/burn \
 	test/burniso \
@@ -97,6 +98,9 @@ noinst_PROGRAMS = \
 	test/structest \
 	cdrskin/cdrskin
 
+test_libburner_CPPFLAGS = -Ilibburn
+test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+test_libburner_SOURCES = test/libburner.c
 test_devices_CPPFLAGS = -Ilibburn
 test_devices_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_devices_SOURCES = test/devices.c
@@ -169,6 +173,7 @@ doc-upload: doc/html
 indent_files = \
 	$(libisofs_libisofs_la_SOURCES) \
 	$(libburn_libburn_la_SOURCES) \
+	$(test_libburner_SOURCES) \
 	$(test_devices_SOURCES) \
 	$(test_poll_SOURCES) \
 	$(test_toc_SOURCES) \
