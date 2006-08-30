@@ -68,6 +68,10 @@ static struct burn_drive_info *drives;
     friendly to the users of other drives on those systems. Beware. */
 static unsigned int n_drives;
 
+/** This variable indicates wether the drive is grabbed and must be
+    finally released */
+static int drive_is_grabbed = 0;
+
 /** Wether to burn for real or to *try* to simulate a burn */
 static int simulate_burn = Burniso_try_to_simulatE ;
 
@@ -119,8 +123,10 @@ int burn_app_aquire_by_adr(char *drive_adr)
 	ret = burn_drive_scan_and_grab(&drives,drive_adr,1);
 	if (ret <= 0)
 		printf("Failed\n");
-	else
+	else {
 		printf("done\n");
+		drive_is_grabbed = 1;
+	}
 	return ret;
 }
 
@@ -295,11 +301,14 @@ int burn_app_regrab(struct burn_drive *drive) {
 	int ret;
 
 	printf("Releasing and regrabbing drive ...\n");
-	burn_drive_release(drive, 0);
+	if (drive_is_grabbed)
+		burn_drive_release(drive, 0);
+	drive_is_grabbed = 0;
 	ret = burn_drive_grab(drive, 0);
-	if (ret != 0)
+	if (ret != 0) {
+		drive_is_grabbed = 1;
 	 	printf("done\n");
-	else
+	} else
 	 	printf("Failed\n");
 	return !!ret;
 }
@@ -568,7 +577,8 @@ int main(int argc, char **argv)
 	}
 	ret = 0;
 release_drive:;
-	burn_drive_release(drives[driveno].drive, 0);
+	if(drive_is_grabbed)
+		burn_drive_release(drives[driveno].drive, 0);
 
 finish_libburn:;
 	/* This app does not bother to know about exact scan state. 
