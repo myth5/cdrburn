@@ -149,13 +149,13 @@ void sg_enumerate(void)
 	if(burn_sg_open_o_nonblock)
 		open_mode |= O_NONBLOCK;
 
+/* <<< debugging
 	fprintf(stderr,
 		"\nlibburn: experimental: o_excl= %d , o_nonblock= %d, abort_on_busy= %d\n",
 	burn_sg_open_o_excl,burn_sg_open_o_nonblock,burn_sg_open_abort_busy);
 	fprintf(stderr,
 		"libburn: experimental: O_EXCL= %d , O_NONBLOCK= %d\n",
 		!!(open_mode&O_EXCL),!!(open_mode&O_NONBLOCK));
-/* <<< debugging
           
 */
 

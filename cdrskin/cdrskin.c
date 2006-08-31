@@ -837,7 +837,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
      }
    }
  }
- if(track->fixed_size<Cdrtrack_minimum_sizE) {
+ if(track->fixed_size<Cdrtrack_minimum_sizE && *fd>=0) {
    fprintf(stderr,
            "cdrskin: NOTE : Enforcing minimum track size of %.f bytes\n",
            Cdrtrack_minimum_sizE);
@@ -1814,9 +1814,8 @@ struct CdrskiN {
  /** The list of tracks with their data sources and parameters */
  struct CdrtracK *tracklist[Cdrskin_track_maX];
  int track_counter;
- /* a guess about what track might be processing right now */
+ /** a guess about what track might be processing right now */
  int supposed_track_idx;
-
 
  int fifo_enabled;
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
@@ -2039,6 +2038,9 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
    if(i==0)
      skin->fifo= ff;
  }
+
+ /* >>> ticket 55: check all fifos for input */;
+
  return(1);
 }
 
@@ -2173,23 +2175,30 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
 
  if(flag&1) {
+/*
    fprintf(stderr,
       "cdrskin: experimental: Cdrskin_grab_drive() from shutdown libburn\n");
-
+*/
    ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,
                                  !(flag&2));
    if(ret<=0) {
+/*
      fprintf(stderr,"cdrskin: experimental: burn_drive_scan_and_grab ret=%d\n",
                    ret);
+*/
      goto unable;
    }
    skin->driveno= 0;
  } else {
+/*
    fprintf(stderr,
       "cdrskin: experimental: Cdrskin_grab_drive() on active libburn\n");
+*/
    if(strlen(skin->preskin->device_adr)<=0) {
+/*
      fprintf(stderr,
         "cdrskin: experimental: Cdrskin_grab_drive() restarting libburn\n");
+*/
      ret= Cdrskin_reinit_lib_with_adr(skin,1|(flag&2));
      goto ex; /* this calls Cdrskin_grab() with persistent address or fails */
    }
@@ -2684,8 +2693,10 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
 
 #ifdef Cdrskin_new_api_tesT
 
+/*
  fprintf(stderr,
          "cdrskin: experimental: Cdrskin_atip() on Cdrskin_new_api_tesT\n");
+*/
 
  if(strlen(skin->preskin->device_adr)<=0)
    burn_drive_get_adr(&(skin->drives[skin->driveno]),
