@@ -160,10 +160,13 @@ or
 #define Cdrskin_libburn_with_fd_sourcE 1
 #define Cdrskin_libburn_largefilE 1
 #define Cdrskin_libburn_padding_does_worK 1
+#define Cdrskin_libburn_does_ejecT 1
+#define Cdrskin_libburn_has_drive_get_adR 1
 
 #ifdef Cdrskin_new_api_tesT
-#define Cdrskin_libburn_has_drive_get_adR 1
-#define Cdrskin_libburn_does_ejecT 1
+
+/* nothing under test caveat, currently */
+
 #endif
 
 #endif /* Cdrskin_libburn_0_2_1 */
