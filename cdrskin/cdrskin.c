@@ -909,7 +909,7 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
 */
 int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
 {
- int ret;
+ int ret,buffer_fill,buffer_space;
 
  if(track->fifo==NULL || track->fifo_start_empty)
    return(2);
@@ -918,6 +918,15 @@ int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
  ret= Cdrfifo_fill(track->fifo,0);
  if(ret<=0)
    return(ret);
+
+ /* >>> ticket 55: check all fifos for input */;
+ ret= Cdrfifo_get_buffer_state(track->fifo,&buffer_fill,&buffer_space,0);
+ if(ret<0 || buffer_fill<=0) {
+   fprintf(stderr,
+         "\ncdrskin: FATAL : (First track) fifo did not read a single byte\n");
+   return(0);
+ }
+
  return(1);
 }
 
@@ -2041,9 +2050,6 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
    if(i==0)
      skin->fifo= ff;
  }
-
- /* >>> ticket 55: check all fifos for input */;
-
  return(1);
 }
 
