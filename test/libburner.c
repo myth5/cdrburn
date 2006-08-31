@@ -320,12 +320,8 @@ int libburner_regrab(struct burn_drive *drive) {
 
 /** Brings the preformatted image (ISO 9660, afio, ext2, whatever) onto media.
 
-    To make sure your image is readable on any Linux machine, you should
-    add at least 300 kB of padding. This program will not do this for you.
-    For a file on disk, do:
-      dd if=/dev/zero bs=1K count=300 >>my_image_file
-    For on-the-fly streams it suffices to add the 300 kB to the argument for
-    --stdin_size (which is then needed due to lack of TAO mode).
+    To make sure your image is fully readable on any Linux machine, this
+    function adds 300 kB of padding to the track.
 
     Without a signal handler it is quite dangerous to abort the process
     while this function is active. See cdrskin/cdrskin.c and its usage
@@ -360,7 +356,10 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 	session = burn_session_create();
 	burn_disc_add_session(target_disc, session, BURN_POS_END);
 	track = burn_track_create();
-	burn_track_define_data(track, 0, 0, 0, BURN_MODE1);
+
+	/* a padding of 300 kB is helpful to avoid the buffer-read-ahead bug */
+	burn_track_define_data(track, 0, 300*1024, 1, BURN_MODE1);
+
 	if (source_adr[0] == '-' && source_adr[1] == 0) {
 		data_src = burn_fd_source_new(0, -1, size);
 		printf("Note: using standard input as source with %.f bytes\n",
