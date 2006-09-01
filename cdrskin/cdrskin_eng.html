@@ -111,7 +111,8 @@ wishes as well as on the development of libburn.</DT>
 <UL>
 <DT></DT>
 <LI>
-No audio features yet.
+No audio features yet. (Note: Option -audio is enabled in cdrskin-0.1.5 as
+offered below, but no beheading of .au or .wav files takes place yet.)
 </LI>
 <LI>
 Burns only a single closed session. No -multi option yet.
@@ -134,7 +135,9 @@ ill peers. Alternatively one can guess the address of the ill device, remove
 rw-permissions and retry the bus scan as non-superuser.
 <LI>
 Burners other than /dev/sg0 and /dev/hdX (i.e. without ide-scsi) need a user
-supplied device address for eject.
+supplied device address for program eject. 
+(Note: -eject is now working in libburn-0.2.1 SVN and the workaround described
+here is obsolete with cdrskin-0.1.5 as offered below.)
 </LI>
 </UL>
 </P>

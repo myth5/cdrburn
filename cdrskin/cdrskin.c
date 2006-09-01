@@ -39,7 +39,7 @@ See option blank= for an example.
 About compliance with *strong urge* of API towards burn_drive_scan_and_grab() 
 
 For a more comprehensive example of the advised way to behave with libburn
-see  test/burniso.c  test/blank.c  test/devices.c .
+see  test/libburner.c .
  
 cdrskin was the initiator of the whitelist functionality within libburn.
 Now it has problems to obviously comply with the new API best practice
@@ -163,9 +163,15 @@ or
 #define Cdrskin_libburn_does_ejecT 1
 #define Cdrskin_libburn_has_drive_get_adR 1
 
+/* >>> upcoming
+#define Cdrskin_progress_track_does_worK 1
+*/
+
 #ifdef Cdrskin_new_api_tesT
 
-/* nothing under test caveat, currently */
+/* switches from old behavior with aquiring drives to new behavior */
+
+/* (put parasite macros under test caveat here) */
 
 #endif
 
@@ -205,7 +211,9 @@ or
 
 /** Work around the fact that burn_drive_get_status() always reports to do
     track 0 */
+#ifndef Cdrskin_progress_track_does_worK
 #define Cdrskin_progress_track_brokeN 1
+#endif
 
 /** Work around the fact that a drive interrupted at burn_drive_grab() never
     leaves status BURN_DRIVE_GRABBING */
@@ -1310,7 +1318,7 @@ return:
    2 end program run (--help)
 */
 {
- int i,ret;
+ int i,ret,bragg_with_audio= 0;
  char *value_pt;
 
 #ifndef Cdrskin_extra_leaN
@@ -1364,6 +1372,9 @@ return:
 
      if(argc==2)
        {ret= 2; goto final_checks;}
+
+   } else if(strcmp(argv[i],"--bragg_with_audio")==0) {
+     bragg_with_audio= 1;
 
    } else if(strcmp(argv[i],"--demand_a_drive")==0) {
      o->scan_demands_drive= 1;
@@ -1490,6 +1501,8 @@ set_dev:;
      printf(" --allow_setuid     disable setuid blocker (very insecure !)\n");
      printf(
          " --any_track        allow source_addresses to match '^-.' or '='\n");
+     printf(
+           " --bragg_with_audio list -audio as supported option with -help\n");
      printf(" --demand_a_drive   exit !=0 on bus scans with empty result\n");
      printf(" --devices          list accessible devices (tells /dev/...)\n");
      printf(
@@ -1501,8 +1514,10 @@ set_dev:;
      printf("                    (might be stalled by a busy hard disk)\n");
      printf(" --drive_not_exclusive  do not ask kernel to prevent opening\n");
      printf("                    busy drives. Effect is kernel dependend.\n");
+#ifdef Cdrskin_burn_drive_eject_brokeN
      printf(
           " eject_device=<path>  set the device address for command eject\n");
+#endif
      printf(" --fifo_disable     disable fifo despite any fs=...\n");
      printf(" --fifo_per_track   use a separate fifo for each track\n");
      printf(
@@ -1586,11 +1601,15 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-sao\t\tWrite disk in SAO mode.\n");
      fprintf(stderr,"\ttsize=#\t\tannounces exact size of source data\n");
      fprintf(stderr,"\tpadsize=#\tAmount of padding\n");
+     if(bragg_with_audio)
+       fprintf(stderr,"\t-audio\t\tSubsequent tracks are CD-DA audio tracks\n");
      fprintf(stderr,
             "\t-data\t\tSubsequent tracks are CD-ROM data mode 1 (default)\n");
      fprintf(stderr,"\t-pad\t\tpadsize=30k\n");
      fprintf(stderr,"\t-nopad\t\tDo not pad (default)\n");
      fprintf(stderr,"\t-help\t\tprint this text to stderr and exit\n");
+     fprintf(stderr,
+     "Option -audio is enabled but does no special .au or .wav processing.\n");
      fprintf(stderr,
     "By default any argument that does not match grep '^-.' or '=' is used\n");
      fprintf(stderr,
@@ -2993,6 +3012,9 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  if(p->track>0)
    skin->supposed_track_idx= p->track;
 #else /* Cdrskin_progress_track_brokeN */
+/* >>> upcomming
+ old_track_idx= 
+*/
  skin->supposed_track_idx= p->track;
 #endif /* ! Cdrskin_progress_track_brokeN */
 

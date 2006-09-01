@@ -31,7 +31,7 @@ On top of libburn there is implemented cdrskin 0.1.5, a limited cdrecord
 compatibility wrapper which allows to use some libburn features from
 the command line.
 Interested users of cdrecord are invited to participate in the development
-of cdrskin. Contact: scdbackup@gmx.net
+of cdrskin. Contact: scdbackup@gmx.net or libburn-hackers@pykix.org .
 
 
 Important :
@@ -92,10 +92,6 @@ It will not collide with an installed version of libburn either.
 But libpthread must be installed on the system and glibc has to match. (See
 below for a way to create a statically linked binary.)
 
-Up to now i discourage to install the emerging libraries and to use them
-with other programs. Unless you need my patches, better use vanilla libburn
-for that.
-
 
                                     Usage
 
@@ -140,18 +136,25 @@ Obtain some info about the drive and the inserted media
     cdrskin dev=1,1,0 -atip 
 
 Thoroughly blank a CD-RW
-    cdrskin -v dev=1,1,0 blank=all eject_device=/dev/cdrom -eject 
+    cdrskin -v dev=1,1,0 blank=all -eject 
 
 Blank CD-RW sufficiently for making it ready for overwrite
-    cdrskin -v dev=1,1,0 blank=fast eject_device=/dev/cdrom -eject 
+    cdrskin -v dev=1,1,0 blank=fast -eject 
 
 Burn image file  my_image.iso  to CD
     cdrskin -v dev=1,1,0 speed=12 fs=8m -sao driveropts=burnfree padsize=300k \
-            eject_device=/dev/cdrom -eject  my_image.iso 
+            -eject  my_image.iso 
 
 Burn a compressed afio archive to CD on-the-fly
     find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao \
                                   driveropts=burnfree padsize=300k tsize=650m - 
+
+Burn 4 audio tracks to CD
+    ogg123 -d raw -f track01.cd /path/to/track1.ogg
+    oggdec -R -o track02.cd /path/to/track2.ogg
+    lame --decode -t -o track03.cd /path/to/track3.mp3
+    mppdec --raw-le /path/to/track4.mpc track04.cd
+    cdrskin dev=/dev/hdc blank=fast fs=0 -eject -audio track0[1-4].cd
 
 
            Usage example with  http://scdbackup.sourceforge.net
@@ -167,7 +170,7 @@ or a device file address as listed by --devices with an accessible drive :
 
 Set usage of cdrskin with appropriate options rather than cdrecord :
 
-    export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m eject_device=/dev/cdrw"
+    export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m"
 
 Run a backup :
 
@@ -181,12 +184,12 @@ Therefore it has to be defaulted to mode SAO which needs to know the track
 size in advance. non-cdrecord option  tao_to_sao_tsize=650m  causes each CD
 to get burned up to 650 MB regardless of the payload size.
 
-Command eject does not work with /dev/sgX and there is no easy way to determine
-a drive's device file address which is suitable for eject.
-So this address has to be supplied by eject_device=... unless your drive is
-/dev/sg0 which is guessed as eject_device=/dev/sr0 .
+Audio features are incomplete in respect to cdrecord. Well prepaired track
+files should get burned flawlessly, thanks to Lorenzo Taylor.
+Builtin extraction of raw audio data from filetypes .au and .wav is not
+implemented yet. See chapter "Audio CD" for details.
 
-No audio features, no multi session ... Please report your wishes.
+No multi session yet ... Please report your wishes.
 
 
                            Inspiration and Standard
@@ -270,6 +273,45 @@ dev=1,1,0
 dev_translation=+1,0,0+1,1,0
 --fifo_start_empty
 fs=16m
+
+
+                                  Audio CD
+
+Builtin extraction of raw audio data from filetypes .au and .wav is not
+implemented yet. Lorenzo Taylor enabled option -audio in cdrskin (thanks !)
+and reports neat results with audio data files which are :
+  headerless 
+  44100Hz 
+  16bit, stereo (or 4-channel if the 4-channel bit is set),
+  little-endian byte order
+He proposes to extract them from usual audio formats by commands like
+given above under "Usage examples".
+
+The existence of cdrecord-builtin .wav extraction seems to have
+hampered the development of a standalone stripping tool. If you know
+a command line that would do the trick, contact me or libburn.pykix.org .
+I myself am not into audio. So libburn-hackers@pykix.org might be the
+best address for requests and bug reports.
+
+Lorenzo also reports of a frontend tool which he italked into burning
+automatically extracted files via cdrskin:
+  http://www.bigpaul.org/burn/
+which in its configuration file burn.conf would need something like this
+in the executables section:
+  ogg_decoder_option = -q -d raw -f
+  mp3_decoder_option = --quiet --decode -t -o
+  cdrecord = /usr/local/bin/cdrskin #or wherever you copied it
+  mp3_decoder = /usr/bin/lame
+  ogg_decoder = /usr/bin/ogg123
+And in general section:
+  external_decoding = yes
+
+The burning command would then be:
+  burn -A -a file1.ogg file2.mp3 file3.mp3 file4.ogg
+
+This way still has a little flaw caused by cdrskin's misinterpretation
+of option -pad which puts silent gaps between tracks rather than to
+just fill up the final record of a track. We work on it.
 
 
                         Special compilation variations
