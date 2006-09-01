@@ -357,7 +357,7 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 	burn_disc_add_session(target_disc, session, BURN_POS_END);
 	track = burn_track_create();
 
-	/* a padding of 300 kB is helpful to avoid the buffer-read-ahead bug */
+	/* a padding of 300 kB is helpful to avoid the read-ahead bug */
 	burn_track_define_data(track, 0, 300*1024, 1, BURN_MODE1);
 
 	if (source_adr[0] == '-' && source_adr[1] == 0) {
