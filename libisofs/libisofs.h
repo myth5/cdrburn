@@ -80,6 +80,41 @@ void iso_volume_set_data_preparer_id(struct iso_volume *volume,
 				     const char *data_preparer_id);
 
 /**
+ * Locate a node by its path on disc.
+ * 
+ * \param volume The volume to search in.
+ * \param path The path, in the image, of the file.
+ *
+ * \return The node found or NULL.
+ *
+ */
+struct iso_tree_node *iso_tree_volume_path_to_node(struct iso_volume *volume, const char *path);
+
+/**
+ * Add a file or a directory (recursively) to a volume by specifying its path on the volume.
+ *
+ * \param volume The volume to add the file to.
+ * \param disc_path The path on the disc at which to add the disc.
+ * \param path The path, on the local filesystem, of the file.
+ *
+ * \return The node for the file or NULL if the parent doesn't exists on the disc.
+ */
+struct iso_tree_node *iso_tree_volume_add_path(struct iso_volume *volume,
+				 					const char *disc_path,
+									const char *path);
+
+/**
+ * Creates a new, empty directory on the volume.
+ *
+ * \param volume The volume to add the directory to.
+ * \param disc_path The path on the volume at which to add the directory.
+ *
+ * \return A pointer to the newly created directory.
+ */
+struct iso_tree_node *iso_tree_volume_add_new_dir(struct iso_volume *volume,
+				 					const char *disc_path);
+
+/**
  * Create a new Volume Set consisting of only one volume.
  * @param volume The first and only volume for the volset to contain.
  * @param volset_id The Volume Set ID.

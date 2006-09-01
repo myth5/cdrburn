@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "libisofs.h"
 #include "tree.h"
@@ -87,4 +88,100 @@ void iso_volume_free(struct iso_volume *volume)
 struct iso_tree_node *iso_volume_get_root(const struct iso_volume *volume)
 {
 	return volume->root;
+}
+
+struct iso_tree_node *
+iso_tree_volume_path_to_node(struct iso_volume *volume, const char *path)
+{
+	struct iso_tree_node *node;
+	char *ptr, *brk_info, *component;
+
+	/* get the first child at the root of the volume
+	 * that is "/" */
+	node=iso_volume_get_root(volume);
+	if (!strcmp (path, "/"))
+		return node;
+
+	if (!node->nchildren)
+		return NULL;
+
+	/* the name of the nodes is in wide characters so first convert path
+	 * into wide characters. */
+	ptr = strdup(path);
+
+	/* get the first component of the path */
+	component=strtok_r(ptr, "/", &brk_info);
+	while (component) {
+		size_t max;
+		size_t i;
+
+		/* search among all the children of this directory if this path component exists */
+		max=node->nchildren;
+		for (i=0; i < max; i++) {
+			if (!strcmp(component, node->children[i]->name)) {
+				node=node->children[i];
+				break;
+			}
+		}
+
+		/* see if a node could be found */
+		if (i==max) {
+			node=NULL;
+			break;
+		}
+
+		component=strtok_r(NULL, "/", &brk_info);
+	}
+
+	free(ptr);
+	return node;	
+}
+
+struct iso_tree_node *
+iso_tree_volume_add_path(struct iso_volume *volume,
+					 const char *disc_path,
+					 const char *path)
+{
+	char *tmp;
+	struct iso_tree_node *node;
+	struct iso_tree_node *parent_node;
+
+	tmp=strdup(disc_path);
+	parent_node = iso_tree_volume_path_to_node(volume, dirname(tmp));
+	free(tmp);
+
+	if (!parent_node)
+		return NULL;
+
+	node = iso_tree_radd_dir(parent_node, path);
+	if (!node)
+		return NULL;
+
+	tmp=strdup(disc_path);
+	iso_tree_node_set_name(node, basename(tmp));
+	free(tmp);
+
+	return node;
+}
+
+struct iso_tree_node *
+iso_tree_volume_add_new_dir(struct iso_volume *volume,
+	 				      const char *disc_path)
+{
+	char *tmp;
+	struct iso_tree_node *node;
+	struct iso_tree_node *parent_node;
+
+	tmp=strdup(disc_path);
+	parent_node = iso_tree_volume_path_to_node(volume, dirname(tmp));
+	free(tmp);
+
+	if (!parent_node)
+		return NULL;
+
+	tmp=strdup(disc_path);
+	node = iso_tree_add_new_dir(parent_node, basename(tmp));
+	free(tmp);
+
+	return node;
 }
