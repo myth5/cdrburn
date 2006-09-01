@@ -22,6 +22,7 @@
 #include "tree.h"
 #include "util.h"
 #include "volume.h"
+#include "exclude.h"
 
 static void
 set_default_stat(struct stat *s)
@@ -157,6 +158,11 @@ iso_tree_radd_dir (struct iso_tree_node *parent, const char *path)
 			continue;
 
 		sprintf(child, "%s/%s", path, ent->d_name);
+
+		/* see if this child is excluded. */
+		if (iso_exclude_lookup(child))
+			continue;
+
 		iso_tree_radd_dir(new, child);
 	}
 	closedir(dir);

@@ -117,6 +117,26 @@ struct iso_tree_node *iso_tree_add_node(struct iso_tree_node *parent,
 struct iso_tree_node *iso_tree_radd_dir(struct iso_tree_node *parent,
 					const char *path);
 
+
+/**
+ * Add the path of a file or directory to ignore when adding a directory recursively.
+ *
+ * \param path The path, on the local filesystem, of the file.
+ */
+void iso_exclude_add_path(const char *path);
+
+/**
+ * Remove a path that was set to be ignored when adding a directory recusively.
+ * 
+ * \param path The path, on the local filesystem, of the file.
+ */
+void iso_exclude_remove_path(const char *path);
+
+/**
+ * Remove all paths that were set to be ignored when adding a directory recusively.
+ */
+void iso_exclude_empty(void);
+
 /**
  * Creates a new, empty directory on the volume.
  *

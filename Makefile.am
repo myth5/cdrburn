@@ -75,7 +75,11 @@ libisofs_libisofs_la_SOURCES = \
 	libisofs/rockridge.h \
 	libisofs/rockridge.c \
 	libisofs/joliet.c \
-	libisofs/joliet.h 
+	libisofs/joliet.h \
+	libisofs/exclude.c \
+	libisofs/exclude.h \
+	libisofs/hash.h \
+	libisofs/hash.c 
 
 libinclude_HEADERS = \
 	libburn/libburn.h \
