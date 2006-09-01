@@ -392,7 +392,10 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	d->progress.sectors = sectors;
 	d->progress.sector = 0;
 
-	burn_print(12, "track is %d sectors long\n", sectors);
+	/* ts A60831: added tnum-line, extended print message on proposal
+           by bonfire-app@wanadoo.fr in http://libburn.pykix.org/ticket/58 */
+        d->progress.track = tnum;
+        burn_print(12, "track %d is %d sectors long\n", tnum, sectors);
 
 	if (tnum == s->tracks)
 		tmp = sectors > 150 ? 150 : sectors;

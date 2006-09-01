@@ -163,9 +163,7 @@ or
 #define Cdrskin_libburn_does_ejecT 1
 #define Cdrskin_libburn_has_drive_get_adR 1
 
-/* >>> upcoming
 #define Cdrskin_progress_track_does_worK 1
-*/
 
 #ifdef Cdrskin_new_api_tesT
 
@@ -2951,6 +2949,7 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  int ret,fifo_percent,fill,space,advance_interval=0,new_mb,old_mb,time_to_tell;
  int fs,bs,old_track_idx;
  char fifo_text[80],mb_text[40];
+ char *debug_mark= ""; /* use this to prepend a marker text for experiments */
 
  /* for debugging */
  static double last_fifo_in= 0.0,last_fifo_out= 0.0,curr_fifo_in,curr_fifo_out;
@@ -3001,9 +3000,9 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
 
  written_bytes= written_total_bytes-*last_count;
 
+ old_track_idx= skin->supposed_track_idx;
 #ifdef Cdrskin_progress_track_brokeN
  /* with libburn.0.2 there is always reported 0 as p->track */
- old_track_idx= skin->supposed_track_idx;
  if(written_bytes<0) { /* track hop ? */
    if(skin->supposed_track_idx+1<skin->track_counter)
      skin->supposed_track_idx++;
@@ -3012,9 +3011,6 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  if(p->track>0)
    skin->supposed_track_idx= p->track;
 #else /* Cdrskin_progress_track_brokeN */
-/* >>> upcomming
- old_track_idx= 
-*/
  skin->supposed_track_idx= p->track;
 #endif /* ! Cdrskin_progress_track_brokeN */
 
@@ -3022,8 +3018,8 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
    Cdrtrack_get_size(skin->tracklist[old_track_idx],&fixed_size,&padding,0);
    if(skin->verbosity>=Cdrskin_verbose_progresS)
      printf("\n");
-   printf("Track %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-          old_track_idx+1,fixed_size,fixed_size,fixed_size/2048.0);
+   printf("%sTrack %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
+          debug_mark,old_track_idx+1,fixed_size,fixed_size,fixed_size/2048.0);
  }
 
  if(written_total_bytes<1024*1024) {
@@ -3136,8 +3132,8 @@ thank_you_for_patience:;
                (int) ((fixed_size+padding)/1024.0/1024.0));
      } else
        sprintf(mb_text,"%4d",(int) (written_total_bytes/1024.0/1024.0));
-     printf("\rTrack %-2.2d: %s MB written %s[buf  50%%]  %4.1fx.",
-            skin->supposed_track_idx+1,mb_text,fifo_text,
+     printf("\r%sTrack %-2.2d: %s MB written %s[buf  50%%]  %4.1fx.",
+            debug_mark,skin->supposed_track_idx+1,mb_text,fifo_text,
             measured_speed/Cdrskin_cd_speed_factoR);
      fflush(stdout);
    }
