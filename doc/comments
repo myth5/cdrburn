@@ -1,16 +1,78 @@
 /**
-   @author Dana Jansens, Derek Foreman
+   @author Mario Danic, Thomas Schmitt
 
    @mainpage Libburn Documentation Index
 
    @section intro Introduction
 
-   Libburn is an open source library suite for reading, mastering and writing
-   optical discs.
+Libburn is an open-source library for reading, mastering and writing
+optical discs. For now this means only CD-R and CD-RW.
 
-   @section using Using the library
+The project comprises of several more or less interdependent parts which
+together strive to be a usable foundation for application development.
+These are libraries, language bindings, and middleware binaries which emulate
+classical (and valuable) Linux tools.
 
-   @subsection concepts Library concepts
+Our scope is currently Linux 2.4 and 2.6 and we will have a hard time to widen
+this for now, because of our history. The project could need advise from or
+membership of skilled kernel people and people who know how to talk CD/DVD
+drives into doing things.
+
+We do have a workable code base for burning data CDs, though. The burn API is
+quite comprehensively documented and can be used to build a presentable
+application.
+We do have a functional binary which emulates parts of cdrecord in order to
+prove that usability, and in order to allow you to explore libburn's scope
+by help of existing cdrecord frontends.
+
+The project components (list subject to growth, hopefully):
+
+- libburn  the library by which preformatted data get onto optical media.
+           It uses either /dev/sgN (e.g. on kernel 2.4 with ide-scsi) or
+           /dev/hdX (e.g. on kernel 2.6).
+           libburn is the foundation of our cdrecord emulation.
+
+- libisofs the library to pack up hard disk files and directories into a
+           ISO 9660 disk image. This may then be brought to CD via libburn.
+           libisofs is to be the foundation of our upcoming mkisofs emulation.
+
+- cdrskin  a limited cdrecord compatibility wrapper for libburn.
+           cdrecord is a powerful GPL'ed burn program included in Joerg
+           Schilling's cdrtools. cdrskin strives to be a second source for
+           the services traditionally provided by cdrecord.
+           cdrskin does not contain any bytes copied from cdrecord's sources.
+           Many bytes have been copied from the message output of cdrecord
+           runs, though.
+           See cdrskin/README for more.
+
+- test     a collection of application gestures and examples given by the
+           authors of the library features. cdrskin for example originally
+           emerged from test/burniso.c and you can see traces of my first
+           steps in there. Explore these examples if you look for inspiration.
+
+We plan to be a responsive upstream. Bear with us. We are still practicing.
+Our build system is based on autotools which seem to be a bit smarter than me.
+User experience tells us that you will need at least autotools version 1.7.
+
+To build libburn and its subprojects it should be sufficient to go into
+its toplevel directory and execute
+   ./bootstrap  (needed if you downloaded from SVN and not a release tarball)
+   ./configure
+   make
+
+To make the libraries accessible for running resp. developing applications 
+   make install
+
+   @section using Using the libraries
+
+   Both libraries are written in C language and get built by autotools.
+   Thus we expect them to be useable by a wide range of Linux-implemented
+   languages and development tools.
+
+   For the libburn library there is a reference and demo application
+   test/libburner
+
+   @subsection concepts Libburn library concepts
 
    There are a few concepts to introduce in order for you to understand how to
    use Libburn. So, lets start with them:
@@ -33,20 +95,24 @@
    steps:
 
    <ol>
-   <li> Initialize the library. (If not already done; a single instance of
-        the library can perform multiple operations simultaneously with
-        multiple drives.)
-   <li> Scan for available Drives.
-   <li> Choose and grab a Drive for reading/writing.
+   <li> Initialize the library.
+   <li> Depends on wether you know the persisten drive address in advance
+      If yes:
+      2a. Aquire this drive alone and directly by function
+          burn_drive_scan_and_grab() and be done until step 5
+      If no address known yet:
+      2b. Scan for available Drives..
+   <li>b Choose a Drive for reading/writing and inquire its persistent address.
+   <li>b Shut down library, re-initialize it and like in step 2a aquire the
+       chosen drive by function burn_drive_scan_and_grab()
    <li> Fill in the options for the operation.
-   <li> Wait for the operation to complete, displaying status along the way
-        if desired.
+   <li> Wait for the operation to complete, displaying status along the wayi
+      if desired.
    <li> Release the Drive.
-   <li> Destroy the library instance. (If you're done working with the
-        library.)
+   <li> Destroy the library instance. (If you're done working with the library.)
    </ol>
 
-   Here's a very simple example of burning an ISO file
+   Here's a minimal demo application for the libburn library
 
-   @include burniso.c
+   @include libburner.c
 */
