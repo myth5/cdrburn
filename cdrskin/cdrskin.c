@@ -707,6 +707,7 @@ struct CdrtracK {
   
  char source_path[Cdrskin_strleN];
  int source_fd;
+ int is_from_stdin;
  double fixed_size;
  double padding;
  int track_type;
@@ -735,6 +736,7 @@ int Cdrtrack_destroy(struct CdrtracK **o, int flag);
     @param trackno The index in the cdrskin tracklist array (is not constant)
     @param flag Bitfield for control purposes:
                 bit0= set fifo_start_empty to 1
+                bit1= track is originally stdin
 */
 int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
                  int trackno, int flag)
@@ -754,6 +756,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->trackno= trackno;
  o->source_path[0]= 0;
  o->source_fd= -1;
+ o->is_from_stdin= !!(flag&2);
  o->fixed_size= 0.0;
  o->padding= 0.0;
  o->track_type= BURN_MODE1;
@@ -915,7 +918,7 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
 */
 int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
 {
- int ret;
+ int ret,buffer_fill,buffer_space;
 
  if(track->fifo==NULL || track->fifo_start_empty)
    return(2);
@@ -924,21 +927,16 @@ int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
  ret= Cdrfifo_fill(track->fifo,0);
  if(ret<=0)
    return(ret);
- return(1);
-}
 
-/** Ticket 55: check fifos for input, throw error on 0-bytes
+/** Ticket 55: check fifos for input, throw error on 0-bytes from stdin
     @return <=0 abort run, 1 go on with burning
 */
-int Cdrtrack_demand_fifo_data(struct CdrtracK *track, int flag)
-{
- int ret,buffer_fill,buffer_space;
-
- ret= Cdrfifo_get_buffer_state(track->fifo,&buffer_fill,&buffer_space,0);
- if(ret<0 || buffer_fill<=0) {
-   fprintf(stderr,
-         "\ncdrskin: FATAL : (First track) fifo did not read a single byte\n");
-   return(0);
+ if(track->is_from_stdin) {
+   ret= Cdrfifo_get_buffer_state(track->fifo,&buffer_fill,&buffer_space,0);
+   if(ret<0 || buffer_fill<=0) {
+     fprintf(stderr,"\ncdrskin: FATAL : (First track) fifo did not read a single byte from stdin\n");
+     return(0);
+   }
  }
  return(1);
 }
@@ -1523,9 +1521,6 @@ set_dev:;
      printf(
           " eject_device=<path>  set the device address for command eject\n");
 #endif
-     printf(
-         " --fifo_abort_on_empty  abort if first fifo fill yields no bytes\n");
-     printf("                    (disabled by: --fifo_start_empty)\n");
      printf(" --fifo_disable     disable fifo despite any fs=...\n");
      printf(" --fifo_per_track   use a separate fifo for each track\n");
      printf(
@@ -1802,17 +1797,6 @@ static double Cdrskin_libburn_cd_speed_factoR= 176.0;
 static double Cdrskin_libburn_cd_speed_addoN= 50.0;
 
 
-/** Default settings which deviate from cdrecord but are actually deemed
-    preferrable over original cdrecord behavior. To be set from outside.
-*/
-#ifdef Cdrskin_fifo_abort_on_emptY
-#undef Cdrskin_fifo_abort_on_emptY
-#define Cdrskin_fifo_abort_on_emptY 1
-#else
-#define Cdrskin_fifo_abort_on_emptY 0
-#endif /* ! Cdrskin_fifo_abort_on_emptY */
-
-
 /** The program run control object. Defaults: see Cdrskin_new(). */
 struct CdrskiN {
 
@@ -1881,7 +1865,6 @@ struct CdrskiN {
  int fifo_size;
  int fifo_start_empty;
  int fifo_per_track;
- int fifo_abort_on_empty;
 
 
  /** User defined address translation */
@@ -1973,7 +1956,6 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->fifo_size= 4*1024*1024;
  o->fifo_start_empty= 0;
  o->fifo_per_track= 0;
- o->fifo_abort_on_empty= Cdrskin_fifo_abort_on_emptY;
  o->adr_trn= NULL;
  o->drives= NULL;
  o->n_drives= 0;
@@ -2107,11 +2089,6 @@ int Cdrskin_fill_fifo(struct CdrskiN *skin, int flag)
    return(ret);
  printf("input buffer ready.\n");
  fflush(stdout);
- if(skin->fifo_abort_on_empty) {
-   ret= Cdrtrack_demand_fifo_data(skin->tracklist[0],0);
-   if(ret<=0)
-     return(ret);
- }
  return(1);
 }
 
@@ -3826,9 +3803,6 @@ set_driveropts:;
 
 #ifndef Cdrskin_extra_leaN
 
-   } else if(strcmp(argv[i],"--fifo_abort_on_empty")==0) {
-     skin->fifo_abort_on_empty= 1;
-
    } else if(strcmp(argv[i],"--fifo_disable")==0) {
      skin->fifo_enabled= 0;
      skin->fifo_size= 0;
@@ -4053,7 +4027,8 @@ track_too_large:;
        return(0);
      }
      ret= Cdrtrack_new(&(skin->tracklist[skin->track_counter]),skin,
-                       skin->track_counter,0);
+                       skin->track_counter,
+                       (strcmp(skin->source_path,"-")==0)<<1);
      if(ret<=0) {
        fprintf(stderr,
                "cdrskin: FATAL : creation of track control object failed.\n");
