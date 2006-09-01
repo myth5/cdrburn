@@ -915,7 +915,7 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
 */
 int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
 {
- int ret,buffer_fill,buffer_space;
+ int ret;
 
  if(track->fifo==NULL || track->fifo_start_empty)
    return(2);
@@ -924,15 +924,22 @@ int Cdrtrack_fill_fifo(struct CdrtracK *track, int flag)
  ret= Cdrfifo_fill(track->fifo,0);
  if(ret<=0)
    return(ret);
+ return(1);
+}
 
- /* >>> ticket 55: check all fifos for input */;
+/** Ticket 55: check fifos for input, throw error on 0-bytes
+    @return <=0 abort run, 1 go on with burning
+*/
+int Cdrtrack_demand_fifo_data(struct CdrtracK *track, int flag)
+{
+ int ret,buffer_fill,buffer_space;
+
  ret= Cdrfifo_get_buffer_state(track->fifo,&buffer_fill,&buffer_space,0);
  if(ret<0 || buffer_fill<=0) {
    fprintf(stderr,
          "\ncdrskin: FATAL : (First track) fifo did not read a single byte\n");
    return(0);
  }
-
  return(1);
 }
 
@@ -1516,6 +1523,9 @@ set_dev:;
      printf(
           " eject_device=<path>  set the device address for command eject\n");
 #endif
+     printf(
+         " --fifo_abort_on_empty  abort if first fifo fill yields no bytes\n");
+     printf("                    (disabled by: --fifo_start_empty)\n");
      printf(" --fifo_disable     disable fifo despite any fs=...\n");
      printf(" --fifo_per_track   use a separate fifo for each track\n");
      printf(
@@ -1792,6 +1802,17 @@ static double Cdrskin_libburn_cd_speed_factoR= 176.0;
 static double Cdrskin_libburn_cd_speed_addoN= 50.0;
 
 
+/** Default settings which deviate from cdrecord but are actually deemed
+    preferrable over original cdrecord behavior. To be set from outside.
+*/
+#ifdef Cdrskin_fifo_abort_on_emptY
+#undef Cdrskin_fifo_abort_on_emptY
+#define Cdrskin_fifo_abort_on_emptY 1
+#else
+#define Cdrskin_fifo_abort_on_emptY 0
+#endif /* ! Cdrskin_fifo_abort_on_emptY */
+
+
 /** The program run control object. Defaults: see Cdrskin_new(). */
 struct CdrskiN {
 
@@ -1860,6 +1881,7 @@ struct CdrskiN {
  int fifo_size;
  int fifo_start_empty;
  int fifo_per_track;
+ int fifo_abort_on_empty;
 
 
  /** User defined address translation */
@@ -1951,6 +1973,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->fifo_size= 4*1024*1024;
  o->fifo_start_empty= 0;
  o->fifo_per_track= 0;
+ o->fifo_abort_on_empty= Cdrskin_fifo_abort_on_emptY;
  o->adr_trn= NULL;
  o->drives= NULL;
  o->n_drives= 0;
@@ -2084,6 +2107,11 @@ int Cdrskin_fill_fifo(struct CdrskiN *skin, int flag)
    return(ret);
  printf("input buffer ready.\n");
  fflush(stdout);
+ if(skin->fifo_abort_on_empty) {
+   ret= Cdrtrack_demand_fifo_data(skin->tracklist[0],0);
+   if(ret<=0)
+     return(ret);
+ }
  return(1);
 }
 
@@ -2349,7 +2377,7 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
                "cdrskin: ABORT : Will wait for current operation to end\n");
      }
      if(drive_status!=BURN_DRIVE_IDLE) {
-       fprintf(stderr,"cdrskin: ABORT : Normally abort processing is done after at most a minute\n");
+       fprintf(stderr,"cdrskin: ABORT : Usually abort processing is done after at most a minute\n");
        fprintf(stderr,"cdrskin: URGE : But wait at least the normal burning time before any kill -9\n");
      }
      last_time= start_time= Sfile_microtime(0);
@@ -3697,6 +3725,9 @@ set_blank:;
        printf("cdrskin: blank mode : blank=%s\n",
             (skin->blank_fast?"fast":"all"));
 
+   } else if(strcmp(argv[i],"--bragg_with_audio")==0) {
+     /* is handled in Cdrpreskin_setup() */;
+
    } else if(strcmp(argv[i],"-checkdrive")==0) {
      skin->do_checkdrive= 1;
 
@@ -3794,6 +3825,9 @@ set_driveropts:;
 
 
 #ifndef Cdrskin_extra_leaN
+
+   } else if(strcmp(argv[i],"--fifo_abort_on_empty")==0) {
+     skin->fifo_abort_on_empty= 1;
 
    } else if(strcmp(argv[i],"--fifo_disable")==0) {
      skin->fifo_enabled= 0;
