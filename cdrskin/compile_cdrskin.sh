@@ -31,6 +31,9 @@ do
   elif test "$i" = "-newapi"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
+  elif test "$i" = "-fifo_abort_on_empty"
+  then
+    def_opts="$def_opts -DCdrskin_fifo_abort_on_emptY"
   elif test "$i" = "-do_not_compile_cdrskin"
   then
     compile_cdrskin=0
@@ -57,6 +60,8 @@ do
     echo "  -cvs_A51208       set macro to match libburn-CVS of 8 Dec 2005."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
+    echo "  -fifo_abort_on_empty  make --fifo_abort_on_empty  default."
+    echo "  -newapi           follow newer API style guide."
     echo "  -do_diet          produce capability reduced lean version."
     echo "  -do_strip         apply program strip to compiled programs."
     echo "  -g                compile with cc option -g."
