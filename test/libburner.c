@@ -629,18 +629,47 @@ finish_libburn:;
 
 /*  License and copyright aspects:
 
-    Here and now this is provided under GPL only.
-    Read. Try. Think. Play. Write yourself some code. Be free of my copyright.
+This all is provided under GPL.
+Read. Try. Think. Play. Write yourself some code. Be free of my copyright.
 
-    Be also invited to study the code of cdrskin/cdrskin.c et al.
+Be also invited to study the code of cdrskin/cdrskin.c et al.
 
-    If you can tell me a good reason why not to start your application from
-    scratch or to derive a first version with joint copyright and then
-    carefully strip off my code, then ask me for a BSD license. :)
 
-    libburner is a compilation of my own contributions to test/burniso.c and
-    fresh code which replaced the remaining parts under copyright of
-    Derek Foreman.
-    My respect and my thanks to Derek for providing me a start back in 2005.
+Clarification in my name and in the name of Mario Danic, copyright holder
+on toplevel of libburn. To be fully in effect after the remaining other
+copyrighted code has been replaced by ours and by copyright-free contributions
+of our friends:
+
+We, the copyright holders, agree on the interpretation that
+dynamical linking of our libraries constitutes "use of" and
+not "derivation from" our work in the sense of GPL, provided
+those libraries are compiled from our unaltered code.
+
+Thus you may link our libraries dynamically with applications
+which are not under GPL. You may distribute our libraries and
+application tools in binary form, if you fulfill the usual
+condition of GPL to offer a copy of the source code -altered
+or unaltered- under GPL.
+
+We ask you politely to use our work in open source spirit
+and with the due reference to the entire open source community.
+
+If there should really arise the case where above clarification
+does not suffice to fulfill a clear and neat request in open source
+spirit that would otherwise be declined for mere formal reasons,
+only in that case we will duely consider to issue a special license
+covering only that special case.
+It is the open source idea of responsible freedom which will be
+decisive and you will have to prove that you exhausted all own
+means to qualify for GPL.
+
+For now we are firmly committed to maintain one single license: GPL.
+
+History:
+libburner is a compilation of my own contributions to test/burniso.c and
+fresh code which replaced the remaining parts under copyright of
+Derek Foreman.
+My respect and my thanks to Derek for providing me a start back in 2005.
+
 */
 
