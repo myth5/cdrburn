@@ -116,13 +116,13 @@ To make the libraries accessible for running resp. developing applications
 
    @section libburner Libburner
 
-    libburner is a minimal demo application for the library libburn as provided
-  on  http://libburn.pykix.org . It can list the available devices, can
-  blank a CD-RW and can burn to CD-R or CD-RW.
-  It's main purpose, nevertheless, is to show you how to use libburn and also
-  to serve the libburn team as reference application. libburner.c does indeed
-  define the standard way how above three gestures can be implemented and
-  stay upward compatible for a good while.
+    libburner is a minimal demo application for the library libburn (see: libburn.h)
+    as provided on  http://libburn.pykix.org . It can list the available devices, can
+    blank a CD-RW and can burn to CD-R or CD-RW.
+    It's main purpose, nevertheless, is to show you how to use libburn and also
+    to serve the libburn team as reference application. libburner.c does indeed
+    define the standard way how above three gestures can be implemented and
+    stay upward compatible for a good while.
 
    @subsection libburner-help Libburner --help
 
