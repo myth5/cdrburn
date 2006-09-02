@@ -140,12 +140,12 @@ To make the libraries accessible for running resp. developing applications
 
    <ol>
    <li> A bus scan (needs rw-permissions to see a drive): test/libburner --drive -
-   <ol> Burn a file to drive chosen by number: test/libburner --drive 0 --burn_for_real my_image_file  
-   <ol> Burn a file to drive chosen by persistent address: test/libburner --drive /dev/hdc --burn_for_real my_image_file
-   <ol> Blank a used CD-RW (is combinable with burning in one run): test/libburner --drive 0 --blank_fast
-   <ol> Burn a compressed afio archive on-the-fly, pad up to 700 MB: ( cd my_directory ; find . -print | afio -oZ - ) | \
+   <li> Burn a file to drive chosen by number: test/libburner --drive 0 --burn_for_real my_image_file  
+   <li> Burn a file to drive chosen by persistent address: test/libburner --drive /dev/hdc --burn_for_real my_image_file
+   <li> Blank a used CD-RW (is combinable with burning in one run): test/libburner --drive 0 --blank_fast
+   <li> Burn a compressed afio archive on-the-fly, pad up to 700 MB: ( cd my_directory ; find . -print | afio -oZ - ) | \
         test/libburner --drive /dev/hdc --burn_for_real --stdin_size 734003200  -
-   <ol>To be read from *not mounted* CD via: afio -tvZ /dev/hdc
+   <li>To be read from *not mounted* CD via: afio -tvZ /dev/hdc
    Program tar would need a clean EOF which our padded CD cannot deliver.
-
+   </ol>
 */
