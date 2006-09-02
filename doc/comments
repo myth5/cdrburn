@@ -50,8 +50,7 @@ by help of existing cdrecord frontends.
            emerged from test/burniso.c and you can see traces of my first
            steps in there. Explore these examples if you look for inspiration.
 
-We plan to be a responsive upstream. Bear with us. We are still practicing.
-Our build system is based on autotools.
+We plan to be a responsive upstream. Bear with us. Our build system is based on autotools.
 User experience tells us that you will need at least autotools version 1.7.
 
 To build libburn and its subprojects it should be sufficient to go into
