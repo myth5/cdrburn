@@ -710,6 +710,7 @@ struct CdrtracK {
  int is_from_stdin;
  double fixed_size;
  double padding;
+ int set_by_padsize;
  int track_type;
 
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
@@ -745,7 +746,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  int ret;
  int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                         double *fixed_size, double *padding,
-                        int *track_type, int flag);
+                        int *set_by_padsize, int *track_type, int flag);
  int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
                           int *fifo_size, int *fifo_start_empty, int flag);
 
@@ -759,6 +760,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->is_from_stdin= !!(flag&2);
  o->fixed_size= 0.0;
  o->padding= 0.0;
+ o->set_by_padsize= 0;
  o->track_type= BURN_MODE1;
  o->fifo_enabled= 0;
  o->fifo= NULL;
@@ -767,7 +769,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->fifo_start_empty= 0;
  o->libburn_track= NULL;
  ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),
-                         &(o->track_type),0);
+                         &(o->set_by_padsize),&(o->track_type),0);
  if(ret<=0)
    goto failed;
 
@@ -957,7 +959,7 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  struct burn_track *tr;
  struct burn_source *src= NULL;
  double padding,lib_padding;
- int ret;
+ int ret,sector_pad_up;
 #ifdef Cdrskin_libburn_with_fd_sourcE
  double fixed_size;
  int source_fd;
@@ -966,19 +968,31 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  track->trackno= trackno;
  tr= burn_track_create();
  track->libburn_track= tr;
- if(track->padding>0)
-   padding= track->padding;
- else
-   padding= 0.0;
+ padding= 0.0;
+ sector_pad_up= 0;
+ if(track->padding>0) {
+   if(track->set_by_padsize || track->track_type!=BURN_AUDIO)
+     padding= track->padding;
+   else
+     sector_pad_up= 1;
+ }
+   
  if(flag&2)
    lib_padding= 0.0;
  else
    lib_padding= padding;
- if(flag&1)
-   ClN(fprintf(stderr,
+ if(flag&1) {
+   if(sector_pad_up) {
+     ClN(fprintf(stderr,"cdrskin_debug: track %d telling burn_track_define_data() to pad up last sector\n",trackno+1));
+   }
+   if(lib_padding>0 || !sector_pad_up) {
+     ClN(fprintf(stderr,
  "cdrskin_debug: track %d telling burn_track_define_data() to pad %.f bytes\n",
            trackno+1,lib_padding));
- burn_track_define_data(tr,0,(int) lib_padding,1,track->track_type);
+   }
+ }
+ burn_track_define_data(tr,0,(int) lib_padding,sector_pad_up,
+                        track->track_type);
 
 #ifdef Cdrskin_libburn_with_fd_sourcE
  if(track->source_fd==-1) {
@@ -2014,12 +2028,13 @@ int Cdrskin_destroy(struct CdrskiN **o, int flag)
 /** Return information about current track source */
 int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                        double *fixed_size, double *padding,
-                       int *track_type, int flag)
+                       int *set_by_padsize, int *track_type, int flag)
 {
  strcpy(source_path,skin->source_path);
  *fixed_size= skin->fixed_size;
  *padding= skin->padding;
  *track_type= skin->track_type;
+ *set_by_padsize= skin->set_by_padsize;
  return(1);
 }
 
