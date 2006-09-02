@@ -25,7 +25,7 @@ We do have a functional binary which emulates parts of cdrecord in order to
 prove that usability, and in order to allow you to explore libburn's scope
 by help of existing cdrecord frontends.
 
-The project components (list subject to growth, hopefully):
+@subsection components The project components (list subject to growth, hopefully):
 
 - libburn  the library by which preformatted data get onto optical media.
            It uses either /dev/sgN (e.g. on kernel 2.4 with ide-scsi) or
@@ -45,13 +45,13 @@ The project components (list subject to growth, hopefully):
            runs, though.
            See cdrskin/README for more.
 
-- test     a collection of application gestures and examples given by the
+- "test"   is a collection of application gestures and examples given by the
            authors of the library features. cdrskin for example originally
            emerged from test/burniso.c and you can see traces of my first
            steps in there. Explore these examples if you look for inspiration.
 
 We plan to be a responsive upstream. Bear with us. We are still practicing.
-Our build system is based on autotools which seem to be a bit smarter than me.
+Our build system is based on autotools.
 User experience tells us that you will need at least autotools version 1.7.
 
 To build libburn and its subprojects it should be sufficient to go into
@@ -68,6 +68,8 @@ To make the libraries accessible for running resp. developing applications
    Both libraries are written in C language and get built by autotools.
    Thus we expect them to be useable by a wide range of Linux-implemented
    languages and development tools.
+
+   We are still practicing.
 
    For the libburn library there is a reference and demo application
    test/libburner
