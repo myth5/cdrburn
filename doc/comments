@@ -127,24 +127,43 @@ To make the libraries accessible for running resp. developing applications
    @subsection libburner-help Libburner --help
 
    Usage: test/libburner
-       [--drive <address>|<driveno>|"-"]
-       [--verbose <level>] [--blank_fast|--blank_full]
-       [--burn_for_real|--try_to_simulate] [--stdin_size <bytes>]
-       [<imagefile>|"-"]
+       
+	[--drive <address>|<driveno>|"-"]
+
+        [--verbose <level>] [--blank_fast|--blank_full]
+ 
+        [--burn_for_real|--try_to_simulate] [--stdin_size <bytes>]
+ 
+        [<imagefile>|"-"]
+
    Examples
+
    A bus scan (needs rw-permissions to see a drive):
+
    test/libburner --drive -
+
    Burn a file to drive chosen by number:
+
    test/libburner --drive 0 --burn_for_real my_image_file  
+
    Burn a file to drive chosen by persistent address:
+
    test/libburner --drive /dev/hdc --burn_for_real my_image_file
+
    Blank a used CD-RW (is combinable with burning in one run):
+
    test/libburner --drive 0 --blank_fast
+
    Burn a compressed afio archive on-the-fly, pad up to 700 MB:
+
    ( cd my_directory ; find . -print | afio -oZ - ) | \
+
    test/libburner --drive /dev/hdc --burn_for_real --stdin_size 734003200  -
+
    To be read from *not mounted* CD via:
+
    afio -tvZ /dev/hdc
+
    Program tar would need a clean EOF which our padded CD cannot deliver.
 
 */
