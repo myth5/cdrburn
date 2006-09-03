@@ -139,4 +139,6 @@ We are still practicing.
   <dd>To be read from *not mounted* CD via: afio -tvZ /dev/hdc
   <dd> Program tar would need a clean EOF which our padded CD cannot deliver.
   </dl>
+
+@include libburner.c
 */
