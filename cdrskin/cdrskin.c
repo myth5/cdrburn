@@ -84,13 +84,22 @@ restart of libburn.
 
 ------------------------------------------------------------------------------
 This program is currently copyright Thomas Schmitt only.
-I, Thomas Schmitt, commit myself to grant to anybody on mere request the right
-to use this under BSD license, i.e. completely free of the special obligations
-of GPL. But note well, it is here and now only granted under GPL.
-Any person with a BSD license is explictely entitled to grant a GPL with
-or without changes to a BSD licensed original. Nothing else is intended
-by me. It is only that i want to grant others the same rights that i claim
-effectively for me. And for me i do claim the rights of a BSD license.
+The copyrights of several components of libburn.pykix.org are willfully tangled
+at toplevel to form an irrevocable commitment to true open source spirit.
+We have chosen the GPL for legal compatibility and clearly express that it
+shall not hamper the use of our software by non-GPL applications which show
+otherwise the due respect to the open source community.
+See toplevel README and cdrskin/README for that commitment.
+
+For a short time, this place showed a promise to release a BSD license on
+mere request. I have to retract that promise now, and replace it by the
+promise to make above commitment reality in a way that any BSD conformant
+usage in due open source spirit will be made possible somehow and in the
+particular special case. I will not raise public protest if you spawn yourself
+a BSD license from an (outdated) cdrskin.c which still bears that old promise.
+Note that this extended commitment is valid only for cdrskin.[ch],
+cdrfifo.[ch] and cleanup.[ch], but not for libburn.pykix.org as a whole.
+
 ------------------------------------------------------------------------------
 
 Compilation within cdrskin-* :
