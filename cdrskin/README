@@ -164,6 +164,7 @@ Burn 5 audio tracks to CD
     cdrskin dev=/dev/hdc blank=fast fs=0 -eject -audio track0[1-5].cd
 
 
+
            Usage example with  http://scdbackup.sourceforge.net
 
 Address may be a cdrecord-style  "scsibus,target,lun"  as listed with
@@ -298,27 +299,7 @@ The existence of cdrecord-builtin .wav extraction seems to have
 hampered the development of a standalone stripping tool. If you know
 a command line that would do the trick, contact me or libburn.pykix.org .
 I myself am not into audio. So libburn-hackers@pykix.org might be the
-best address for requests and bug reports.
-
-Lorenzo also reports of a frontend tool which he talked into burning
-automatically extracted files via cdrskin:
-  http://www.bigpaul.org/burn/
-which in its configuration file burn.conf would need something like this
-in the executables section:
-  ogg_decoder_option = -q -d raw -f
-  mp3_decoder_option = --quiet --decode -t -o
-  cdrecord = /usr/local/bin/cdrskin #or wherever you copied it
-  mp3_decoder = /usr/bin/lame
-  ogg_decoder = /usr/bin/ogg123
-And in general section:
-  external_decoding = yes
-
-The burning command would then be:
-  burn -A -a file1.ogg file2.mp3 file3.mp3 file4.ogg
-
-This way still has a little flaw caused by cdrskin's misinterpretation
-of option -pad which puts silent gaps between tracks rather than to
-just fill up the final record of a track. We work on it.
+best address for suggestions, requests and bug reports.
 
 
                         Special compilation variations
