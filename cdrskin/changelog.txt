@@ -13,7 +13,7 @@ libburn-svn.pykix.org/trunk after initial merge of libburn and cdrskin-0.1.3 .
 
 ------------------------------------------------------------------------------
 
-19 Aug 2006  [in the process of being committed right now]
+19 Aug 2006  [committed 16]
 cdrskin/changelog.txt
 cdrskin-0.1.5 development started.
 Introduced this changelog.
@@ -63,7 +63,7 @@ Rectified non-ANSI-C comment, complained by gcc.
 cdrskin/cdrskin_eng.html
 The homepage moved in from scdbackup's internal doc collection.
 
-21 Aug 2006  [commited with revision 11, i fear]
+21 Aug 2006  [committed with revision 11, i fear]
 cdrskin/cdrskin.c
 Removed flaw:
 Help text of tao_to_sao_tsize= clarified.
@@ -83,4 +83,244 @@ Timestamping the new version.
 cdrskin/add_ts_changes_to_libburn_0_2_1
 cdrskin/compile_cdrskin.sh
 Readjusted relationship glue of libburn and cdrskin.
+
+--------------------------------------------------------------------- cycled -
+
+27 Aug 2006  [40]
+libburn/mmc.c
+libburn/sg.c
+Inserted prints to see how sg_issue_command() is called (printing is disabled now)
+
+21 Aug 2006  [17]
+README
+Reported obvious need for automake >=1.7
+
+21 Aug 2006  [18]
+cdrskin/cdrskin_eng.html
+cdrskin/README
+Reported obvious need for automake >=1.7
+
+22 Aug 2006  [19]
+libburn/drive.c
+libburn/drive.h
+New internal function burn_drive_is_open()
+
+23 Aug 2006  [20]
+cdrskin/cdrskin.c
+Implemented Lorenzo Taylor's audio patch manually by copy+paste
+as i wanted to fully understand it.
+Hopefully did not break it that way.
+
+24 Aug 2006  [21]
+libburn/libburn.h
+libburn/drive.c
+Introduced API functions burn_drive_scan_and_grab() burn_drive_get_adr()
+
+24 Aug 2006  [22]
+cdrskin/compile_cdrskin.sh
+Experimental option cdrskin/compile_cdrskin.sh -newapi
+
+24 Aug 2006  [23]
+cdrskin/cdrskin.c
+First test of possibility to obey the self imposed rules of Revison 21
+
+24 Aug 2006  [25]
+cdrskin/cdrskin.c
+Fixed undefined track_type introduced by revision 20.
+(We broke cdrskin, but i did not break the patch. Success.)
+
+24 Aug 2006  [30]
+libburn/libburn.h
+Hopefully fixed an unintended line break in API doxygen
+
+25 Aug 2006  [32]
+cdrskin/cdrskin.c
+Installed protection against resource leak in Cdrskin_grab_drive()
+Just to be sure.
+
+25 Aug 2006  [33]
+libburn/drive.c
+burn_drive_free() now closes all open drive file descriptors
+
+25 Aug 2006  [34]
+libburn/libburn.h
+Adjusted statement at API documention of burn_initialize()
+
+25 Aug 2006  [35]
+cdrskin/cdrskin.c
+Worked forth in order to make cdrskin fully newapi compliant
+
+26 Aug 2006  [37]
+Makefile.am
+libburn/back_hacks.h
+libburn/drive.c
+libburn/init.c
+Allowed to blank appendable files and installed first back_hacks.h variable ever
+
+26 Aug 2006  [38]
+test/burniso.c
+Rewrote it to new API practice, inflated explanation comments, SAO mode
+
+27 Aug 2006  [39]
+cdrskin/cdrskin.c
+Implemented Lorenzos blank-appendable patch plus option --no_blank_appendable
+
+27 Aug 2006  [44]
+test/blank.c
+Rewrote test/blank.c to new API practice, inflated explanation comments
+
+27 Aug 2006  [41]
+cdrskin/cdrskin.c
+Fixed obscure sigsegv introduced with 35 or 39 by obeying libburn.h text
+(could be a fandango starting in burn_drive_info_free)
+
+27 Aug 2006  [45]
+test/burniso.c
+Disabled inner burn_drive_info_free like in cdrskin, polished a bit
+
+27 Aug 2006  [43]
+libburn/libburn.h
+Changed some 'release' to 'close' with specs of burn_drive_scan_and_grab
+
+28 Aug 2006  [46]
+test/burniso.c
+Polished a bit more for doxygen
+
+28 Aug 2006  [50]
+libburn/libburn.h
+cdrskin/cdrskin.c
+Wrote into API the imperative not to use drive.location but burn_drive_get_adr
+
+28 Aug 2006  [47]
+test/burniso.c
+Integrated functionality of test/devices.c into test/burniso.c
+Proposed to rename it to test/libburner.c
+
+28 Aug 2006  [51]
+cdrskin/cdrskin.c
+Closed a pitfall with reading from '-' and no tsize= or tao_to_sao_tsize=
+Ticket 55
+
+28 Aug 2006  [52]
+cdrskin/cdrskin.c
+Added personal commitment to grant BSD license on request. Insisted in GPL for now.
+
+28 Aug 2006  [53]
+cdrskin/cdrskin.c
+Forced each track to have a minimum size of 600 kB
+Ticket 55
+
+29 Aug 2006  [58]
+test/burniso.c
+Integrated functionality of test/blank.c into test/burniso.c
+
+29 Aug 2006  [55]
+cdrskin/cdrskin.c
+Made cdrskin ready to make good use of now working libburn-eject
+
+29 Aug 2006  [56]
+cdrskin/cdrskin.c
+Avoided unwanted tray loading on eject of never grabbed drive
+
+29 Aug 2006  [57]
+cdrskin/cdrskin.c
+Disabled unconditionality of eject introduced by 55 or 56
+
+30 Aug 2006  [59]
+test/burniso.c
+Repaired SIGSEGV caused by releasing ungrabbed drive after mere bus scan
+
+30 Aug 2006  [60]
+test/libburner.c
+Makefile.am
+My proposal for new souvereign app as API doc and reference for API decisions
+
+31 Aug 2006  [61]
+libburn/sg.c
+cdrskin/cdrskin.c
+Outcommented "experimental:" messages of O_EXCL development
+
+31 Aug 2006  [62]
+test/libburner.c
+Added 300 kB of padding to get rid of warning in doc, plus end sector padding
+
+31 Aug 2006  [63]
+cdrskin/cdrskin.c
+Promoted "newapi" functionality and libburn-eject from test to standard
+
+31 Aug 2006  [64]
+cdrskin/cdrskin.c
+Made cdrskin abort if fifo filling before burn yields 0 bytes (ticket 55)
+
+1 Sep 2006  [65]
+cdrskin/README
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+Updated cdrskin help tests and docs: -audio, obsolete eject_device=
+
+1 Sep 2006  [66]
+libburn/write.c
+cdrskin/cdrskin.c
+Implemented track number patch by bonfire-app@wanadoo.fr, tickets 58 and 9
+
+1 Sep 2006  [67]
+cdrskin/cdrskin.c
+Added clarifying URGE to ABORT texts
+
+1 Sep 2006  [71]
+test/libburner.c
+Made "read-ahead" comment sufficiently ambigous: "buffer"|"filesystem" == ""
+
+1 Sep 2006  [72] [73]
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Rowed back from revision 64. Now #ifdef Cdrskin_fifo_abort_on_emptY
+
+1 Sep 2006  [74]
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Rowed forth from revision 73. Now hopefully compliant to man cdrecord.
+
+1 Sep 2006  [78]
+cdrskin/cdrskin.c
+Made -pad behave cdrecord-ly on audio tracks (not tested acousticly)
+
+2 Sep 2006  [85]
+test/libburner.c
+Added upcoming clarification of copyright and license aspiration
+
+3 Sep 2006  [86]
+README
+Added upcoming clarification of copyright and license aspiration
+
+3 Sep 2006  [87] [88]
+cdrskin/README
+cdrskin/cdrskin.c
+Added upcoming clarification of copyright and license aspiration
+
+3 Sep 2006  []
+cdrskin/changelog.txt
+cdrskin/cdrskin_timestamp.h
+Opened new cdrskin-0.1.5 upload cycle. This marks a should-be-stable phase.
+
+---------------------------------------------------- cycled - 2006.09.03.132934
+
+
+3 Sep 2006  [89]
+doc/comments_test_ts
+Made a try to get doxygen portal page readable by html dl lists
+
+2006  []
+cdrskin/cdrskin.c
+test/libburner.c
+Getting rid of highspeed loops
+
+
+2006  []
+>>> libburn/libburn.h
+>>> libburn/drive.c
+>>> libburn/sg.c
+>>> Promoted burn_drive_is_open() to official API
+>>> how to close a drive that is not grabbed ?
+
 
