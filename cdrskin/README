@@ -155,12 +155,13 @@ Burn a compressed afio archive to CD on-the-fly
     find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao \
                                   driveropts=burnfree padsize=300k tsize=650m - 
 
-Burn 4 audio tracks to CD
+Burn 5 audio tracks to CD
     ogg123 -d raw -f track01.cd /path/to/track1.ogg
     oggdec -R -o track02.cd /path/to/track2.ogg
-    lame --decode -t -o track03.cd /path/to/track3.mp3
-    mppdec --raw-le /path/to/track4.mpc track04.cd
-    cdrskin dev=/dev/hdc blank=fast fs=0 -eject -audio track0[1-4].cd
+    lame --decode -t /path/to/track3.mp3 track03.cd   
+    madplay -o raw:track04.cd /path/to/track4.mp3
+    mppdec --raw-le /path/to/track5.mpc track05.cd
+    cdrskin dev=/dev/hdc blank=fast fs=0 -eject -audio track0[1-5].cd
 
 
            Usage example with  http://scdbackup.sourceforge.net
