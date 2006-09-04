@@ -89,6 +89,8 @@ struct scsi_mode_data
 	int underrun_proof;
 };
 
+
+/** Gets initialized in enumerate_common() and burn_drive_register() */
 struct burn_drive
 {
 	int host;
@@ -97,6 +99,13 @@ struct burn_drive
 	int lun;
 	char *devname;
 	int fd;
+
+	/* ts A60904 : ticket 62, contribution by elmom */
+	/**
+	    Tells the index in scanned burn_drive_info array.
+	    -1 if fallen victim to burn_drive_info_forget()
+	*/
+	int global_index;
 
 	pthread_mutex_t access_lock;
 

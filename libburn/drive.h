@@ -42,7 +42,8 @@ int burn_sector_length_write(struct burn_drive *d);
 int burn_track_control(struct burn_drive *d, int);
 void burn_write_empty_sector(int fd);
 void burn_write_empty_subcode(int fd);
-void burn_drive_free(void);
+void burn_drive_free(struct burn_drive *d);
+void burn_drive_free_all(void);
 
 int burn_drive_scan_sync(struct burn_drive_info *drives[],
 			 unsigned int *n_drives);

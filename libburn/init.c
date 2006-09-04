@@ -46,7 +46,8 @@ void burn_finish(void)
 
 	burn_wait_all();
 
-	burn_drive_free();
+	/* ts A60904 : ticket 62, contribution by elmom : name addon "_all" */
+	burn_drive_free_all();
 
 	burn_running = 0;
 }

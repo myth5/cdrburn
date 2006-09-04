@@ -479,6 +479,7 @@ struct burn_message* burn_get_message(void);
 /** Frees a burn_message structure */
 void burn_message_free(struct burn_message *msg);
 
+
 /* ts A60823 */
 /** Aquire a drive with known persistent address.This is the sysadmin friendly
     way to open one drive and to leave all others untouched. It bundles
@@ -493,8 +494,8 @@ void burn_message_free(struct burn_message *msg);
     burn_drive_scan().
     You may start a new libburn session and should then use the function
     described here with an address obtained after burn_drive_scan() via
-    a call of  burn_drive_get_adr(&(drives[driveno]), adr) .
-    @param drives On success returns a one element array with the drive
+    a call of  burn_drive_get_adr(&(drive_infos[driveno]), adr) .
+    @param drive_infos On success returns a one element array with the drive
                   (cdrom/burner). Thus use with driveno 0 only. On failure
                   the array has no valid elements at all.
                   The returned array should be freed via burn_drive_info_free()
@@ -509,46 +510,63 @@ void burn_message_free(struct burn_message *msg);
                   tray door, etc).
     @return       1 = success , 0 = drive not found , -1 = other error
 */    
-int burn_drive_scan_and_grab(struct burn_drive_info *drives[], char* adr,
-                             int load);
+int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[],
+                             char* adr, int load);
+
 
 /* ts A51221 */
 /** Maximum number of particularly permissible drive addresses */
 #define BURN_DRIVE_WHITELIST_LEN 255
 /** Add a device to the list of permissible drives. As soon as some entry is in
-    the whitelist all non-listed drives are banned from enumeration.
+    the whitelist all non-listed drives are banned from scanning.
     @return 1 success, <=0 failure
 */
 int burn_drive_add_whitelist(char *device_address);
 /** Remove all drives from whitelist. This enables all possible drives. */
 void burn_drive_clear_whitelist(void);
 
+
 /** Scans for drives. This function MUST be called until it returns nonzero.
     No drives can be in use when this is called or it will assert.
     All drive pointers are invalidated by using this function. Do NOT store
     drive pointers across calls to this function or death AND pain will ensue.
-    When the app is done with the burn_drive_info array, it must be freed with
-    burn_drive_info_free()
-    @param drives Returns an array of drives (cdroms/burners). The returned
-                  array should be freed when it is no longer needed, and
-                  before calling this function again to rescan.
-    @param n_drives Returns the number of hardware drives in @c drives.
+    After this call all drives depicted by the returned array are subject
+    to eventual (O_EXCL) locking. See burn_preset_device_open(). This state
+    ends either with burn_drive_info_forget() or with burn_drive_release().
+    It is unfriendly to other processes on the system to hold drives locked
+    which one does not definitely plan to use soon.
+    @param drive_infos Returns an array of drive info items (cdroms/burners).
+                  The returned array must be freed by burn_drive_info_free()
+                  before burn_finish(), and also before calling this function
+                  burn_drive_scan() again.
+    @param n_drives Returns the number of drive items in drive_infos.
     @return Zero while scanning is not complete; non-zero when it is finished.
 */
-int burn_drive_scan(struct burn_drive_info *drives[],
+int burn_drive_scan(struct burn_drive_info *drive_infos[],
 		    unsigned int *n_drives);
 
-/** Frees a burn_drive_info array returned by burn_drive_scan
-    @param info The array to free
+/* ts A60904 : ticket 62, contribution by elmom */
+/** EXPERIMENTAL: DO NOT USE IN PRODUCTION YET. DO NOT RELY ON PERSISTENCE YET.
+    Release memory about and any exclusive locks on a single drive
+    and become unable to inquire or grab it.
+    @param drive_info pointer to a single element out of the array
+                      obtained from burn_drive_scan() : &(drive_infos[driveno])
+    @return 1 on success, <=0 on failure
 */
-void burn_drive_info_free(struct burn_drive_info *info);
+int burn_drive_info_forget(struct burn_drive_info *drive_info);
+
+
+/** Frees a burn_drive_info array returned by burn_drive_scan
+*/
+void burn_drive_info_free(struct burn_drive_info drive_infos[]);
+
 
 /* ts A60823 */
 /** Maximum length+1 to expect with a persistent drive address string */
 #define BURN_DRIVE_ADR_LEN 1024
 
 /** Inquire the persistent address of the given drive.
-    @param drive The drive to inquire. Usually some  &(drives[driveno])
+    @param drive The drive to inquire. Usually some  &(drive_infos[driveno])
     @param adr   An application provided array of at least BURN_DRIVE_ADR_LEN
                  characters size. The persistent address gets copied to it.
 */
@@ -556,22 +574,24 @@ int burn_drive_get_adr(struct burn_drive_info *drive, char adr[]);
 
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
-    writing, etc). It may be neccesary to call this function more than once
-    to grab a drive. See burn_grab for details.
+    writing, etc).
     @param drive The drive to grab. This is found in a returned
                  burn_drive_info struct.
     @param load Nonzero to make the drive attempt to load a disc (close its
                 tray door, etc).
-    @return 1 if the drive has been grabbed, else 0
+    @return 1 if it was possible to grab the drive, else 0
 */
 int burn_drive_grab(struct burn_drive *drive, int load);
 
+
 /** Release a drive. This should not be done until the drive is no longer
-	busy (see burn_drive_get_status).
+    busy (see burn_drive_get_status). The drive is (O_EXCL) unlocked
+    afterwards.
 	@param drive The drive to release.
 	@param eject Nonzero to make the drive eject the disc in it.
 */
 void burn_drive_release(struct burn_drive *drive, int eject);
+
 
 /** Returns what kind of disc a drive is holding. This function may need to be
     called more than once to get a proper status from it. See burn_status

@@ -25,20 +25,28 @@ static int drivetop = -1;
 
 int burn_drive_is_open(struct burn_drive *d);
 
-void burn_drive_free(void)
+/* ts A60904 : ticket 62, contribution by elmom */
+/* splitting former burn_drive_free() (which freed all, into two calls) */
+void burn_drive_free(struct burn_drive *d)
+{
+	if (d->global_index == -1)
+		return;
+	/* ts A60822 : close open fds before forgetting them */
+	if (burn_drive_is_open(d))
+		close(d->fd);
+	free((void *) d->idata);
+	free((void *) d->mdata);
+	free((void *) d->toc_entry);
+	free(d->devname);
+	d->global_index = -1;
+}
+
+void burn_drive_free_all(void)
 {
 	int i;
-	struct burn_drive *d;
 
-	for (i = 0; i < drivetop + 1; i++) {
-		d = &drive_array[i];
-		if (burn_drive_is_open(d))
-			close(d->fd);
-		free((void *)d->idata);
-		free((void *)d->mdata);
-		free((void *)d->toc_entry);
-		free(d->devname);
-	}
+	for (i = 0; i < drivetop + 1; i++)
+		burn_drive_free(&(drive_array[i]));
 	drivetop = -1;
 	memset(drive_array, 0, sizeof(drive_array));
 }
@@ -86,6 +94,10 @@ int burn_drive_grab(struct burn_drive *d, int le)
 
 struct burn_drive *burn_drive_register(struct burn_drive *d)
 {
+#ifdef Libburn_ticket_62_re_register_is_possiblE
+	int i;
+#endif
+
 	d->block_types[0] = 0;
 	d->block_types[1] = 0;
 	d->block_types[2] = 0;
@@ -100,9 +112,33 @@ struct burn_drive *burn_drive_register(struct burn_drive *d)
 	d->toc_entry = NULL;
 	d->disc = NULL;
 	d->erasable = 0;
+
+#ifdef Libburn_ticket_62_re_register_is_possiblE
+	/* ts A60904 : ticket 62, contribution by elmom */
+	/* Not yet accepted because no use case seen yet */
+
+	/* This is supposed to find an already freed drive struct among
+	   all the the ones that have been used before */
+	for (i = 0; i < drivetop + 1; i++)
+		if (drive_array[i].global_index == -1)
+			break;
+	d->global_index = i;
+	memcpy(&drive_array[i], d, sizeof(struct burn_drive));
+	pthread_mutex_init(&drive_array[i].access_lock, NULL);
+	if (drivetop < i)
+		drivetop = i;
+	return &(drive_array[i]);
+
+#else /* Libburn_ticket_62_re_register_is_possiblE */
+	/* old A60904 : */
+	/* Still active by default */
+
 	memcpy(&drive_array[drivetop + 1], d, sizeof(struct burn_drive));
 	pthread_mutex_init(&drive_array[drivetop + 1].access_lock, NULL);
 	return &drive_array[++drivetop];
+
+#endif /* ! Libburn_ticket_62_re_register_is_possiblE */
+
 }
 
 void burn_drive_release(struct burn_drive *d, int le)
@@ -138,6 +174,11 @@ void burn_wait_all(void)
 		finished = 1;
 		d = drive_array;
 		for (i = burn_drive_count(); i > 0; --i, ++d) {
+
+			/* ts A60904 : ticket 62, contribution by elmom */
+			if (d->global_index==-1)
+				continue;
+
 			assert(d->released);
 		}
 		if (!finished)
@@ -284,10 +325,13 @@ int burn_drive_scan_sync(struct burn_drive_info *drives[],
 			 unsigned int *n_drives)
 {
 	/* state vars for the scan process */
-	static int scanning = 0, scanned, found;
-	static unsigned num_scanned, count;
+	/* ts A60904 : did set some default values to feel comfortable */
+	static int scanning = 0, scanned = 0, found = 0;
+	static unsigned num_scanned = 0, count = 0;
 	unsigned int i;
+#ifdef Libburn_ticket_62_enable_redundant_asserT
 	struct burn_drive *d;
+#endif
 
 	assert(burn_running);
 
@@ -298,10 +342,14 @@ int burn_drive_scan_sync(struct burn_drive_info *drives[],
 					   before checking for the released
 					   state */
 
+		/* ts A60904 : ticket 62, contribution by elmom */
+		/* this is redundant with what is done in burn_wait_all() */
+#ifdef Libburn_ticket_62_enable_redundant_asserT
 		d = drive_array;
 		count = burn_drive_count();
 		for (i = 0; i < count; ++i, ++d)
 			assert(d->released == 1);
+#endif /* Libburn_ticket_62_enable_redundant_asserT */
 
 		/* refresh the lib's drives */
 		sg_enumerate();
@@ -337,10 +385,27 @@ int burn_drive_scan_sync(struct burn_drive_info *drives[],
 	return 0;
 }
 
-void burn_drive_info_free(struct burn_drive_info *info)
+
+void burn_drive_info_free(struct burn_drive_info drive_infos[])
 {
-	free(info);
-	burn_drive_free();
+/* ts A60904 : ticket 62, contribution by elmom */
+/* clarifying the meaning and the identity of the victim */
+
+	/* ts A60904 : This looks a bit weird.
+	   burn_drive_info is not the manager of burn_drive but only its
+	   spokesperson. To my knowlege drive_infos from burn_drive_scan()
+	   are not memorized globally. */
+	if(drive_infos != NULL) /* and this NULL test is deadly necessary */
+		free((void *) drive_infos);
+
+	burn_drive_free_all();
+}
+
+/* Experimental API call */
+int burn_drive_info_forget(struct burn_drive_info *info)
+{
+	burn_drive_free(info->drive);
+	return 1;
 }
 
 struct burn_disc *burn_drive_get_disc(struct burn_drive *d)
@@ -433,7 +498,7 @@ int burn_drive_is_open(struct burn_drive *d)
 /* ts A60823 */
 /** Aquire a drive with known persistent address. 
 */
-int burn_drive_scan_and_grab(struct burn_drive_info *drives[], char* adr,
+int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 			     int load)
 {
 	unsigned int n_drives;
@@ -441,19 +506,19 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drives[], char* adr,
 
 	burn_drive_clear_whitelist();
 	burn_drive_add_whitelist(adr);
-	while (!burn_drive_scan(drives, &n_drives));
+	while (!burn_drive_scan(drive_infos, &n_drives));
 	if (n_drives <= 0)
 		return 0;
 	if (load) {
 		/* RIP-14.5 + LITE-ON 48125S produce a false status
 		   if tray was unloaded */
  		/* Therefore the first grab is just for loading */
-		ret= burn_drive_grab(drives[0]->drive, 1);
+		ret= burn_drive_grab(drive_infos[0]->drive, 1);
 		if (ret != 1) 
 			return -1;
-		burn_drive_release(drives[0]->drive,0);
+		burn_drive_release(drive_infos[0]->drive,0);
 	}
-	ret = burn_drive_grab(drives[0]->drive, load);
+	ret = burn_drive_grab(drive_infos[0]->drive, load);
 	if (ret != 1)
 		return -1;
 	return 1;
