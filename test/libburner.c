@@ -191,7 +191,7 @@ int libburner_aquire_by_driveno(int *driveno)
 		printf("%d  --drive '%s'  :  '%s'  '%s'\n",
 			i,adr,drive_list[i].vendor,drive_list[i].product);
 	}
-printf("-----------------------------------------------------------------------------\n\n");
+	printf("-----------------------------------------------------------------------------\n\n");
 
 	if (*driveno < 0) {
 		printf("Pseudo-drive \"-\" given : bus scanning done.\n");
