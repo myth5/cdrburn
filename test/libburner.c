@@ -3,8 +3,6 @@
 /*  Copyright (C) 2005 - 2006 Thomas Schmitt <scdbackup@gmx.net> */
 /*  Provided under GPL, see also "License and copyright aspects" at file end */
 
-/** See this for the decisive API specs . libburn.h is The Original */
-#include <libburn/libburn.h>
 
 /** IMPORTANT: By default this program tries to make a simulated burn
 	       on the CD recorder. Some obey, some do not.
@@ -43,6 +41,17 @@
   
 */
 
+/* We shall prepare for times when more than 2 GB of data are to be handled.
+   This gives POSIX-ly 64 bit off_t */
+#ifndef _LARGEFILE_SOURCE
+#define _LARGEFILE_SOURCE 1
+#endif
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
+
+/** See this for the decisive API specs . libburn.h is The Original */
+#include <libburn/libburn.h>
 
 /* libburn is intended for Linux systems with kernel 2.4 or 2.6 for now */
 #include <stdio.h>
@@ -53,15 +62,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
-
-/* We shall prepare for times when more than 2 GB of data are to be handled.
-   This gives POSIX-ly 64 bit off_t */
-#ifndef _LARGEFILE_SOURCE
-#define _LARGEFILE_SOURCE 1
-#endif
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 64
-#endif
 
 
 /** For simplicity i use global variables to represent the drives.
