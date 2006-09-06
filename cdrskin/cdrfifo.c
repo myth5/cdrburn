@@ -652,7 +652,7 @@ int Cdrfifo_try_to_work(struct CdrfifO *o, int wait_usec,
  struct timezone tz;
  fd_set rds,wts,exs;
  int ready,ret,max_fd= -1,buffer_space,dummy,still_active= 0;
- int did_work= 0,elapsed,still_to_wait,speed_limiter= 0,ready_to_write;
+ int did_work= 0,elapsed,still_to_wait,speed_limiter= 0,ready_to_write= 0;
  double start_out_counter;
  struct CdrfifO *ff;
 
