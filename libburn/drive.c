@@ -402,7 +402,7 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[])
 }
 
 /* Experimental API call */
-int burn_drive_info_forget(struct burn_drive_info *info)
+int burn_drive_info_forget(struct burn_drive_info *info, int force)
 {
 	burn_drive_free(info->drive);
 	return 1;
