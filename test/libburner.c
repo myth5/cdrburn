@@ -10,7 +10,7 @@
 	       then set this macro to 0 .
 	       Explicit options: --burn_for_real  and  --try_to_simulate
 */
-#define Burniso_try_to_simulatE 1
+#define Libburner_try_to_simulatE 1
 
 /**                               Overview 
   
@@ -82,7 +82,7 @@ static unsigned int drive_count;
 static int drive_is_grabbed = 0;
 
 /** Wether to burn for real or to *try* to simulate a burn */
-static int simulate_burn = Burniso_try_to_simulatE ;
+static int simulate_burn = Libburner_try_to_simulatE ;
 
 
 /* Some in-advance definitions to allow a more comprehensive ordering
