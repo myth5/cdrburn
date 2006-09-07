@@ -552,12 +552,13 @@ int burn_drive_scan(struct burn_drive_info *drive_infos[],
     @param drive_info pointer to a single element out of the array
                       obtained from burn_drive_scan() : &(drive_infos[driveno])
     @param force controls degree of permissible drive usage at the moment this
-                 function is called and amount of automatically provided drive
-                 shutdown : 
+                 function is called, and the amount of automatically provided
+                 drive shutdown : 
                   0= drive must be ungrabbed and BURN_DRIVE_IDLE
                   1= try to release drive resp. accept BURN_DRIVE_GRABBING 
                  Use these two only. Further values are to be defined.
-    @return 1 on success, <=0 on failure
+    @return 1 on success, 2 if drive was already forgotten,
+            0 if not permissible, <0 on other failures, 
 */
 int burn_drive_info_forget(struct burn_drive_info *drive_info, int force);
 

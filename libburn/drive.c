@@ -51,6 +51,63 @@ void burn_drive_free_all(void)
 	memset(drive_array, 0, sizeof(drive_array));
 }
 
+
+/* ts A60822 */
+int burn_drive_is_open(struct burn_drive *d)
+{
+	/* a bit more detailed case distinction than needed */
+	if (d->fd == -1337)
+		return 0;
+	if (d->fd < 0)
+		return 0;
+	return 1;
+}
+
+
+/* ts A60906 */
+int burn_drive_force_idle(struct burn_drive *d)
+{
+	d->busy = BURN_DRIVE_IDLE;
+	return 1;
+}
+
+
+/* ts A60906 */
+int burn_drive_is_released(struct burn_drive *d)
+{
+        return !!d->released;
+}
+
+
+/* ts A60906 */
+/** Inquires drive status in respect to degree of app usage.
+    @param return -2 = drive is forgotten 
+                  -1 = drive is closed (i.e. released explicitely)
+                   0 = drive is open, not grabbed (after scan, before 1st grab)
+                   1 = drive is grabbed but BURN_DRIVE_IDLE
+                  10 = drive is grabbing (BURN_DRIVE_GRABBING)
+                 100 = drive is busy in cancelable state
+                1000 = drive is in non-cancelable state 
+           Expect a monotonous sequence of usage severity to emerge in future.
+*/
+int burn_drive_is_occupied(struct burn_drive *d)
+{
+	if(d->global_index < 0)
+		return -2;
+	if(!burn_drive_is_open(d))
+		return -1;
+	if(d->busy == BURN_DRIVE_GRABBING)
+		return 10;
+	if(d->released)
+		return 0;
+	if(d->busy == BURN_DRIVE_IDLE)
+		return 1;
+	if(d->busy == BURN_DRIVE_READING || d->busy == BURN_DRIVE_WRITING)
+		return 50;
+	return 1000;
+}
+
+
 /*
 void drive_read_lead_in(int dnum)
 {
@@ -145,7 +202,10 @@ void burn_drive_release(struct burn_drive *d, int le)
 {
 	if (d->released)
 		burn_print(1, "second release on drive!\n");
-	assert(!d->busy);
+
+	/* ts A60906: one should not assume BURN_DRIVE_IDLE == 0 */
+	assert(d->busy == BURN_DRIVE_IDLE);
+
 	d->unlock(d);
 	if (le)
 		d->eject(d);
@@ -404,7 +464,26 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[])
 /* Experimental API call */
 int burn_drive_info_forget(struct burn_drive_info *info, int force)
 {
-	burn_drive_free(info->drive);
+	int occup;
+	struct burn_drive *d;
+
+	d = info->drive;
+	occup = burn_drive_is_occupied(d);
+	if(occup <= -2)
+		return 2;
+	if(occup > 0)
+		if(force < 1)
+			return 0; 
+	if(occup > 10)
+		return 0;
+
+	/* >>> do any drive calming here */;
+
+
+	burn_drive_force_idle(d);
+	if(occup > 0 && !burn_drive_is_released(d))
+		burn_drive_release(d,0);
+	burn_drive_free(d);
 	return 1;
 }
 
@@ -481,17 +560,6 @@ int burn_drive_is_banned(char *device_address)
 	for (i = 0; i <= enumeration_whitelist_top; i++) 
 		if (strcmp(enumeration_whitelist[i], device_address) == 0)
 			return 0;
-	return 1;
-}
-
-/* ts A60822 */
-int burn_drive_is_open(struct burn_drive *d)
-{
-	/* a bit more detailed case distinction than needed */
-	if (d->fd == -1337)
-		return 0;
-	if (d->fd < 0)
-		return 0;
 	return 1;
 }
 
