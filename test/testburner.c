@@ -205,7 +205,7 @@ int libburner_drop_unwanted_and_grab(int *driveno)
 
 	/* Drop all drives which you do not want to use */
 	for (i = 0; i < drive_count; i++) {
-		if (0 && i == *driveno) /* the one drive we want to keep */
+		if (i == *driveno) /* the one drive we want to keep */
 	continue;
 		printf("--test_ticket_62: Dropping drive %d\n",i);
 		ret = burn_drive_info_forget(&(drive_list[i]),0);
