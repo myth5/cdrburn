@@ -163,7 +163,7 @@ int libburner_aquire_by_driveno(int *driveno)
 
 	printf("Beginning to scan for devices ...\n");
 	while (!burn_drive_scan(&drive_list, &drive_count)) ;
-	if (drive_count <= 0) {
+	if (drive_count <= 0 && *driveno >= 0) {
 		printf("FAILED (no drives found)\n");
 		return 0;
 	}
@@ -500,7 +500,6 @@ int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
                 }
                 strcpy(drive_adr, argv[i]);
             }
-
         } else if (!strcmp(argv[i], "--stdin_size")) {
             ++i;
             if (i >= argc) {
@@ -508,6 +507,8 @@ int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
                 return 3;
             } else
                 *size = atoi(argv[i]);
+            if (*size < 600*1024) /* seems to be minimum readable track size */
+                *size = 600*1024;
         } else if (!strcmp(argv[i], "--try_to_simulate")) {
             simulate_burn = 1;
 
