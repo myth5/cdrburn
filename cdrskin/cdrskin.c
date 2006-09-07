@@ -1,12 +1,9 @@
 
 /*
  cdrskin.c , Copyright 2006 Thomas Schmitt <scdbackup@gmx.net>
+Provided under GPL. See future commitment below.
 
 A cdrecord compatible command line interface for libburn.
-
-Originally inspired by libburn-0.2/test/burniso.c 
-(c) Derek Foreman <derek@signalmarketing.com> and Ben Jansens <xor@orodu.net>
-Provided under GPL. See future commitment below.
 
 This project is neither directed against original cdrecord nor does it exploit
 any source code of said program. It rather tries to be an alternative method
@@ -100,6 +97,9 @@ a BSD license from an (outdated) cdrskin.c which still bears that old promise.
 Note that this extended commitment is valid only for cdrskin.[ch],
 cdrfifo.[ch] and cleanup.[ch], but not for libburn.pykix.org as a whole.
 
+cdrskin is originally inspired by libburn-0.2/test/burniso.c :
+(c) Derek Foreman <derek@signalmarketing.com> and Ben Jansens <xor@orodu.net>
+
 ------------------------------------------------------------------------------
 
 Compilation within cdrskin-* :
@@ -179,6 +179,7 @@ or
 /* switches from old behavior with aquiring drives to new behavior */
 
 /* (put parasite macros under test caveat here) */
+#define Cdrskin_grab_abort_does_worK 1
 
 #endif
 
@@ -224,7 +225,9 @@ or
 
 /** Work around the fact that a drive interrupted at burn_drive_grab() never
     leaves status BURN_DRIVE_GRABBING */
+#ifndef Cdrskin_grab_abort_does_worK
 #define Cdrskin_grab_abort_brokeN 1
+#endif
 
 
 /** A macro which is able to eat up a function call like printf() */
@@ -2204,8 +2207,11 @@ ex:
 */
 int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 {
- int restore_handler= 0,ret;
+ int ret;
  struct burn_drive *drive;
+#ifdef Cdrskin_grab_abort_brokeN
+ int restore_handler= 0;
+#endif
 
  if(skin->drive_is_grabbed)
    Cdrskin_release_drive(skin,0);
@@ -2224,7 +2230,13 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    restore_handler= 1;
  }
 
-#endif /* Cdrskin_grab_abort_brokeN */
+#else
+
+ if(skin->verbosity>=Cdrskin_verbose_debuG)   
+   ClN(fprintf(stderr,
+             "cdrskin_debug: Trusting in abortability of grabbing process\n"));
+
+#endif /* ! Cdrskin_grab_abort_brokeN */
 
 #ifdef Cdrskin_new_api_tesT
 
@@ -2371,14 +2383,35 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
        burn_drive_cancel(skin->grabbed_drive);
      } else if(drive_status==BURN_DRIVE_GRABBING) {
 
+#ifdef Cdrskin_new_api_tesT
+       int ret;
+
+       fprintf(stderr,
+            "cdrskin: ABORT : Trying to close drive in process of grabbing\n");
+
+       /* >>> ??? rather inquire driveno from 
+                  skin->grabbed_drive->global_index ? */;
+
+       ret= burn_drive_info_forget(&(skin->drives[skin->driveno]),1);
+       if(ret<=0)
+         fprintf(stderr,
+             "cdrskin: ABORT : Attempt to close drive failed (ret= %d)\n",ret);
+       else {
+         skin->drive_is_grabbed= 0;
+         skin->grabbed_drive= NULL;
+         goto try_to_finish_lib;
+       }
+
+#else
        /* >>> what to do in this state ? */;
+#endif /* Cdrskin_new_api_tesT */
 
      } else if(drive_status!=BURN_DRIVE_IDLE) {
        fprintf(stderr,
                "cdrskin: ABORT : Will wait for current operation to end\n");
      }
      if(drive_status!=BURN_DRIVE_IDLE) {
-       fprintf(stderr,"cdrskin: ABORT : Usually abort processing is done after at most a minute\n");
+       fprintf(stderr,"cdrskin: ABORT : Usually abort processing is done after at most a MINUTE\n");
        fprintf(stderr,"cdrskin: URGE : But wait at least the normal burning time before any kill -9\n");
      }
      last_time= start_time= Sfile_microtime(0);
@@ -2408,6 +2441,11 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
    fprintf(stderr,"cdrskin: ABORT : Trying to release drive.\n");
    Cdrskin_release_drive(skin,0);
  }
+
+#ifdef Cdrskin_new_api_tesT
+try_to_finish_lib:;
+#endif
+
  if(skin->lib_is_initialized) {
    fprintf(stderr,"cdrskin: ABORT : Trying to finish libburn.\n");
    burn_finish();
