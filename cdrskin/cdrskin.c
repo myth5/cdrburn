@@ -2411,8 +2411,9 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
                "cdrskin: ABORT : Will wait for current operation to end\n");
      }
      if(drive_status!=BURN_DRIVE_IDLE) {
-       fprintf(stderr,"cdrskin: ABORT : Usually abort processing is done after at most a MINUTE\n");
-       fprintf(stderr,"cdrskin: URGE : But wait at least the normal burning time before any kill -9\n");
+       fprintf(stderr,"cdrskin: ABORT : Abort processing depends on CD speed and buffer size\n");
+       fprintf(stderr,"cdrskin: ABORT : Usually it is done with 4x speed after about a MINUTE\n");
+       fprintf(stderr,"cdrskin: URGE  : But wait at least the normal burning time before any kill -9\n");
      }
      last_time= start_time= Sfile_microtime(0);
      while(1) {
