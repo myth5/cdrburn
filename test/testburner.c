@@ -30,7 +30,7 @@
 
    Terminal 2 (while terminal 1 still burning):
       echo | \
-      test/testburner --test_ticket_62 --drive 0 --stdin_size 10000000
+      test/testburner --test_ticket_62 --drive 0 --stdin_size 10000000 -
 
    This should start a burn on your second drive. Wether throughput is
    acceptable will depend on your system backbone.
@@ -219,6 +219,7 @@ int libburner_drop_unwanted_and_grab(int *driveno)
 	}
 	printf("--test_ticket_62: Looks good so far ...\n");
 
+#ifdef Testburner_release_and_grab_agaiN
 	/* Load the drive tray and avoid a bug in libburn burn_drive_grab() */
 	/* Some systems produce a false status if tray was unloaded */
 	/* Therefore the first grab is just for loading */
@@ -226,6 +227,10 @@ int libburner_drop_unwanted_and_grab(int *driveno)
 	if (ret != 1)
 		return 0;
 	burn_drive_release(drive_list[*driveno].drive, 0);
+#else
+	printf("--test_ticket_62: Skipped extra release and grab cycle\n");
+#endif /* ! Testburner_release_and_grab_agaiN */
+
 	/* now grab for real */
 	ret= burn_drive_grab(drive_list[*driveno].drive, 1);
 	if (ret != 1)

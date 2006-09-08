@@ -122,6 +122,11 @@ unsigned int burn_drive_count(void)
 int burn_drive_grab(struct burn_drive *d, int le)
 {
 	int errcode;
+	int was_equal = 0, must_equal = 3, max_loop = 20;
+
+	/* ts A60907 */
+	int loop_count, old_speed = -1234567890, new_speed = -987654321;
+	int old_erasable = -1234567890, new_erasable = -987654321;
 
 	if (!d->released) {
 		burn_print(1, "can't grab - already grabbed\n");
@@ -142,9 +147,49 @@ int burn_drive_grab(struct burn_drive *d, int le)
 	d->status = BURN_DISC_BLANK;
 	if (d->mdata->cdr_write || d->mdata->cdrw_write ||
 	    d->mdata->dvdr_write || d->mdata->dvdram_write) {
+
+#ifdef Libburn_grab_release_and_grab_agaiN
+
 		d->read_disc_info(d);
-	} else
+
+#else
+		/* ts A60908 */
+		/* Trying to stabilize the disc status after eventual load
+		   without closing and re-opening the drive */
+		/* This seems to work for burn_disc_erasable() .
+		   Speed values on RIP-14 and LITE-ON 48125S are stable
+		   and false, nevertheless. So cdrskin -atip is still
+		   forced to finish-initialize. */
+		/*
+		fprintf(stderr,"libburn: experimental: read_disc_info()\n");
+		*/
+		for (loop_count = 0; loop_count < max_loop; loop_count++){
+			old_speed = new_speed;
+			old_erasable = new_erasable;
+
+			d->read_disc_info(d);
+
+			new_speed = burn_drive_get_write_speed(d);
+			new_erasable = burn_disc_erasable(d);
+		        if (new_speed == old_speed &&
+			    new_erasable == old_erasable) {
+				was_equal++;
+				if (was_equal >= must_equal)
+		break;
+			} else
+				was_equal = 0;
+			/*
+			if (loop_count >= 1 && was_equal == 0)
+				fprintf(stderr,"libburn: experimental: %d : speed %d:%d   erasable %d:%d\n",
+					loop_count,old_speed,new_speed,old_erasable,new_erasable);
+			*/
+			usleep(100000);
+		}
+#endif /* ! Libburn_grab_release_and_grab_agaiN */
+
+	} else {
 		d->read_toc(d);
+	}
 	d->busy = BURN_DRIVE_IDLE;
 	return 1;
 }
@@ -469,6 +514,9 @@ int burn_drive_info_forget(struct burn_drive_info *info, int force)
 
 	d = info->drive;
 	occup = burn_drive_is_occupied(d);
+/*
+	fprintf(stderr, "libburn: experimental: occup == %d\n",occup);
+*/
 	if(occup <= -2)
 		return 2;
 	if(occup > 0)
@@ -577,6 +625,9 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 	while (!burn_drive_scan(drive_infos, &n_drives));
 	if (n_drives <= 0)
 		return 0;
+
+/* ts A60908 : seems we get rid of this :) */
+#ifdef Libburn_grab_release_and_grab_agaiN
 	if (load) {
 		/* RIP-14.5 + LITE-ON 48125S produce a false status
 		   if tray was unloaded */
@@ -586,6 +637,8 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 			return -1;
 		burn_drive_release(drive_infos[0]->drive,0);
 	}
+#endif /* Libburn_grab_release_and_grab_agaiN */
+
 	ret = burn_drive_grab(drive_infos[0]->drive, load);
 	if (ret != 1)
 		return -1;

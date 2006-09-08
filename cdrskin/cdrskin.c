@@ -171,15 +171,15 @@ or
 #define Cdrskin_libburn_padding_does_worK 1
 #define Cdrskin_libburn_does_ejecT 1
 #define Cdrskin_libburn_has_drive_get_adR 1
-
 #define Cdrskin_progress_track_does_worK 1
+#define Cdrskin_is_erasable_on_load_does_worK 1
+#define Cdrskin_grab_abort_does_worK 1
 
 #ifdef Cdrskin_new_api_tesT
 
 /* switches from old behavior with aquiring drives to new behavior */
 
 /* (put parasite macros under test caveat here) */
-#define Cdrskin_grab_abort_does_worK 1
 
 #endif
 
@@ -229,6 +229,9 @@ or
 #define Cdrskin_grab_abort_brokeN 1
 #endif
 
+#ifndef Cdrskin_is_erasable_on_load_does_worK
+#define Cdrskin_is_erasable_on_load_is_brokeN 1
+#endif
 
 /** A macro which is able to eat up a function call like printf() */
 #ifdef Cdrskin_extra_leaN
@@ -2253,7 +2256,9 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
      fprintf(stderr,"cdrskin: experimental: burn_drive_scan_and_grab ret=%d\n",
                    ret);
 */
-     goto unable;
+     fprintf(stderr,"cdrskin: FATAL : unable to open drive '%s'\n",
+             skin->preskin->device_adr);
+     goto ex;
    }
    skin->driveno= 0;
  } else {
@@ -2276,21 +2281,33 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
 #endif /* ! Cdrskin_new_api_tesT */
 
-   /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
-   /* Therefore the first grab is just for loading */
-   if(!burn_drive_grab(drive, 1)) {
-unable:;
+   ret= burn_drive_grab(drive,1);
+   if(ret==0) {
      fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
              skin->driveno);
-     ret= 0; goto ex;
+     goto ex;
    }
-   skin->drive_is_grabbed= 1;
+
+#ifdef Cdrskin_is_erasable_on_load_is_brokeN
+   /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
+   /* Therefore the first grab was just for loading */
+   skin->drive_is_grabbed= 1; /* message to eventual abort handler */
    burn_drive_release(drive,0); 
    skin->drive_is_grabbed= 0;
 
    /* now grab the drive for real */
-   if(!burn_drive_grab(drive, 1))
-     goto unable;
+   ret= burn_drive_grab(drive,1);
+   if(ret==0) {
+     fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
+             skin->driveno);
+     goto ex;
+   }
+#else
+   if(skin->verbosity>=Cdrskin_verbose_debuG)   
+     ClN(fprintf(stderr,
+        "cdrskin_debug: Trusting in burn_disc_erasable() after first grab\n"));
+#endif /* ! Cdrskin_is_erasable_on_load_is_brokeN */
+
  }
  skin->drive_is_grabbed= 1;
  ret= 1;
