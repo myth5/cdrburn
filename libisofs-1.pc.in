@@ -8,4 +8,4 @@ Description: ISO9660 filesystem creation library
 Version: @VERSION@
 Requires: 
 Libs: -L${libdir} -lisofs
-Cflags: -I${includedir}/libburn/@BURN_MAJOR_VERSION@
+Cflags: -I${includedir}/libburn
