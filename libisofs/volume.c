@@ -71,7 +71,8 @@ iso_volume_new_with_root(const char *volume_id,
 	return volume;
 }
 
-void iso_volume_free(struct iso_volume *volume)
+void
+iso_volume_free(struct iso_volume *volume)
 {
 	/* Only free if no references are in use. */
 	if (--volume->refcount < 1) {
@@ -85,7 +86,8 @@ void iso_volume_free(struct iso_volume *volume)
 	}
 }
 
-struct iso_tree_node *iso_volume_get_root(const struct iso_volume *volume)
+struct iso_tree_node *
+iso_volume_get_root(const struct iso_volume *volume)
 {
 	return volume->root;
 }
