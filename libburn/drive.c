@@ -622,9 +622,16 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 
 	burn_drive_clear_whitelist();
 	burn_drive_add_whitelist(adr);
+/*
+	fprintf(stderr,"libburn: experimental: burn_drive_scan_and_grab(%s)\n",
+		adr);
+*/
 	while (!burn_drive_scan(drive_infos, &n_drives));
 	if (n_drives <= 0)
 		return 0;
+/*
+	fprintf(stderr, "libburn: experimental: n_drives == %d\n",n_drives);
+*/
 
 /* ts A60908 : seems we get rid of this :) */
 #ifdef Libburn_grab_release_and_grab_agaiN
