@@ -57,6 +57,11 @@ struct iso_volume *iso_volume_new_with_root(const char *volume_id,
 void iso_volume_free(struct iso_volume *volume);
 
 /**
+ * Free a set of data volumes.
+ */
+void iso_volset_free(struct iso_volset *volume);
+
+/**
  * Get the root directory for a volume.
  */
 struct iso_tree_node *iso_volume_get_root(const struct iso_volume *volume);
