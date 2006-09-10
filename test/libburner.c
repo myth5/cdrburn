@@ -223,11 +223,7 @@ int libburner_aquire_by_driveno(int *driveno)
 	printf("Detected '%s' as persistent address of drive number %d\n",
 		adr,*driveno);
 
-/* In cdrskin this causes a delayed sigsegv. I understand we risk only
-   a small memory leak by not doing:
-
 	burn_drive_info_free(drive_list);
-*/
 	burn_finish();
 	printf(
 	     "Re-Initializing library to release any unintended drives ...\n");

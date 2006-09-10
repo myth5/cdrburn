@@ -2182,8 +2182,8 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
                skin->drives[skin->driveno].drive after burn (then as
                skin->grabbed_drive, but already being 0xb0 in Cdrskin_grab) )
 
- burn_drive_info_free(skin->drives);
 */
+ burn_drive_info_free(skin->drives);
 
  if(skin->verbosity>=Cdrskin_verbose_debuG)   
    ClN(fprintf(stderr,"cdrskin_debug: Finishing libburn.\n"));
@@ -4390,7 +4390,7 @@ int main(int argc, char **argv)
  if(ret<=0)
    {exit_value= 2; goto ex;}
  if(skin->n_drives<=0) {
-   fprintf(stderr,"cdrskin: NOTE : no usable drive detected.\n");
+   fprintf(stderr,"cdrskin: NOTE : No usable drive detected.\n");
    if(getuid()!=0) {
      fprintf(stderr,
       "cdrskin: HINT : Run this program as superuser with option --devices\n");
