@@ -28,7 +28,7 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
-  elif test "$i" = "-newapi"
+  elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
   elif test "$i" = "-do_not_compile_cdrskin"
