@@ -260,7 +260,8 @@ int libburner_aquire_by_driveno(int *driveno)
 	int ret= 0, i;
 
 	printf("Beginning to scan for devices ...\n");
-	while (!burn_drive_scan(&drive_list, &drive_count)) ;
+	while (!burn_drive_scan(&drive_list, &drive_count))
+		usleep(1002);
 	if (drive_count <= 0  && *driveno >= 0) {
 		printf("FAILED (no drives found)\n");
 		return 0;
@@ -537,7 +538,8 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 	burn_disc_write(burn_options, target_disc);
 
 	burn_write_opts_free(burn_options);
-	while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING) ;
+	while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING)
+		usleep(1002);
 	while (burn_drive_get_status(drive, &progress)) {
 		if( progress.sectors <= 0 || progress.sector == last_sector)
 			printf(

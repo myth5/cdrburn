@@ -626,7 +626,8 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 	fprintf(stderr,"libburn: experimental: burn_drive_scan_and_grab(%s)\n",
 		adr);
 */
-	while (!burn_drive_scan(drive_infos, &n_drives));
+	while (!burn_drive_scan(drive_infos, &n_drives))
+		usleep(1002);
 	if (n_drives <= 0)
 		return 0;
 /*

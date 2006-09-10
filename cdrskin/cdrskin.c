@@ -2297,6 +2297,9 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
      ClN(fprintf(stderr,
                  "cdrskin_debug: Cdrskin_grab_drive() on active libburn\n"));
    if(strlen(skin->preskin->device_adr)<=0) {
+
+     /* >>> forget unwanted drives here ! */;
+
      ret= Cdrskin_reinit_lib_with_adr(skin,1|(flag&2));
      goto ex; /* this calls Cdrskin_grab() with persistent address or fails */
    }
@@ -2810,9 +2813,9 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
  while(burn_drive_get_status(drive,NULL))
-   sleep(2);
+   usleep(100002);
  while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
-   sleep(2);
+   usleep(100002);
  Cdrskin_report_disc_status(skin,s,0);
  if(s==BURN_DISC_APPENDABLE && skin->no_blank_appendable) {
    is_not_really_erasable= 1;
@@ -2864,7 +2867,8 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  } 
  if(strlen(skin->preskin->device_adr)>0)
    burn_drive_add_whitelist(skin->preskin->device_adr);
- while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) ;
+ while(!burn_drive_scan(&(skin->drives),&(skin->n_drives)))
+   usleep(1002);
  ret= Cdrskin_grab_drive(skin,0);
  if(ret<=0)
    return(ret);
@@ -2960,9 +2964,9 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
  drive= skin->drives[skin->driveno].drive;
 
  while(burn_drive_get_status(drive,NULL))
-   sleep(2);
+   usleep(100002);
  while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
-   sleep(2);
+   usleep(100002);
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,0);
  if(s!=BURN_DISC_FULL && 
@@ -3341,10 +3345,10 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  drive= skin->drives[skin->driveno].drive;
 
  while (burn_drive_get_status(drive, NULL))
-   sleep(2); /* >>> ??? add a timeout ? */
+   usleep(100002); /* >>> ??? add a timeout ? */
 
  while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
-   sleep(2); /* >>> ??? add a timeout ? */
+   usleep(100002); /* >>> ??? add a timeout ? */
 
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,0);
