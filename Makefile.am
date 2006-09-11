@@ -90,7 +90,6 @@ libinclude_HEADERS = \
 ## Build test applications
 noinst_PROGRAMS = \
 	test/libburner \
-	test/testburner \
 	test/blank \
 	test/burn \
 	test/burniso \
@@ -106,9 +105,6 @@ noinst_PROGRAMS = \
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_libburner_SOURCES = test/libburner.c
-test_testburner_CPPFLAGS = -Ilibburn
-test_testburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
-test_testburner_SOURCES = test/testburner.c
 test_devices_CPPFLAGS = -Ilibburn
 test_devices_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_devices_SOURCES = test/devices.c
