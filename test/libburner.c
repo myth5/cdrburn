@@ -4,14 +4,6 @@
 /*  Provided under GPL, see also "License and copyright aspects" at file end */
 
 
-/** IMPORTANT: By default this program tries to make a simulated burn
-	       on the CD recorder. Some obey, some do not.
-	       If you want to burn really readable CD for sure by default,
-	       then set this macro to 0 .
-	       Explicit options: --burn_for_real  and  --try_to_simulate
-*/
-#define Libburner_try_to_simulatE 1
-
 /**                               Overview 
   
   libburner is a minimal demo application for the library libburn as provided
@@ -29,7 +21,7 @@
   approaches are shown here in application functions:
      libburner_aquire_by_adr()     demonstrates usage as of cdrecord traditions
      libburner_aquire_by_driveno()      demonstrates a scan-and-choose approach
-  With that aquired drive you blank a CD-RW
+  With that aquired drive you can blank a CD-RW
      libburner_blank_disc()
   Between blanking and burning one eventually has to reload the drive status
      libburner_regrab()
@@ -81,8 +73,12 @@ static unsigned int drive_count;
     finally released */
 static int drive_is_grabbed = 0;
 
-/** Wether to burn for real or to *try* to simulate a burn */
-static int simulate_burn = Libburner_try_to_simulatE ;
+
+/** Here you may enable simulated burn by default. This does not apply to
+    blanking. Anyway, some CD recorders obey the request to simulate, some do
+    not. Explicit options are:  --burn_for_real  and  --try_to_simulate
+*/
+static int simulate_burn = 0;
 
 
 /* Some in-advance definitions to allow a more comprehensive ordering
@@ -98,15 +94,11 @@ int libburner_aquire_by_driveno(int *drive_no);
     whitelisting, scanning for drives and finally grabbing one of them.
 
     If you have a persistent address of the drive, then the compact call is
-    to prefer. It avoids a shutdown-init cycle of libburn and thus is more
-    safe against race conditions between competing users of that drive.
-    On modern Linux kernels, race conditions are supposed to end up by
-    having one single winner or by having all losers. On modern Linux
-    kernels, there should be no fatal disturbance of ongoing burns
-    of other libburn instances. We use open(O_EXCL) by default.
-    There are variants of cdrecord which participate in advisory O_EXCL
-    locking of block devices. Others possibly don't. Some kernels do
-    nevertheless impose locking on open drives anyway (e.g. SuSE 9.0, 2.4.21).
+    to prefer because it only touches one drive. On modern Linux kernels,
+    there should be no fatal disturbance of ongoing burns of other libburn
+    instances with any of our approaches. We use open(O_EXCL) by default.
+    On /dev/hdX it should cooperate with growisofs and some cdrecord variants.
+    On /dev/sgN versus /dev/scdM expect it not to respect other programs.
 */
 int libburner_aquire_drive(char *drive_adr, int *driveno)
 {
@@ -137,7 +129,7 @@ int libburner_aquire_by_adr(char *drive_adr)
 		    strncmp(drive_adr,"/dev/hd",7) != 0)
 			fprintf(stderr,"\nHINT: Consider addresses like  '/dev/hdc'  or  '/dev/sg0'\n");
 	} else {
-		printf("done\n");
+		printf("Done\n");
 		drive_is_grabbed = 1;
 	}
 	return ret;
@@ -145,12 +137,12 @@ int libburner_aquire_by_adr(char *drive_adr)
 
 
 /** This method demonstrates how to use libburn without knowing a persistent
-    drive address in advance. It has to make sure that after assessing the
-    list of available drives, all drives get closed again. Only then it is
-    sysadmin-acceptable to aquire the desired drive for a prolonged time.
-    This drive closing is enforced here by shutting down libburn and
-    restarting it again with the much more un-obtrusive approach to use
-    a persistent address and thus to only touch the one desired drive.
+    drive address in advance. It has to make sure that after assessing the list
+    of available drives, all unwanted drives get closed again. As long as they
+    are open, no other libburn instance can see them. This is an intended
+    locking feature. The application is responsible for giving up the locks
+    by either burn_drive_release() (only after burn_drive_grab() !),
+    burn_drive_info_forget(), burn_drive_info_free(), or burn_finish().
     @param driveno the index number in libburn's drive list. This will get
                    set to 0 on success and will then be the drive index to
                    use in the further dourse of processing.
@@ -168,20 +160,21 @@ int libburner_aquire_by_driveno(int *driveno)
 		printf("FAILED (no drives found)\n");
 		return 0;
 	}
-	printf("done\n");
+	printf("Done\n");
 
-	/* Interactive programs may choose the drive number at this moment.
+	/*
+	Interactive programs may choose the drive number at this moment.
 
-	   drive[0] to drive[drive_count-1] are struct burn_drive_info
-	   as defined in  libburn/libburn.h  . This structure is part of API
-	   and thus will strive for future compatibility on source level.
-	   Have a look at the info offered.
-	   Caution: do not take .location for drive address. Always use
-		    burn_drive_get_adr() or you might become incompatible
-		    in future.
-	   Note: bugs with struct burn_drive_info - if any - will not be
-		 easy to fix. Please report them but also strive for
-		 workarounds on application level.
+	drive[0] to drive[drive_count-1] are struct burn_drive_info
+	as defined in  libburn/libburn.h  . This structure is part of API
+	and thus will strive for future compatibility on source level.
+	Have a look at the info offered.
+	Caution: do not take .location for drive address. Always use
+		burn_drive_get_adr() or you might become incompatible
+		in future.
+	Note: bugs with struct burn_drive_info - if any - will not be
+		easy to fix. Please report them but also strive for
+		workarounds on application level.
 	*/
 	printf("\nOverview of accessible drives (%d found) :\n",
 		drive_count);
@@ -194,50 +187,60 @@ int libburner_aquire_by_driveno(int *driveno)
 	}
 	printf("-----------------------------------------------------------------------------\n\n");
 
+
+	/*
+	On multi-drive systems save yourself from sysadmins' revenge.
+
+	Be aware that you hold reserved all available drives at this point.
+	So either make your choice quick enough not to annoy other system
+	users, or set free the drives for a while.
+
+	The tested way of setting free all drives is to shutdown the library
+	and to restart when the choice has been made. The list of selectable
+	drives should also hold persistent drive addresses as obtained
+	above by burn_drive_get_adr(). By such an address one may use
+	burn_drive_scan_and_grab() to finally aquire exactly one drive.
+
+	A not yet tested shortcut should be to call burn_drive_info_free()
+	and to call either burn_drive_scan() or burn_drive_scan_and_grab()
+	before accessing any drives again.
+
+	In both cases you have to be aware that the desired drive might get
+	aquired in the meantime by another user resp. libburn process.
+	*/
+
+	/* We already made our choice via command line. (default is 0)
+	   So we just have to keep our desired drive and drop all others.
+	   No other libburn instance will have a chance to steal our drive.
+	 */
 	if (*driveno < 0) {
 		printf("Pseudo-drive \"-\" given : bus scanning done.\n");
-		return 2; /* only return 1 will cause a burn */
+		return 2; /* the program will end after this */
 	}
-
-	/* We already made our choice via command line. (default is 0) */
-	if (drive_count <= *driveno || *driveno < 0) {
+	if (drive_count <= *driveno) {
 		fprintf(stderr,
 			"Found only %d drives. Number %d not available.\n",
 			drive_count, *driveno);
-		return 0;
+		return 0; /* the program will end after this */
 	}
 
-
-	/* Now save yourself from sysadmins' revenge */
-
-	/* If drive_count == 1 this would be not really necessary, though.
-	   You could now call burn_drive_grab() and avoid libburn restart.
-	   We don't try to be smart here and follow the API's strong urge. */
-
-	if (burn_drive_get_adr(&(drive_list[*driveno]), adr) <=0) {
-		fprintf(stderr,
-		"Cannot inquire persistent drive address of drive number %d\n",
-			*driveno);
-		return 0;
+	/* Drop all drives which we do not want to use */
+	for (i = 0; i < drive_count; i++) {
+		if (i == *driveno) /* the one drive we want to keep */
+	continue;
+		ret = burn_drive_info_forget(&(drive_list[i]),0);
+		if (ret != 1)
+			fprintf(stderr, "Cannot drop drive %d. Please report \"ret=%d\" to libburn-hackers@pykix.org\n",
+				i, ret);
+		else
+			printf("Dropped unwanted drive %d\n",i);
 	}
-	printf("Detected '%s' as persistent address of drive number %d\n",
-		adr,*driveno);
-
-	burn_drive_info_free(drive_list);
-	burn_finish();
-	printf(
-	     "Re-Initializing library to release any unintended drives ...\n");
-	if (burn_initialize())
-		printf("done\n");
-	else {
-		printf("FAILED\n");
-		fprintf(stderr,"\nFailed to re-initialize libburn.\n");
+	/* Make the one we want ready for blanking or burning */
+	ret= burn_drive_grab(drive_list[*driveno].drive, 1);
+	if (ret != 1)
 		return 0;
-	}
-	ret = libburner_aquire_by_adr(adr);
-	if (ret > 0)
-		*driveno = 0;
-	return ret;
+	drive_is_grabbed = 1;
+	return 1;
 }
 
 
@@ -297,7 +300,10 @@ int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 }
 
 
-/** This gesture is necessary to get the drive info after blanking */
+/** This gesture is necessary to get the drive info after blanking.
+    It opens a small gap for losing the drive to another libburn instance.
+    We will work on closing this gap.
+*/
 int libburner_regrab(struct burn_drive *drive) {
 	int ret;
 
@@ -308,7 +314,7 @@ int libburner_regrab(struct burn_drive *drive) {
 	ret = burn_drive_grab(drive, 0);
 	if (ret != 0) {
 		drive_is_grabbed = 1;
-	 	printf("done\n");
+	 	printf("Done\n");
 	} else
 	 	printf("FAILED\n");
 	return !!ret;
@@ -577,7 +583,7 @@ int main(int argc, char **argv)
 
 	printf("Initializing library ...\n");
 	if (burn_initialize())
-		printf("done\n");
+		printf("Done\n");
 	else {
 		printf("FAILED\n");
 		fprintf(stderr,"\nFATAL: Failed to initialize libburn.\n");

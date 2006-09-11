@@ -488,13 +488,13 @@ void burn_message_free(struct burn_message *msg);
     You are *strongly urged* to use this call whenever you know the drive
     address in advance.
     If not, then you have to use directly above calls. In that case, you are
-    *strongly urged* to end the libburn session as soon as possible,
-    including a call to burn_finish(). This is to close any unintended
-    drive which might get exclusively occupied and not closed by
-    burn_drive_scan().
-    You may start a new libburn session and should then use the function
-    described here with an address obtained after burn_drive_scan() via
-    a call of  burn_drive_get_adr(&(drive_infos[driveno]), adr) .
+    *strongly urged* to drop any unintended drive which will be exclusively
+    occupied and not closed by burn_drive_scan().
+    This can be done by shutting down the library including a call to
+    burn_finish(). You may later start a new libburn session and should then
+    use the function described here with an address obtained after
+    burn_drive_scan() via burn_drive_get_adr(&(drive_infos[driveno]), adr) .
+    Another way is to drop the unwanted drives by burn_drive_info_forget().
     @param drive_infos On success returns a one element array with the drive
                   (cdrom/burner). Thus use with driveno 0 only. On failure
                   the array has no valid elements at all.
@@ -522,11 +522,12 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[],
     @return 1 success, <=0 failure
 */
 int burn_drive_add_whitelist(char *device_address);
+
 /** Remove all drives from whitelist. This enables all possible drives. */
 void burn_drive_clear_whitelist(void);
 
 
-/** Scans for drives. This function MUST be called until it returns nonzero.
+/** Scan for drives. This function MUST be called until it returns nonzero.
     No drives can be in use when this is called or it will assert.
     All drive pointers are invalidated by using this function. Do NOT store
     drive pointers across calls to this function or death AND pain will ensue.
@@ -546,9 +547,8 @@ int burn_drive_scan(struct burn_drive_info *drive_infos[],
 		    unsigned int *n_drives);
 
 /* ts A60904 : ticket 62, contribution by elmom */
-/** EXPERIMENTAL: DO NOT USE IN PRODUCTION YET. DO NOT RELY ON PERSISTENCE YET.
-    Release memory about and any exclusive locks on a single drive
-    and become unable to inquire or grab it.
+/** Release memory about a single drive and any exclusive lock on it.
+    Become unable to inquire or grab it. Expect FATAL consequences if you try.
     @param drive_info pointer to a single element out of the array
                       obtained from burn_drive_scan() : &(drive_infos[driveno])
     @param force controls degree of permissible drive usage at the moment this
@@ -563,7 +563,7 @@ int burn_drive_scan(struct burn_drive_info *drive_infos[],
 int burn_drive_info_forget(struct burn_drive_info *drive_info, int force);
 
 
-/** Frees a burn_drive_info array returned by burn_drive_scan
+/** Free a burn_drive_info array returned by burn_drive_scan
 */
 void burn_drive_info_free(struct burn_drive_info drive_infos[]);
 
@@ -577,7 +577,7 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[]);
     @param adr   An application provided array of at least BURN_DRIVE_ADR_LEN
                  characters size. The persistent address gets copied to it.
 */
-int burn_drive_get_adr(struct burn_drive_info *drive, char adr[]);
+int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[]);
 
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
