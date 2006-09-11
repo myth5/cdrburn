@@ -57,7 +57,7 @@ do
     echo "  -cvs_A51208       set macro to match libburn-CVS of 8 Dec 2005."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
-    echo "  -newapi           follow newer API style guide."
+    echo "  -experimental     use newly introduced libburn features."
     echo "  -do_diet          produce capability reduced lean version."
     echo "  -do_strip         apply program strip to compiled programs."
     echo "  -g                compile with cc option -g."
