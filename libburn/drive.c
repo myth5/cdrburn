@@ -235,6 +235,7 @@ struct burn_drive *burn_drive_register(struct burn_drive *d)
 	/* old A60904 : */
 	/* Still active by default */
 
+	d->global_index = drivetop + 1;
 	memcpy(&drive_array[drivetop + 1], d, sizeof(struct burn_drive));
 	pthread_mutex_init(&drive_array[drivetop + 1].access_lock, NULL);
 	return &drive_array[++drivetop];
@@ -655,10 +656,10 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 
 /* ts A60823 */
 /** Inquire the persistent address of the given drive. */
-int burn_drive_get_adr(struct burn_drive_info *drive, char adr[])
+int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[])
 {
-	assert(strlen(drive->location) < BURN_DRIVE_ADR_LEN);
-	strcpy(adr,drive->location);
+	assert(strlen(drive_info->location) < BURN_DRIVE_ADR_LEN);
+	strcpy(adr,drive_info->location);
 	return 1;
 }
 
