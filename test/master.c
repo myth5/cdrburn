@@ -30,7 +30,7 @@ void burn_files(struct burn_drive *drive, struct burn_disc *disc)
 
 	if (s != BURN_DISC_BLANK) {
 		burn_drive_release(drive, 0);
-		printf("put a blank in the drive, corky\n");
+		printf("Please insert blank media in the drive\n");
 		return;
 	}
 	o = burn_write_opts_new(drive);
