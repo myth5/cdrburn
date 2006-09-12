@@ -53,23 +53,23 @@ or switchable. The sysdamin will want it on - but only for one drive.
 So with dev=... cdrskin complies to the spirit of the strong urge.
 Without dev=... it has to leave out the whitelist in order to enable bus
 scanning and implicit drive address 0. A tradition of 9 months shall not
-be broken. So burns without dev= will stay possible - and are now harmless.
+be broken. So burns without dev= will stay possible - but harmless only
+on single drive systems.
+
 *
 Only if the new API compliance is enabled by macro  Cdrskin_new_api_tesT .
-There is a flaw to be solved in libburn until new API compliance is in all
-aspects as good as the old handcrafted attempt to be sysadmin friendly.
-In many aspects it is already superior, note well.
-As soon as the flaw http://libburn.pykix.org/ticket/10 is removed,
-cdrskin will switch to its new way of API best practice compliance.
-*
+Not yet by default. In many aspects this is already superior, note well :
 
-This is because Cdrskin_grab_drive() enforces a restart of the library
-with the desired drive's persistent address. This restart then really uses
-the strongly urged function burn_drive_scan_and_grab().
+Burns without dev= resp. with dev=number are harmless on multi-drive systems.
+
+This is because Cdrskin_grab_drive() either drops the unwanted drives or
+it enforces a restart of the library with the desired drive's persistent
+address. This restart then really uses the strongly urged function
+burn_drive_scan_and_grab().
 Thus, cdrskin complies with the new spirit of API by closing down libburn
-as soon as the persistent drive address is known and the drive is to be
-used with a long running operation. To my knowlege all long running
-operations in cdrskin need a grabbed drive.
+or by dropping unused drives as soon as the persistent drive address is
+known and the drive is to be used with a long running operation. To my
+knowlege all long running operations in cdrskin need a grabbed drive.
 
 This spaghetti approach seems necessary to keep small the impact of new API
 urge on cdrskin's stability. cdrskin suffers from having donated the body
@@ -78,6 +78,7 @@ parts which have been transplanted to libburn in order to create
 achieved by most cdrskin runs. The remaining problem situations should now
 be defused by releasing any short time grabbed flocks of drives during the
 restart of libburn.
+*
 
 ------------------------------------------------------------------------------
 This program is currently copyright Thomas Schmitt only.
@@ -2312,7 +2313,7 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
                  "cdrskin_debug: Cdrskin_grab_drive() on active libburn\n"));
    if(strlen(skin->preskin->device_adr)<=0) {
 
-#define Cdrskin_drop_drives_by_forgeT 0
+#define Cdrskin_drop_drives_by_forgeT 1
 #ifdef Cdrskin_drop_drives_by_forgeT 
 
      if(skin->verbosity>=Cdrskin_verbose_debuG)   
