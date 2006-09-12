@@ -739,6 +739,7 @@ struct CdrtracK {
  double fixed_size;
  double padding;
  int set_by_padsize;
+ int sector_pad_up; /* enforce single sector padding */
  int track_type;
 
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
@@ -789,6 +790,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->fixed_size= 0.0;
  o->padding= 0.0;
  o->set_by_padsize= 0;
+ o->sector_pad_up= 0;
  o->track_type= BURN_MODE1;
  o->fifo_enabled= 0;
  o->fifo= NULL;
@@ -997,14 +999,13 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  tr= burn_track_create();
  track->libburn_track= tr;
  padding= 0.0;
- sector_pad_up= 0;
+ sector_pad_up= track->sector_pad_up;
  if(track->padding>0) {
    if(track->set_by_padsize || track->track_type!=BURN_AUDIO)
      padding= track->padding;
    else
      sector_pad_up= 1;
  }
-   
  if(flag&2)
    lib_padding= 0.0;
  else
@@ -1079,6 +1080,21 @@ int Cdrtrack_cleanup(struct CdrtracK *track, int flag)
    return(0);
  burn_track_free(track->libburn_track);
  track->libburn_track= NULL;
+ return(1);
+}
+
+
+int Cdrtrack_ensure_padding(struct CdrtracK *track, int flag)
+/*
+flag:
+ bit0= debugging verbosity
+*/
+{
+ if(track->track_type!=BURN_AUDIO)
+   return(2);
+ if(flag&1)
+   fprintf(stderr,"cdrskin_debug: enforcing -pad on last -audio track\n");
+ track->sector_pad_up= 1;
  return(1);
 }
 
@@ -3370,6 +3386,8 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
 #ifdef Cdrskin_burn_track_padding_brokeN
    hflag|= 2;
 #endif
+   if(i==skin->track_counter-1)
+     Cdrtrack_ensure_padding(skin->tracklist[i],hflag&1);
    ret= Cdrtrack_add_to_session(skin->tracklist[i],i,session,hflag);
    if(ret<=0) {
      fprintf(stderr,"cdrskin: FATAL : cannot add track %d to session.\n",i+1);
