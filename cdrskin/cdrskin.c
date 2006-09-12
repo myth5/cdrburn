@@ -125,7 +125,9 @@ or
 
 
 /** The official program version */
+#ifndef Cdrskin_prog_versioN
 #define Cdrskin_prog_versioN "0.1.5"
+#endif
 
 /** The source code release timestamp */
 #include "cdrskin_timestamp.h"
@@ -162,9 +164,19 @@ or
 
 #endif /* Cdrskin_libburn_cvs_A60220_tS */
 
-#ifdef Cdrskin_libburn_0_2_1
 
+#ifdef Cdrskin_libburn_0_2_1
 #define Cdrskin_libburn_versioN "0.2.1"
+#define Cdrskin_libburn_from_pykix_svN 1
+#endif
+
+/* still inofficial */
+#ifdef  Cdrskin_libburn_0_2_2
+#define Cdrskin_libburn_versioN "0.2.2"
+#define Cdrskin_libburn_from_pykix_svN 1
+#endif
+
+#ifdef Cdrskin_libburn_from_pykix_svN
 #define Cdrskin_libburn_p_sectoR 1
 #define Cdrskin_libburn_with_fd_sourcE 1
 #define Cdrskin_libburn_largefilE 1
@@ -183,10 +195,10 @@ or
 
 #endif
 
-#endif /* Cdrskin_libburn_0_2_1 */
+#endif /* Cdrskin_libburn_from_pykix_svN */
 
 #ifndef Cdrskin_libburn_versioN
-#define Cdrskin_libburn_versioN "0.2.1"
+#define Cdrskin_libburn_versioN "0.2.2"
 #endif
 
 #ifdef Cdrskin_libburn_largefilE
@@ -1687,7 +1699,7 @@ see_cdrskin_eng_html:;
 
    } else if(strcmp(argv[i],"-version")==0) {
      printf(
-        "Cdrecord 2.01-Emulation Copyright (C) 2006, see libburn + cdrskin\n");
+        "Cdrecord 2.01-Emulation Copyright (C) 2006, see libburn.pykix.org\n");
      printf("libburn version   :  %s\n",Cdrskin_libburn_versioN);
 
 #ifndef Cdrskin_extra_leaN
@@ -2233,11 +2245,13 @@ ex:
 */
 int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 {
- int ret;
+ int ret,i;
  struct burn_drive *drive;
 #ifdef Cdrskin_grab_abort_brokeN
  int restore_handler= 0;
 #endif
+
+ i= 0;/* as long as its use is conditional, so gcc -Wall does not complain */
 
  if(skin->drive_is_grabbed)
    Cdrskin_release_drive(skin,0);
@@ -2298,10 +2312,35 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
                  "cdrskin_debug: Cdrskin_grab_drive() on active libburn\n"));
    if(strlen(skin->preskin->device_adr)<=0) {
 
-     /* >>> forget unwanted drives here ! */;
+#define Cdrskin_drop_drives_by_forgeT 0
+#ifdef Cdrskin_drop_drives_by_forgeT 
+
+     if(skin->verbosity>=Cdrskin_verbose_debuG)   
+       ClN(fprintf(stderr,
+         "cdrskin_debug: Cdrskin_grab_drive() dropping unwanted drives (%d)\n",
+          skin->n_drives-1));
+     for(i=0;i<skin->n_drives;i++) {
+       if(i==skin->driveno)
+     continue;
+       if(skin->verbosity>=Cdrskin_verbose_debuG)   
+         ClN(fprintf(stderr,
+           "cdrskin_debug: Cdrskin_grab_drive() dropped drive number %d\n",i));
+       ret= burn_drive_info_forget(&(skin->drives[i]), 0);
+       if(ret==1 || ret==2)
+     continue;
+       fprintf(stderr,
+           "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
+       fprintf(stderr,
+           "cdrskin:        burn_drive_info_forget() returns %d\n",ret);
+     }
+
+#else
 
      ret= Cdrskin_reinit_lib_with_adr(skin,1|(flag&2));
      goto ex; /* this calls Cdrskin_grab() with persistent address or fails */
+
+#endif /* ! Cdrskin_drop_drives_by_forgeT */
+
    }
 
 #else
@@ -2310,7 +2349,7 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
 #endif /* ! Cdrskin_new_api_tesT */
 
-   ret= burn_drive_grab(drive,1);
+   ret= burn_drive_grab(drive,!(flag&2));
    if(ret==0) {
      fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
              skin->driveno);
@@ -2321,11 +2360,11 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    /* RIP-14.5 + LITE-ON 48125S produce a false status if tray was unloaded */
    /* Therefore the first grab was just for loading */
    skin->drive_is_grabbed= 1; /* message to eventual abort handler */
-   burn_drive_release(drive,0); 
+   burn_drive_release(drive,0);
    skin->drive_is_grabbed= 0;
 
    /* now grab the drive for real */
-   ret= burn_drive_grab(drive,1);
+   ret= burn_drive_grab(drive,!(flag&2));
    if(ret==0) {
      fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
              skin->driveno);
