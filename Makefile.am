@@ -90,10 +90,7 @@ libinclude_HEADERS = \
 ## Build test applications
 noinst_PROGRAMS = \
 	test/libburner \
-	test/blank \
 	test/burn \
-	test/burniso \
-	test/devices \
 	test/iso \
 	test/master \
 	test/poll \
@@ -105,9 +102,6 @@ noinst_PROGRAMS = \
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_libburner_SOURCES = test/libburner.c
-test_devices_CPPFLAGS = -Ilibburn
-test_devices_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
-test_devices_SOURCES = test/devices.c
 test_poll_CPPFLAGS = -Ilibburn
 test_poll_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_poll_SOURCES = test/poll.c
@@ -120,18 +114,12 @@ test_rip_SOURCES = test/rip.c
 test_burn_CPPFLAGS = -Ilibburn
 test_burn_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_burn_SOURCES = test/burn.c
-test_burniso_CPPFLAGS = -Ilibburn
-test_burniso_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
-test_burniso_SOURCES = test/burniso.c
 test_master_CPPFLAGS = -Ilibburn
 test_master_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_master_SOURCES = test/master.c
 test_structest_CPPFLAGS = -Ilibburn
 test_structest_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_structest_SOURCES = test/structest.c
-test_blank_CPPFLAGS = -Ilibburn
-test_blank_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
-test_blank_SOURCES = test/blank.c
 test_iso_CPPFLAGS = -Ilibisofs
 test_iso_LDADD = $(libisofs_libisofs_la_OBJECTS) $(THREAD_LIBS)
 test_iso_SOURCES = test/iso.c
