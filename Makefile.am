@@ -96,8 +96,7 @@ noinst_PROGRAMS = \
 	test/poll \
 	test/rip \
 	test/toc \
-	test/structest \
-	cdrskin/cdrskin
+	test/structest 
 
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
@@ -198,4 +197,11 @@ EXTRA_DIST = \
 	version.h.in \
 	doc/doxygen.conf.in \
 	README \
-	COPYING
+	cdrskin/README \
+	cdrskin/cdrecord_spy.sh \
+        cdrskin/compile_cdrskin.sh \
+	cdrskin/changelog.txt \
+        cdrskin/cdrskin_eng.html \
+        cdrskin/wiki_plain.txt \
+        COPYING
+
