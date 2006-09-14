@@ -96,7 +96,8 @@ noinst_PROGRAMS = \
 	test/poll \
 	test/rip \
 	test/toc \
-	test/structest 
+	test/structest \
+        cdrskin/cdrskin
 
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
