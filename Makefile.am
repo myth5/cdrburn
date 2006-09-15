@@ -144,16 +144,9 @@ webhost = http://libburn-api.pykix.org
 webpath = /
 docdir = $(DESTDIR)$(prefix)/share/doc/$(PACKAGE)-$(VERSION)
 
-docdeps = \
-	doc/doxygen.conf \
-	doc/comments \
-	libburn/libburn.h \
-	libisofs/libisofs.h \
-	test/burniso.c
-
 doc:	doc/html
 
-doc/html: $(docdeps)
+doc/html: doc/doxygen.conf
 	if [ -f ./doc/doc.lock ]; then \
 		$(RM) -r doc/html; \
 		doxygen doc/doxygen.conf; \
