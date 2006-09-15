@@ -245,6 +245,10 @@ or
 #define Cdrskin_is_erasable_on_load_is_brokeN 1
 #endif
 
+/** http://libburn.pykix.org/ticket/41 reports of big trouble without that */
+#define Cdrskin_all_tracks_with_sector_paD 1
+
+
 /** A macro which is able to eat up a function call like printf() */
 #ifdef Cdrskin_extra_leaN
 #define ClN(x) 
@@ -789,7 +793,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->fixed_size= 0.0;
  o->padding= 0.0;
  o->set_by_padsize= 0;
- o->sector_pad_up= 0;
+ o->sector_pad_up= Cdrskin_all_tracks_with_sector_paD;
  o->track_type= BURN_MODE1;
  o->fifo_enabled= 0;
  o->fifo= NULL;
