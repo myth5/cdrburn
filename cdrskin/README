@@ -85,17 +85,21 @@ In order to surely get a standalone binary, execute
 
     cdrskin/compile_cdrskin.sh
 
-Help texts :
+Version identification an help texts available afterwards:
+    cdrskin/cdrskin -version
     cdrskin/cdrskin --help
     cdrskin/cdrskin -help
 
 Install (eventually as superuser) cdrskin to a directory where it can be found:
-    cp cdrskin/cdrskin /usr/bin
-
-(If cdrskin was already installed by a previous version, or by "make install"
+If cdrskin was already installed by a previous version, or by "make install"
 in the course of this installation, then find out where:
     which cdrskin 
-Copy your standalone binary to exactly the address which you get as reply.) 
+Copy your standalone binary to exactly the address which you get as reply 
+
+    cp cdrskin/cdrskin /usr/bin/cdrskin
+
+Check the version timestamps of the globally installed binary
+    cdrskin -version
 
 It is not necessary for the standalone cdrskin binary to have libburn
 installed, since it incorporates the necessary libburn parts at compile time.

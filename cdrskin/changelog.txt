@@ -298,7 +298,7 @@ cdrskin/README
 cdrskin/cdrskin.c
 Added upcoming clarification of copyright and license aspiration
 
-3 Sep 2006  []
+3 Sep 2006  [91]
 cdrskin/changelog.txt
 cdrskin/cdrskin_timestamp.h
 Opened new cdrskin-0.1.5 upload cycle. This marks a should-be-stable phase.
@@ -310,10 +310,203 @@ Opened new cdrskin-0.1.5 upload cycle. This marks a should-be-stable phase.
 doc/comments_test_ts
 Made a try to get doxygen portal page readable by html dl lists
 
-2006  []
-cdrskin/cdrskin.c
+4 Sep 2006  [92]
+cdrskin/README
+Made changes as reported by Lorenzo on libburn-hackers today
+
+4 Sep 2006  [93]
+libburn/transport.h
+libburn/drive.h
+libburn/drive.c
+libburn/init.c
+libburn/libburn.h
+Integrated elmom patch proposal #3 from ticket #62
+/* ts A60904 : ticket 62, contribution by elmom */
+
+4 Sep 2006  [94]
+cdrskin/README
+Removed reference to frontend "burn" (needs a patch to work for .mp3)
+
+5 Sep 2006  [95]
+doc/comments_test_ts
+Made a try to get doxygen portal page readable by pre tags and truncation
+
+5 Sep 2006  [96]
 test/libburner.c
-Getting rid of highspeed loops
+Rearranged definitions and header inclusions. Is safer so.
+
+5 Sep 2006  [97]
+test/libburner.c
+Re-inserted lost tab.
+
+6 Sep 2006  [trac]
+closed ticket 55: burn of empty tracks from stdin is now forbidden
+
+6 Sep 2006  [98]
+libburn/libburn.h
+libburn/drive.c
+Added new parameter "force" to API-experimental burn_drive_info_forget()
+
+6 Sep 2006  [99]
+doc/comments
+Made doc test portal the official doc portal
+
+6 Sep 2006  [100]
+cdrskin/cdrfifo.c
+Added an initial value on proposal by Bart Vanherck
+
+7 Sep 2006  [101]
+test/libburner.c
+Changed a macro name from Burniso_ to Libburner_
+
+7 Sep 2006  [102] [103]
+libburn/libburn.h
+libburn/drive.c
+cdrskin/cdrskin.c
+Implemented first use of API-experimental burn_drive_info_forget() in cdrskin signal handler
+
+7 Sep 2006  [104]
+cdrskin/cdrskin.c
+Tried to make abort messages clearer
+
+7 Sep 2006  [105]
+Makefile.am
+test/testburner.c
+Prepared test bed for burn_drive_info_forget() as regular API call
+
+7 Sep 2006  [106]
+test/testburner.c
+Removed a remnant piece of rather unhealthy test code
+
+7 Sep 2006  [106]
+test/testburner.c
+Corrected test reciepe
+
+7 Sep 2006  [107]
+test/libburner.c
+Added constraint --stdin_size >= 600k, better bus scan behavior
+
+8 Sep 2006 2006  [109]
+libburn/drive.c
+test/testburner.c
+cdrskin/cdrskin.c
+Hopefully ensured correct burn_disc_erasable() already after first grab
+
+9 Sep 2006 2006  [112]
+libburn/drive.c
+cdrskin/cdrskin.c
+Hunted down the bug which let newapi-cdrskin fail with drive 1
+
+10 Sep 2006  [113]
+libburn/drive.c
+test/libburner.c
+test/testburner.c
+cdrskin/cdrskin.c
+Slowed down highspeed loops waiting for drive status changes
+
+10 Sep 2006  [114]
+cdrskin/compile_cdrskin.sh
+Aliased switch name -newapi by -experimental
+
+10 Sep 2006  [115]
+test/libburner.c
+test/testburner.c
+cdrskin/cdrskin.c
+Re-enabled call to burn_drive_info_free() after repair by revision 93
+
+11 Sep 2006  [116]
+cdrskin/compile_cdrskin.sh
+Changed -newapi to -experimental in help text
+
+11 Sep 2006  [117]
+libburn/drive.c
+Removed a bug introduced with revison 93
+
+11 Sep 2006  [118]
+libburn/libburn.h
+test/libburner.c
+Officialized burn_drive_info_forget()
+
+11 Sep 2006  [119] [120]
+Makefile.am
+test/testburner.c
+Deleted until next occasion: testburner
+
+12 Sep Sep 2006  [124]
+cdrskin/cdrskin.c
+Repaired regression of -eject which loaded tray again
+
+12 Sep 2006  [126]
+cdrskin/cdrskin.c
+Replaced -experimental method of closing libburn by burn_drive_info_forget()
+
+12 Sep 2006  [129]
+cdrskin/cdrskin.c
+Added automated padding to last audio track (ticket 41)
+
+2006.09.13.093350  [130]
+cdrskin/make_timestamp.sh
+Prepared for new revision timestamps to mark cdrskin test versions
+From now on cdrskin/cdrskin_timestamp.h is to be part of any commit.
+
+15 Sep 2006  [135]
+Makefile.am
+Replaced a few 8-blanks by tab
+
+15 Sep 2006  [136]
+README
+Moved installation instructions in front of overview paragraph
+
+15 Sep 2006  [137]
+Makefile.am
+cdrskin/README
+Made cdrskin an installable program
+
+2006.09.15.092509  [138]
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Prepared cdrskin-build for version leap
+
+
+----------------------------- cycled (last cdrskin-0.1.5 ?) - 2006.09.15.101326
+
+2006.09.15.101326  []
+cdrskin/README
+cdrskin/changelog.txt
+New upload of scdbackup.sourceforge.net/cdrskin-0.1.5.tar.gz
+
+
+
+Sep 2006  []
+000_CAUTION_RELEASE_CANDIDATE
+zzz_CAUTION_RELEASE_CANDIDATE
+README
+Makefile.am
+cdrskin/README
+cdrskin/cdrskin_eng.html
+cdrskin/add_ts_changes_to_libburn_0_2_1
+cdrskin/add_ts_changes_to_libburn_0_2_2
+cdrskin/compile_cdrskin.sh
+( cd_backup_planer_dir/aux/upload )
+Perfom version leap
+
+------------------------------ cycle 
+
+2006  []
+test/libburner.c
+--audio and multi-track
+
+2006  []
+Resolve softlinks (ticket 33)
+
+2006  []
+Find matching /dev/sgN from srM or scdM 
+
+2006  []
+Implement a .wav decapitator (ticket 38)
+
+2006  []
+Clear outdated persistent read buffer after small CD image was read (ticket 57)
 
 
 2006  []
@@ -321,6 +514,5 @@ Getting rid of highspeed loops
 >>> libburn/drive.c
 >>> libburn/sg.c
 >>> Promoted burn_drive_is_open() to official API
->>> how to close a drive that is not grabbed ?
 
 
