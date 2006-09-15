@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------
-            libburn.pykix.org    scdbackup.sourceforge.net/cdrskin
+         libburn.pykix.org    scdbackup.sourceforge.net/cdrskin_eng.html
 ------------------------------------------------------------------------------
 Installation instructions at about line 60. First the legal stuff:
 ------------------------------------------------------------------------------
@@ -91,6 +91,11 @@ Help texts :
 
 Install (eventually as superuser) cdrskin to a directory where it can be found:
     cp cdrskin/cdrskin /usr/bin
+
+(If cdrskin was already installed by a previous version, or by "make install"
+in the course of this installation, then find out where:
+    which cdrskin 
+Copy your standalone binary to exactly the address which you get as reply.) 
 
 It is not necessary for the standalone cdrskin binary to have libburn
 installed, since it incorporates the necessary libburn parts at compile time.

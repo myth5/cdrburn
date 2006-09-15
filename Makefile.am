@@ -96,7 +96,9 @@ noinst_PROGRAMS = \
 	test/poll \
 	test/rip \
 	test/toc \
-	test/structest \
+	test/structest
+
+bin_PROGRAMS = \
 	cdrskin/cdrskin
 
 test_libburner_CPPFLAGS = -Ilibburn
