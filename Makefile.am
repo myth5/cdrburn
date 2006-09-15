@@ -142,6 +142,7 @@ cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h 
 ## Build documentation (You need Doxygen for this to work)
 webhost = http://libburn-api.pykix.org
 webpath = /
+docdir = $(DESTDIR)$(prefix)/share/doc/$(PACKAGE)-$(VERSION)
 
 docdeps = \
 	doc/doxygen.conf \
@@ -150,16 +151,27 @@ docdeps = \
 	libisofs/libisofs.h \
 	test/burniso.c
 
-doc: doc/html
+doc:	doc/html
 
 doc/html: $(docdeps)
-	$(RM) -r $@
-	doxygen doc/doxygen.conf
+	if [ -f ./doc/doc.lock ]; then \
+		$(RM) -r doc/html; \
+		doxygen doc/doxygen.conf; \
+	fi
 
 doc-upload: doc/html
 	scp -r $</* $(webhost):$(webpath)
 
-.PHONY: doc
+all: doc
+
+install-data-local: 
+	if [ -f ./doc/doc.lock ]; then \
+		$(mkinstalldirs) $(docdir)/html; \
+		$(INSTALL_DATA) doc/html/* $(docdir)/html; \
+	fi
+
+uninstall-local:
+	rm -rf $(docdir)
 
 ## ========================================================================= ##
 
