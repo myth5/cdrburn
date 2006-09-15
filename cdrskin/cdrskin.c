@@ -171,8 +171,7 @@ or
 #define Cdrskin_libburn_from_pykix_svN 1
 #endif
 
-/* still inofficial */
-#ifdef  Cdrskin_libburn_0_2_2
+#ifdef Cdrskin_libburn_0_2_2
 #define Cdrskin_libburn_versioN "0.2.2"
 #define Cdrskin_libburn_from_pykix_svN 1
 #endif

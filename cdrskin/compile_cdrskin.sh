@@ -2,7 +2,7 @@
 
 # compile_cdrskin.sh  
 # Copyright 2005 - 2006 Thomas Schmitt, scdbackup@gmx.net, GPL
-# to be executed within  ./libburn-0.2.1  resp ./cdrskin-0.1.4
+# to be executed within  ./libburn-*  resp ./cdrskin-*
 
 debug_opts=
 def_opts=
@@ -28,6 +28,12 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
+  elif test "$i" = "-libburn_0_2_1"
+  then
+    libvers="-DCdrskin_libburn_0_2_1"
+  elif test "$i" = "-libburn_0_2_2"
+  then
+    libvers="-DCdrskin_libburn_0_2_2 -DCdrskin_prog_versioN="'"0.2.2"'
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
