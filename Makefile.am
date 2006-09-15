@@ -97,7 +97,7 @@ noinst_PROGRAMS = \
 	test/rip \
 	test/toc \
 	test/structest \
-        cdrskin/cdrskin
+	cdrskin/cdrskin
 
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
@@ -200,9 +200,9 @@ EXTRA_DIST = \
 	README \
 	cdrskin/README \
 	cdrskin/cdrecord_spy.sh \
-        cdrskin/compile_cdrskin.sh \
+	cdrskin/compile_cdrskin.sh \
 	cdrskin/changelog.txt \
-        cdrskin/cdrskin_eng.html \
-        cdrskin/wiki_plain.txt \
-        COPYING
+	cdrskin/cdrskin_eng.html \
+	cdrskin/wiki_plain.txt \
+	COPYING
 
