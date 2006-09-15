@@ -1,4 +1,4 @@
-AC_INIT([libburn], [0.2.1], [http://libburn.pykix.org])
+AC_INIT([libburn], [0.2.2], [http://libburn.pykix.org])
 AC_PREREQ([2.50])
 dnl AC_CONFIG_HEADER([config.h])	
 
