@@ -127,7 +127,7 @@ or
 
 /** The official program version */
 #ifndef Cdrskin_prog_versioN
-#define Cdrskin_prog_versioN "0.1.5"
+#define Cdrskin_prog_versioN "0.2.2"
 #endif
 
 /** The source code release timestamp */

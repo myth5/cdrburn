@@ -128,7 +128,7 @@ test_iso_SOURCES = test/iso.c
 
 ##  cdrskin construction site - ts A60816
 cdrskin_cdrskin_CPPFLAGS = -Ilibburn
-cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_2_1
+cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_2_2
 cdrskin_cdrskin_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h cdrskin/cleanup.c cdrskin/cleanup.h cdrskin/cdrskin_timestamp.h
 ##
