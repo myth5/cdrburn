@@ -320,8 +320,8 @@ void burn_disc_erase_sync(struct burn_drive *d, int fast)
 	/* read the initial 0 stage */
 	while (!d->test_unit_ready(d) && d->get_erase_progress(d) == 0)
 		sleep(1);
-	while (!d->test_unit_ready(d) &&
-	       (d->progress.sector = d->get_erase_progress(d)) > 0)
+	while ((d->progress.sector = d->get_erase_progress(d)) > 0 ||
+	!d->test_unit_ready(d))
 		sleep(1);
 	d->progress.sector = 0x10000;
 	d->busy = BURN_DRIVE_IDLE;
