@@ -203,6 +203,7 @@ EXTRA_DIST = \
 	libburn-1.pc.in \
 	libisofs-1.pc.in \
 	version.h.in \
+	doc/comments \
 	doc/doxygen.conf.in \
 	README \
 	cdrskin/README \
