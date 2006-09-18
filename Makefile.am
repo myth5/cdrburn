@@ -206,6 +206,8 @@ EXTRA_DIST = \
 	doc/comments \
 	doc/doxygen.conf.in \
 	README \
+	AUTHORS \
+	COPYRIGHT \
 	cdrskin/README \
 	cdrskin/cdrecord_spy.sh \
 	cdrskin/compile_cdrskin.sh \
