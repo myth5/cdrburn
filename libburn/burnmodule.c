@@ -1835,45 +1835,55 @@ b_main_drive_scan(PyObject *self /* Not used */, PyObject *args)
 }
 
 static char b_main_msf_to_sectors__doc__[] =
-""
+"Convert a Minute-Second-Frame (MSF) tuple value to its sector count"
 ;
 
 static PyObject *
 b_main_msf_to_sectors(PyObject *self /* Not used */, PyObject *args)
 {
-
-	if (!PyArg_ParseTuple(args, ""))
+    int sectors, min, sec, frame;
+	
+    if (!PyArg_ParseTuple(args, "(iii)", &min, &sec, &frame))
 		return NULL;
-	Py_INCREF(Py_None);
-	return Py_None;
+
+    sectors = burn_msf_to_sectors(min, sec, frame);
+
+    return PyInt_FromLong(sectors);
 }
 
 static char b_main_sectors_to_msf__doc__[] =
-""
+"Convert a sector count to its Minute-Second-Frame (MSF) tuple value"
 ;
 
 static PyObject *
 b_main_sectors_to_msf(PyObject *self /* Not used */, PyObject *args)
 {
+    int sectors, min, sec, frame;	
 
-	if (!PyArg_ParseTuple(args, ""))
+    if (!PyArg_ParseTuple(args, "i", &sectors))
 		return NULL;
-	Py_INCREF(Py_None);
-	return Py_None;
+
+    burn_sectors_to_msf(sectors, &min, &sec, &frame);
+
+    return PyTuple_Pack(3, PyInt_FromLong(min),
+                             PyInt_FromLong(sec), 
+                               PyInt_FromLong(frame));
 }
 
 static char b_main_msf_to_lba__doc__[] =
-""
+"Convert a Minute-Second-Frame (MSF) tuple value to its corresponding LBA"
 ;
 
 static PyObject *
 b_main_msf_to_lba(PyObject *self /* Not used */, PyObject *args)
 {
-
-	if (!PyArg_ParseTuple(args, ""))
+    int lba, min, sec, frame;
+	if (!PyArg_ParseTuple(args, "(iii)", &min, &sec, &frame))
 		return NULL;
-	Py_INCREF(Py_None);
-	return Py_None;
+
+    lba = burn_msf_to_lba(min, sec, frame);
+
+	return PyInt_FromLong(lba);
 }
 
 static char b_main_version__doc__[] =
@@ -1883,14 +1893,12 @@ static char b_main_version__doc__[] =
 static PyObject *
 b_main_version(PyObject *self /* Not used */, PyObject *args)
 {
-    PyObject *version;
     int maj, min, mic;
     burn_version(&maj, &min, &mic);
 
-    version = PyTuple_Pack(3, PyInt_FromLong(maj),
-                                PyInt_FromLong(min), 
-                                  PyInt_FromLong(mic));
-    return version;
+    return PyTuple_Pack(3, PyInt_FromLong(maj),
+                             PyInt_FromLong(min), 
+                               PyInt_FromLong(mic));
 }
 
 /* List of methods defined in the module */
@@ -1908,8 +1916,7 @@ static struct PyMethodDef b_main_methods[] = {
  {"sectors_to_msf",	(PyCFunction)b_main_sectors_to_msf,	METH_VARARGS,	b_main_sectors_to_msf__doc__},
  {"msf_to_lba",	(PyCFunction)b_main_msf_to_lba,	METH_VARARGS,	b_main_msf_to_lba__doc__},
  {"version",	(PyCFunction)b_main_version,	METH_VARARGS,	b_main_version__doc__},
- 
-	{NULL,	 (PyCFunction)NULL, 0, NULL}		/* sentinel */
+ {NULL,	 (PyCFunction)NULL, 0, NULL}		/* sentinel */
 };
 
 
