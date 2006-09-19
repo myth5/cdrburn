@@ -19,7 +19,7 @@ iso_volset_new(struct iso_volume *vol, const char *id)
 	volset->refcount = 1;
 	volset->volume = malloc(sizeof(void *));
 	volset->volume[0] = vol;
-	volset->volset_id = towcs(id);
+	volset->volset_id = strdup(id);
 
 	vol->refcount++;
 	return volset;
@@ -63,11 +63,11 @@ iso_volume_new_with_root(const char *volume_id,
 	volume->root = root ? root : iso_tree_new_root(volume);
 
 	if (volume_id != NULL)
-		volume->volume_id = towcs(volume_id);
+		volume->volume_id = strdup(volume_id);
 	if (publisher_id != NULL)
-		volume->publisher_id = towcs(publisher_id);
+		volume->publisher_id = strdup(publisher_id);
 	if (data_preparer_id != NULL)
-		volume->data_preparer_id = towcs(data_preparer_id);
+		volume->data_preparer_id = strdup(data_preparer_id);
 	return volume;
 }
 

@@ -429,10 +429,10 @@ write_pri_vol_desc(struct ecma119_write_target *t, uint8_t *buf)
 {
 	struct ecma119_pri_vol_desc *vol = (struct ecma119_pri_vol_desc*)buf;
 	struct iso_volume *volume = t->volset->volume[t->volnum];
-	char *vol_id = wcstoascii(volume->volume_id);
-	char *pub_id = wcstoascii(volume->publisher_id);
-	char *data_id = wcstoascii(volume->data_preparer_id);
-	char *volset_id = wcstoascii(t->volset->volset_id);
+	char *vol_id = str2ascii(volume->volume_id);
+	char *pub_id = str2ascii(volume->publisher_id);
+	char *data_id = str2ascii(volume->data_preparer_id);
+	char *volset_id = str2ascii(t->volset->volset_id);
 
 	vol->vol_desc_type[0] = 1;
 	memcpy(vol->std_identifier, "CD001", 5);

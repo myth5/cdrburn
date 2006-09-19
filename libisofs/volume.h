@@ -21,9 +21,9 @@ struct iso_volume
 	struct iso_tree_node *root;	/**< Root of the directory tree for the
 					     volume. */
 
-	wchar_t *volume_id;		/**< Volume identifier. */
-	wchar_t *publisher_id;		/**< Volume publisher. */
-	wchar_t *data_preparer_id;	/**< Volume data preparer. */
+	char *volume_id;		/**< Volume identifier. */
+	char *publisher_id;		/**< Volume publisher. */
+	char *data_preparer_id;	/**< Volume data preparer. */
 };
 
 /**
@@ -38,7 +38,7 @@ struct iso_volset
 	int volset_size;		/**< The number of volumes in this
 					     volume set. */
 
-	wchar_t *volset_id;		/**< The id of this volume set, encoded
+	char *volset_id;		/**< The id of this volume set, encoded
 					     in the current locale. */
 };
 

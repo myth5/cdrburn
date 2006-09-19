@@ -86,7 +86,7 @@ iso_tree_add_new_file(struct iso_tree_node *parent, const char *name)
 
 	f->volume = parent ? parent->volume : NULL;
 	f->parent = parent;
-	f->name = parent ? towcs(name) : NULL;
+	f->name = parent ? strdup(name) : NULL;
 	f->attrib = get_attrib(parent);
 	f->attrib.st_mode = 0777 | S_IFREG;
 	f->loc.type = LIBISO_NONE;
@@ -192,7 +192,7 @@ iso_tree_print(const struct iso_tree_node *root, int spaces)
 	memset(sp, ' ', spaces);
 	sp[spaces] = '\0';
 
-	printf("%s%ls\n", sp, root->name);
+	printf("%s%sn", sp, root->name);
 	for (i=0; i < root->nchildren; i++) {
 		iso_tree_print(root->children[i], spaces+2);
 	}
@@ -219,5 +219,5 @@ void
 iso_tree_node_set_name(struct iso_tree_node *file, const char *name)
 {
 	free(file->name);
-	file->name = towcs(name);
+	file->name = strdup(name);
 }
