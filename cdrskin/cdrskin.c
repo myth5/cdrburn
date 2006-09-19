@@ -3669,10 +3669,15 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
  if(!skin->do_eject)
    return(1);
- if(Cdrskin_grab_drive(skin,2)>0)
+ if(Cdrskin_grab_drive(skin,2)>0) {
     Cdrskin_release_drive(skin,1);
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-  ClN(fprintf(stderr,"cdrskin_debug: supposing drive eject to have worked\n"));
+    if(skin->verbosity>=Cdrskin_verbose_debuG)
+      ClN(fprintf(stderr,
+                  "cdrskin_debug: supposing drive eject to have worked\n"));
+ } else {
+   fprintf(stderr,"cdrskin: SORRY : Failed to finally eject tray.\n");
+   return(0);
+ }
  return(1);
 
 #else /* Cdrskin_burn_drive_eject_brokeN */
