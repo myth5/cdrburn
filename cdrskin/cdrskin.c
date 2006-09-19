@@ -3939,11 +3939,12 @@ set_blank:;
    } else if(strncmp(argv[i],"driveropts=",11)==0) {
      value_pt= argv[i]+11;
 set_driveropts:;
-     if(strcmp(value_pt,"burnfree")==0) {
+     if(strcmp(value_pt,"burnfree")==0 || strcmp(value_pt,"burnproof")==0) {
        skin->burnfree= 1;
        if(skin->verbosity>=Cdrskin_verbose_cmD)
          printf("cdrskin: burnfree : on\n");
-     } else if(strcmp(argv[i]+11,"noburnfree")==0) {
+     } else if(strcmp(argv[i]+11,"noburnfree")==0 ||
+               strcmp(argv[i]+11,"noburnproof")==0 ) {
        skin->burnfree= 0;
        if(skin->verbosity>=Cdrskin_verbose_cmD)
          printf("cdrskin: burnfree : off\n");
