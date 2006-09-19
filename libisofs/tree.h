@@ -51,7 +51,7 @@ struct iso_tree_node
 {
 	struct iso_volume *volume;
 	struct iso_tree_node *parent;
-	wchar_t *name;
+	char *name;
 	struct stat attrib;	/**< The POSIX attributes of this node as
 				  * documented in "man 2 stat". */
 	struct iso_file_location loc;

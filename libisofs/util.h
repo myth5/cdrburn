@@ -31,18 +31,18 @@ extern inline int round_up(int n, int mul)
 }
 
 wchar_t *towcs(const char *);
-char *wcstoascii(const wchar_t *);
-uint16_t *wcstoucs(const wchar_t*);
+char *str2ascii(const char*);
+uint16_t *str2ucs(const char*);
 
 /**
  * Create a level 1 directory identifier.
  */
-char *iso_1_dirid(const wchar_t *src);
+char *iso_1_dirid(const char *src);
 
 /**
  * Create a level 2 directory identifier.
  */
-char *iso_2_dirid(const wchar_t *src);
+char *iso_2_dirid(const char *src);
 
 /**
  * Create a level 1 file identifier that consists of a name, extension and
@@ -51,7 +51,7 @@ char *iso_2_dirid(const wchar_t *src);
  * length 3, followed by a separator (;) and a version number (digit 1).
  * @return NULL if the original name and extension both are of length 0.
  */
-char *iso_1_fileid(const wchar_t *src);
+char *iso_1_fileid(const char *src);
 
 /**
  * Create a level 2 file identifier that consists of a name, extension and
@@ -60,7 +60,7 @@ char *iso_1_fileid(const wchar_t *src);
  * followed by a separator (;) and a version number (digit 1).
  * @return NULL if the original name and extension both are of length 0.
  */
-char *iso_2_fileid(const wchar_t *src);
+char *iso_2_fileid(const char *src);
 
 /**
  * Create a Joliet file or directory identifier that consists of a name,
@@ -73,7 +73,7 @@ char *iso_2_fileid(const wchar_t *src);
  * @param size will be set to the size (in bytes) of the identifier.
  * @return NULL if the original name and extension both are of length 0 or the conversion from the current codeset to UCS-2BE is not available.
  */
-uint16_t *iso_j_id(const wchar_t *src);
+uint16_t *iso_j_id(const char *src);
 
 /**
  * FIXME: what are the requirements for these next two? Is this for RR?
@@ -82,14 +82,14 @@ uint16_t *iso_j_id(const wchar_t *src);
  * The resulting file name will not exceed 250 characters.
  * @return NULL if the original name and extension both are of length 0.
  */
-char *iso_p_fileid(const wchar_t *src);
+char *iso_p_fileid(const char *src);
 
 /**
  * Create a POSIX portable directory name.
  * The resulting directory name will not exceed 250 characters.
  * @return NULL if the original name is of length 0.
  */
-char *iso_p_dirid(const wchar_t *src);
+char *iso_p_dirid(const char *src);
 
 void iso_lsb(uint8_t *buf, uint32_t num, int bytes);
 void iso_msb(uint8_t *buf, uint32_t num, int bytes);

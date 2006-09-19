@@ -129,6 +129,7 @@ joliet_calc_dir_pos(struct ecma119_write_target *t,
 
 	root->block = t->curblock;
 	t->curblock += div_up(root->len, t->block_size);
+
 	t->dirlist_joliet[t->curfile++] = root;
 	for (i = 0; i < root->nchildren; i++) {
 		ch = root->children[i];
@@ -231,10 +232,10 @@ write_sup_vol_desc(struct ecma119_write_target *t, uint8_t *buf)
 {
 	struct ecma119_sup_vol_desc *vol = (struct ecma119_sup_vol_desc*)buf;
 	struct iso_volume *volume = t->volset->volume[t->volnum];
-	uint16_t *vol_id = wcstoucs(volume->volume_id);
-	uint16_t *pub_id = wcstoucs(volume->publisher_id);
-	uint16_t *data_id = wcstoucs(volume->data_preparer_id);
-	uint16_t *volset_id = wcstoucs(t->volset->volset_id);
+	uint16_t *vol_id = str2ucs(volume->volume_id);
+	uint16_t *pub_id = str2ucs(volume->publisher_id);
+	uint16_t *data_id = str2ucs(volume->data_preparer_id);
+	uint16_t *volset_id = str2ucs(t->volset->volset_id);
 	int vol_id_len = MIN(32, ucslen(vol_id) * 2);
 	int pub_id_len = MIN(128, ucslen(pub_id) * 2);
 	int data_id_len = MIN(128, ucslen(data_id) * 2);

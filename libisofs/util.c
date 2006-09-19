@@ -13,8 +13,14 @@
 #include <ctype.h>
 #include <assert.h>
 #include <errno.h>
+#include <locale.h>
 
 #include "util.h"
+
+/* avoids warning and names in iso, joliet and rockridge can't be > 255 bytes
+ * anyway. There are at most 31 characters in iso level 1, 255 for rockridge,
+ * 64 characters (* 2 since UCS) for joliet. */
+#define NAME_BUFFER_SIZE 255
 
 int div_up(int n, int div)
 {
@@ -26,84 +32,161 @@ int round_up(int n, int mul)
 	return div_up(n, mul) * mul;
 }
 
-wchar_t *towcs(const char *str)
+/* this function must always return a name
+ * since the caller never checks if a NULL
+ * is returned. It also avoids some warnings. */
+char *str2ascii(const char *src_arg)
 {
-	size_t len = strlen(str);
-	wchar_t *ret = malloc(sizeof(wchar_t) * (len + 1));
-	mbstate_t ps;
+	wchar_t wsrc_[NAME_BUFFER_SIZE];
+	char *src = (char*)wsrc_;
+	char *ret_;
+	char *ret;
+	mbstate_t state;
+	iconv_t conv;
+	size_t numchars;
+	size_t outbytes;
+	size_t inbytes;
 	size_t n;
 
-	memset(&ps, 0, sizeof(ps));
-	n = mbsrtowcs(ret, &str, len, &ps);
-	ret[len] = '\0';
-
-	if (n != len) {
-		free(ret);
-		return NULL;
-	}
-	return ret;
-}
-
-char *wcstoascii(const wchar_t *wsrc)
-{
-	if (!wsrc)
+	if (!src_arg)
 		return NULL;
 
-	iconv_t conv = iconv_open("ASCII", "WCHAR_T");
-	size_t outbytes = wcslen(wsrc);
-	size_t inbytes = outbytes * sizeof(wchar_t);
-	char src_[inbytes + sizeof(wchar_t)];
-	char *src = src_;
-	char *ret_, *ret;
-	size_t n;
+	/* convert the string to a wide character string. Note: outbytes
+	 * is in fact the number of characters in the string and doesn't
+	 * include the last NULL character. */
+	memset(&state, 0, sizeof(state));
+	numchars = mbsrtowcs(wsrc_, &src_arg, NAME_BUFFER_SIZE-1, &state);
+	if (numchars < 0)
+		return NULL;
 
+	inbytes = numchars * sizeof(wchar_t);
+
+	ret_ = malloc(numchars+1);
+	outbytes = numchars;
+	ret = ret_;
+
+	/* initialize iconv */
+	conv = iconv_open("ASCII", "WCHAR_T");
 	if (conv == (iconv_t)-1)
 		return NULL;
 
-	memcpy(src, wsrc, inbytes + sizeof(wchar_t));
-	ret = malloc(outbytes+1);
-	ret[outbytes] = '\0';
-	ret_ = ret;
-
 	n = iconv(conv, &src, &inbytes, &ret, &outbytes);
-	if (n == -1) {
-		free(ret_);
-		return NULL;
+	while(n == -1) {
+		/* The destination buffer is too small. Stops here. */
+		if(errno == E2BIG)
+			break;
+
+		/* An incomplete multi bytes sequence was found. We 
+		 * can't do anything here. That's quite unlikely. */
+		if(errno == EINVAL)
+			break;
+
+		/* The last possible error is an invalid multi bytes
+		 * sequence. Just replace the character with a "_". 
+		 * Probably the character doesn't exist in ascii like
+		 * "é, è, à, ç, ..." in French. */
+		*ret++ = '_';
+		outbytes--;
+
+		if(!outbytes)
+			break;
+
+		/* There was an error with one character but some other remain
+		 * to be converted. That's probably a multibyte character.
+		 * See above comment. */
+		src += sizeof(wchar_t);
+		inbytes -= sizeof(wchar_t);
+
+		if(!inbytes)
+			break;
+
+		n = iconv(conv, &src, &inbytes, &ret, &outbytes);
 	}
+
+	iconv_close(conv);
+
+	*ret='\0';
 	return ret_;
 }
 
 /* FIXME: C&P */
-uint16_t *wcstoucs(const wchar_t *wsrc)
+uint16_t *str2ucs(const char *src_arg)
 {
-	if (!wsrc)
-		return calloc(2, 1); /* empty UCS string */
-
-	iconv_t conv = iconv_open("UCS-2BE", "WCHAR_T");
-	size_t outbytes = wcslen(wsrc) * 2;
-	size_t inbytes = outbytes * sizeof(wchar_t) / 2;
-	char src_[inbytes + sizeof(wchar_t)];
-	char *src = src_;
-	char *ret_, *ret;
+	wchar_t wsrc_[NAME_BUFFER_SIZE];
+	char *src = (char*)wsrc_;
+	char *ret_;
+	char *ret;
+	mbstate_t state;
+	iconv_t conv;
+	size_t outbytes;
+	size_t numchars;
+	size_t inbytes;
 	size_t n;
 
-	if (conv == (iconv_t)-1)
-		return calloc(2, 1);
+	if (!src_arg)
+		return calloc(2, 1); /* empty UCS string */
 
-	memcpy(src, wsrc, inbytes + sizeof(wchar_t));
-	ret = malloc(outbytes + sizeof(wchar_t));
-	ret[outbytes] = 0;
-	ret[outbytes+1] = 0;
-	ret_ = ret;
+	/* convert the string to a wide character string. Note: outbytes
+	 * is in fact the number of characters in the string and doesn't
+	 * include the last NULL character. */
+	memset(&state, 0, sizeof(state));
+	numchars = mbsrtowcs(wsrc_, &src_arg, NAME_BUFFER_SIZE-1, &state);
+	if (numchars < 0)
+		return calloc(2, 1); /* empty UCS string */
+
+	inbytes = numchars * sizeof(wchar_t);
+
+	outbytes = numchars * sizeof(uint16_t);
+	ret_ = malloc ((numchars+1) * sizeof(uint16_t));
+	ret = ret_;
+
+	/* initialize iconv */
+	conv = iconv_open("UCS-2BE", "WCHAR_T");
+	if (conv == (iconv_t)-1)
+		return calloc(2, 1); /* empty UCS string */
 
 	n = iconv(conv, &src, &inbytes, &ret, &outbytes);
-	if (n == -1) {
-		perror ("error in iconv conversion");
-		free(ret_);
-		return calloc(2, 1);
+	while(n == -1) {
+		/* The destination buffer is too small. Stops here. */
+		if(errno == E2BIG)
+			break;
+
+		/* An incomplete multi bytes sequence was found. We 
+		 * can't do anything here. That's quite unlikely. */
+		if(errno == EINVAL)
+			break;
+
+		/* The last possible error is an invalid multi bytes
+		 * sequence. Just replace the character with a "_". 
+		 * Probably the character doesn't exist in ascii like
+		 * "é, è, à, ç, ..." in French. */
+		*((uint16_t*) ret) = '_';
+		ret += sizeof(uint16_t);
+		outbytes -= sizeof(uint16_t);
+
+		if(!outbytes)
+			break;
+
+		/* There was an error with one character but some other remain
+		 * to be converted. That's probably a multibyte character.
+		 * See above comment. */
+		src += sizeof(wchar_t);
+		inbytes -= sizeof(wchar_t);
+
+		if(!inbytes)
+			break;
+
+		n = iconv(conv, &src, &inbytes, &ret, &outbytes);
 	}
+
+	iconv_close(conv);
+
+	/* close the ucs string */
+	*((uint16_t*) ret) = 0;
+
 	return (uint16_t*)ret_;
 }
+
 
 static int valid_d_char(char c)
 {
@@ -132,9 +215,9 @@ static int valid_p_char(char c)
 				      || (c == '.') || (c == '_') || (c == '-');
 }
 
-static char *iso_dirid(const wchar_t *src, int size)
+static char *iso_dirid(const char *src, int size)
 {
-	char *ret = wcstoascii(src);
+	char *ret = str2ascii(src);
 	size_t len, i;
 
 	if (!ret)
@@ -153,19 +236,19 @@ static char *iso_dirid(const wchar_t *src, int size)
 	return ret;
 }
 
-char *iso_1_dirid(const wchar_t *src)
+char *iso_1_dirid(const char *src)
 {
 	return iso_dirid(src, 8);
 }
 
-char *iso_2_dirid(const wchar_t *src)
+char *iso_2_dirid(const char *src)
 {
 	return iso_dirid(src, 31);
 }
 
-char *iso_1_fileid(const wchar_t *wsrc)
+char *iso_1_fileid(const char *src_arg)
 {
-	char *src = wcstoascii(wsrc);
+	char *src = str2ascii(src_arg);
 	char *dest;
 	char *dot;			/* Position of the last dot in the
 					   filename, will be used to calculate 
@@ -214,9 +297,9 @@ char *iso_1_fileid(const wchar_t *wsrc)
 	return dest;
 }
 
-char *iso_2_fileid(const wchar_t *wsrc)
+char *iso_2_fileid(const char *src_arg)
 {
-	char *src = wcstoascii(wsrc);
+	char *src = str2ascii(src_arg);
 	char *dest;
 	char *dot;
 	int lname, lext, lnname, lnext, pos, i;
@@ -274,9 +357,9 @@ char *iso_2_fileid(const wchar_t *wsrc)
 }
 
 char *
-iso_p_fileid(const wchar_t *src)
+iso_p_fileid(const char *src)
 {
-	char *ret = wcstoascii(src);
+	char *ret = str2ascii(src);
 	size_t i, len;
 
 	if (!ret)
@@ -291,9 +374,9 @@ iso_p_fileid(const wchar_t *src)
 }
 
 uint16_t *
-iso_j_id(const wchar_t *src)
+iso_j_id(const char *src_arg)
 {
-	uint16_t *j_str = wcstoucs(src);
+	uint16_t *j_str = str2ucs(src_arg);
 	size_t len = ucslen(j_str);
 	size_t n;
 
