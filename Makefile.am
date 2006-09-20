@@ -90,8 +90,11 @@ libinclude_HEADERS = \
 ## Build test applications
 noinst_PROGRAMS = \
 	test/libburner \
+	test/burn \
 	test/iso \
+	test/master \
 	test/poll \
+	test/rip \
 	test/toc \
 	test/structest
 
@@ -107,6 +110,15 @@ test_poll_SOURCES = test/poll.c
 test_toc_CPPFLAGS = -Ilibburn
 test_toc_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_toc_SOURCES = test/toc.c
+test_rip_CPPFLAGS = -Ilibburn
+test_rip_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+test_rip_SOURCES = test/rip.c
+test_burn_CPPFLAGS = -Ilibburn
+test_burn_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+test_burn_SOURCES = test/burn.c
+test_master_CPPFLAGS = -Ilibburn
+test_master_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+test_master_SOURCES = test/master.c
 test_structest_CPPFLAGS = -Ilibburn
 test_structest_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_structest_SOURCES = test/structest.c
@@ -134,14 +146,26 @@ docdir = $(DESTDIR)$(prefix)/share/doc/$(PACKAGE)-$(VERSION)
 
 doc:	doc/html
 
-doc/html: 
- $(RM) -r $@ 
- doxygen doc/doxygen.conf 
+doc/html: doc/doxygen.conf
+	if [ -f ./doc/doc.lock ]; then \
+		$(RM) -r doc/html; \
+		doxygen doc/doxygen.conf; \
+	fi
 
 doc-upload: doc/html
 	scp -r $</* $(webhost):$(webpath)
 
-.PHONY: doc 
+all: doc
+
+install-data-local: 
+	if [ -f ./doc/doc.lock ]; then \
+		$(mkinstalldirs) $(docdir)/html; \
+		$(INSTALL_DATA) doc/html/* $(docdir)/html; \
+	fi
+
+uninstall-local:
+	rm -rf $(docdir)
+
 ## ========================================================================= ##
 
 # Indent source files
@@ -149,11 +173,15 @@ indent_files = \
 	$(libisofs_libisofs_la_SOURCES) \
 	$(libburn_libburn_la_SOURCES) \
 	$(test_libburner_SOURCES) \
+	$(test_devices_SOURCES) \
 	$(test_poll_SOURCES) \
 	$(test_toc_SOURCES) \
+	$(test_rip_SOURCES) \
+	$(test_burn_SOURCES) \
+	$(test_burniso_SOURCES) \
+	$(test_master_SOURCES) \
 	$(test_structest_SOURCES) \
-	$(test_iso_SOURCES)
-	
+	$(test_blank_SOURCES)
 
 indent: $(indent_files)
 	indent -bad -bap -nbbb -nbbo -nbc -bli0 -br -bls   \
@@ -179,7 +207,6 @@ EXTRA_DIST = \
 	doc/doxygen.conf.in \
 	README \
 	AUTHORS \
-	CONTRIBUTORS \
 	COPYRIGHT \
 	cdrskin/README \
 	cdrskin/cdrecord_spy.sh \
