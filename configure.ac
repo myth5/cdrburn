@@ -61,6 +61,15 @@ if test ! $ac_cv_func_fseeko; then
    AC_ERROR([Libburn requires largefile support.])
 fi
 
+AC_ARG_ENABLE(static, enable_static=yes)
+if test x$enable_static != xyes; then
+          AC_MSG_RESULT([no])
+          AM_DISABLE_STATIC=no
+else
+          AC_MSG_RESULT([yes])
+          AM_DISABLE_STATIC=yes
+fi
+
 AC_PROG_LIBTOOL
 AC_SUBST(LIBTOOL_DEPS)
 LIBTOOL="$LIBTOOL --silent"
