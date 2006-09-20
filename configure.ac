@@ -93,23 +93,6 @@ else
     CFLAGS="$CFLAGS -DDEBUG"
 fi
 
-AC_MSG_CHECKING([if we build the HTML documentation])
-AC_ARG_ENABLE(docs,
-[  --enable-docs           Use doxygen to build HTML documentation],
-[case "${enableval}" in
-  yes) build_docs=true ;;
-  no)  build_docs=false ;;
-  *) AC_MSG_ERROR(bad value ${enableval} for --enable-docs) ;;
-esac],[build_docs=false])
-
-if test "x$build_docs" = "xtrue"; then
-  AC_MSG_RESULT([yes])
-  touch doc/doc.lock
-else
-  AC_MSG_RESULT([no (use --enable-docs to enable)])
-  rm -f doc/doc.lock
-fi
-
 AC_CONFIG_FILES([
 	Makefile
 	doc/doxygen.conf
