@@ -134,14 +134,26 @@ docdir = $(DESTDIR)$(prefix)/share/doc/$(PACKAGE)-$(VERSION)
 
 doc:	doc/html
 
-doc/html: 
- $(RM) -r $@ 
- doxygen doc/doxygen.conf 
+doc/html: doc/doxygen.conf
+	if [ -f ./doc/doc.lock ]; then \
+		$(RM) -r doc/html; \
+		doxygen doc/doxygen.conf; \
+	fi
 
 doc-upload: doc/html
 	scp -r $</* $(webhost):$(webpath)
 
-.PHONY: doc 
+all: doc
+
+install-data-local: 
+	if [ -f ./doc/doc.lock ]; then \
+		$(mkinstalldirs) $(docdir)/html; \
+		$(INSTALL_DATA) doc/html/* $(docdir)/html; \
+	fi
+
+uninstall-local:
+	rm -rf $(docdir)
+
 ## ========================================================================= ##
 
 # Indent source files
