@@ -2576,7 +2576,7 @@ int Cdrskin_driveno_of_location(struct CdrskiN *skin, char *devicename,
  for(i=0;i<skin->n_drives;i++) {
 
 #ifdef Cdrskin_libburn_has_drive_get_adR
-   ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
+   ret= burn_drive_get_adr(&(skin->drives[i]), adr);
    if(ret<=0)
  continue;
 #else 
