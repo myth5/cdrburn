@@ -142,6 +142,30 @@ joliet_calc_dir_pos(struct ecma119_write_target *t,
 		t->curfile = 0;
 }
 
+void
+joliet_update_file_pos(struct ecma119_write_target *t,
+		       struct joliet_tree_node *dir)
+{
+	size_t i;
+
+	assert(dir && ISO_ISDIR(dir->iso_self));
+	for (i = 0; i < dir->nchildren; i++) {
+		struct joliet_tree_node *ch;
+		ch = dir->children[i];
+
+		if (!ISO_ISDIR (ch->iso_self)) {
+			struct iso_tree_node *iso = ch->iso_self;
+			ch->block = iso->block;
+		}
+		else
+			joliet_update_file_pos(t, ch);
+	}
+
+	/* reset curfile when we're finished */
+	if (!dir->parent)
+		t->curfile = 0;
+}
+
 struct joliet_tree_node*
 joliet_tree_create(struct ecma119_write_target *t,
 		   struct iso_tree_node *iso_root)

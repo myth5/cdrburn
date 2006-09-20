@@ -53,6 +53,13 @@ void
 joliet_calc_dir_pos(struct ecma119_write_target *t, struct joliet_tree_node*);
 
 /**
+ * Update the position of each file in the joliet hierarchy (to be called
+ * AFTER the file positions in the iso tree have been set).
+ */
+void
+joliet_update_file_pos(struct ecma119_write_target *t, struct joliet_tree_node*);
+
+/**
  * Calculate the size of the joliet path table and fill in the list of
  * directories.
  */

@@ -319,6 +319,8 @@ ecma119_target_new(struct iso_volset *volset,
 	if (t->joliet)
 		joliet_calc_dir_pos(t, t->joliet_root);
 	calc_file_pos(t, t->root);
+	if (t->joliet)
+		joliet_update_file_pos (t, t->joliet_root);
 
 	if (t->rockridge) {
 		susp_finalize(t, t->root);
