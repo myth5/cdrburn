@@ -141,14 +141,9 @@ or
 #define Cdrskin_build_timestamP "-none-given-"
 #endif
 
-/** use this to accomodate to the CVS version as of Dec 8, 2005
-#define Cdrskin_libburn_cvs_A51208_tS 1
-*/
-#ifdef Cdrskin_libburn_cvs_A51208_tS
-#define Cdrskin_libburn_versioN "0.2.tsA51208"
-#define Cdrskin_libburn_p_sectoR 1
-/* forever: */
-#define Cdrskin_libburn_no_burn_preset_device_opeN 1
+
+#ifdef Cdrskin_libburn_versioN 
+#undef Cdrskin_libburn_versioN 
 #endif
 
 /** use this to accomodate to the CVS version as of Feb 20, 2006
@@ -157,19 +152,10 @@ or
 #ifdef Cdrskin_libburn_cvs_A60220_tS
 
 #define Cdrskin_libburn_versioN "0.2.tsA60220"
-#define Cdrskin_libburn_p_sectoR 1
-#define Cdrskin_libburn_with_fd_sourcE 1
-#define Cdrskin_libburn_largefilE 1
-#define Cdrskin_libburn_padding_does_worK 1
 #define Cdrskin_libburn_no_burn_preset_device_opeN 1
 
 #endif /* Cdrskin_libburn_cvs_A60220_tS */
 
-
-#ifdef Cdrskin_libburn_0_2_1
-#define Cdrskin_libburn_versioN "0.2.1"
-#define Cdrskin_libburn_from_pykix_svN 1
-#endif
 
 #ifdef Cdrskin_libburn_0_2_2
 #define Cdrskin_libburn_versioN "0.2.2"
@@ -181,11 +167,13 @@ or
 #define Cdrskin_libburn_from_pykix_svN 1
 #endif
 
+#ifndef Cdrskin_libburn_versioN
+#define Cdrskin_libburn_versioN "0.2.3"
+#define Cdrskin_libburn_from_pykix_svN 1
+#endif
+
 #ifdef Cdrskin_libburn_from_pykix_svN
-#define Cdrskin_libburn_p_sectoR 1
-#define Cdrskin_libburn_with_fd_sourcE 1
-#define Cdrskin_libburn_largefilE 1
-#define Cdrskin_libburn_padding_does_worK 1
+
 #define Cdrskin_libburn_does_ejecT 1
 #define Cdrskin_libburn_has_drive_get_adR 1
 #define Cdrskin_progress_track_does_worK 1
@@ -202,31 +190,21 @@ or
 
 #endif /* Cdrskin_libburn_from_pykix_svN */
 
-#ifndef Cdrskin_libburn_versioN
-#define Cdrskin_libburn_versioN "0.2.3"
-#endif
 
-#ifdef Cdrskin_libburn_largefilE
 #ifndef _LARGEFILE_SOURCE
 #define _LARGEFILE_SOURCE 1
 #endif
 #ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 64
 #endif
-#endif /* Cdrskin_libburn_largefilE */
 
 
 /* These macros activate cdrskin workarounds for deficiencies resp.
    problematic features of libburn which hopefully will change in
    future. */
 
-/** Work around the fact that padding is not performed by libburn */
-#ifndef Cdrskin_libburn_padding_does_worK
-#define Cdrskin_burn_track_padding_brokeN 1
-#endif
-
 /** Work around the fact that neither /dev/sg0 (kernel 2.4 + ide-scsi) nor 
-    /dev/hdc (kernel 2.6) get ejected by libburn */
+    /dev/hdc (kernel 2.6) get ejected by icculus.org/burn */
 #ifndef Cdrskin_libburn_does_ejecT
 #define Cdrskin_burn_drive_eject_brokeN 1
 #endif
@@ -235,22 +213,26 @@ or
 #define Cdrskin_atip_speed_brokeN 1
 
 /** Work around the fact that burn_drive_get_status() always reports to do
-    track 0 */
+    track 0 in icculus.org/burn */
 #ifndef Cdrskin_progress_track_does_worK
 #define Cdrskin_progress_track_brokeN 1
 #endif
 
 /** Work around the fact that a drive interrupted at burn_drive_grab() never
-    leaves status BURN_DRIVE_GRABBING */
+    leaves status BURN_DRIVE_GRABBING in icculus.org/burn */
 #ifndef Cdrskin_grab_abort_does_worK
 #define Cdrskin_grab_abort_brokeN 1
 #endif
 
+/** Work around the fact that a freshly loaded tray with media reports
+    arbitrary media erasability in icculuc.org/burn */
 #ifndef Cdrskin_is_erasable_on_load_does_worK
 #define Cdrskin_is_erasable_on_load_is_brokeN 1
 #endif
 
-/** http://libburn.pykix.org/ticket/41 reports of big trouble without that */
+/** http://libburn.pykix.org/ticket/41 reports of big trouble without 
+    padding any track to a full sector
+*/
 #define Cdrskin_all_tracks_with_sector_paD 1
 
 
@@ -991,17 +973,15 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
                             struct burn_session *session, int flag)
 /*
  bit0= debugging verbosity
- bit1= apply padding hack
+ bit1= apply padding hack (<<< should be unused for now)
 */
 {
  struct burn_track *tr;
  struct burn_source *src= NULL;
  double padding,lib_padding;
  int ret,sector_pad_up;
-#ifdef Cdrskin_libburn_with_fd_sourcE
  double fixed_size;
  int source_fd;
-#endif /* ! Cdrskin_libburn_with_fd_sourcE */
 
  track->trackno= trackno;
  tr= burn_track_create();
@@ -1031,7 +1011,6 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  burn_track_define_data(tr,0,(int) lib_padding,sector_pad_up,
                         track->track_type);
 
-#ifdef Cdrskin_libburn_with_fd_sourcE
  if(track->source_fd==-1) {
    ret= Cdrtrack_open_source_path(track,&source_fd,0);
    if(ret<=0)
@@ -1046,32 +1025,16 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
    fixed_size+= track->padding;
  }
  src= burn_fd_source_new(track->source_fd,-1,(off_t) fixed_size);
-#else
- src = burn_file_source_new3(track->source_path,NULL,(int) track->fixed_size);
-#endif /* ! Cdrskin_libburn_with_fd_sourcE */
 
- assert(src);
-
-#ifndef Cdrskin_libburn_with_fd_sourcE
- track->fixed_size= burn_source_get_size(src);
- if((flag&2) && track->padding>0) {
-   if(flag&1)
-     ClN(fprintf(stderr,
-             "cdrskin_debug: padding : %.f + %.f = %.f\n",
-             (double) burn_source_get_size(src),track->padding,
-             ((double) burn_source_get_size(src))+track->padding));
-
-   src->fixed_size = burn_source_get_size(src) + track->padding;
-
-   if(flag&1)
-     ClN(fprintf(stderr,"cdrskin_debug: source size now : %.f\n",
-                    (double) burn_source_get_size(src)));
- }
-#endif /* ! Cdrskin_libburn_with_fd_sourcE */
-
-
- if(burn_track_set_source(tr,src) != BURN_SOURCE_OK)
+ if(src==NULL) {
+   fprintf(stderr,
+           "cdrskin: FATAL : Could not create libburn data source object\n");
    {ret= 0; goto ex;}
+ }
+ if(burn_track_set_source(tr,src)!=BURN_SOURCE_OK) {
+   fprintf(stderr,"cdrskin: FATAL : libburn rejects data source object\n");
+   {ret= 0; goto ex;}
+ }
  burn_session_add_track(session,tr,BURN_POS_END);
  ret= 1;
 ex:
@@ -1687,15 +1650,6 @@ see_cdrskin_eng_html:;
         "the total byte count of the source must be announced via tsize=#.\n");
      fprintf(stderr,
         "cdrskin will ensure that the announced tsize= is written even if\n");
-
-#ifdef Cdrskin_burn_track_padding_brokeN
-     fprintf(stderr,
-        "the source delivers fewer bytes. If the source delivers surplus\n");
-     fprintf(stderr,
-        "bytes, they will replace the eventual padding.\n");
-#else /* Cdrskin_burn_track_padding_brokeN */
-     fprintf(stderr,"the source delivers fewer bytes.\n");
-#endif /* ! Cdrskin_burn_track_padding_brokeN */
 
 #else /* ! Cdrskin_extra_leaN */
 
@@ -3077,17 +3031,9 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
  while (burn_drive_get_status(drive, &p)!=BURN_DRIVE_IDLE) {
    if(loop_counter>0)
      if(skin->verbosity>=Cdrskin_verbose_progresS)
-
-#ifdef Cdrskin_libburn_p_sectoR
        fprintf(stderr,
                "\rcdrskin: blanking sector %d   (%lu seconds elapsed)        ",
                p.sector,(unsigned long) (Sfile_microtime(0)-start_time));
-#else /* Cdrskin_libburn_p_sectoR */
-       fprintf(stderr,
-               "\rcdrskin: blanking sector %d   (%lu seconds elapsed)        ",
-             p.current_sector,(unsigned long) (Sfile_microtime(0)-start_time));
-#endif /* ! Cdrskin_libburn_p_sectoR */
-
    sleep(2);
    loop_counter++;
  }
@@ -3176,13 +3122,7 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
    goto thank_you_for_patience;
 
  bytes_to_write= ((double) p->sectors)*2048.0;
-
-#ifdef Cdrskin_libburn_p_sectoR
  written_total_bytes= ((double) p->sector)*2048.0;
-#else /* Cdrskin_libburn_p_sectoR */
- written_total_bytes= ((double) p->current_sector)*2048.0;
-#endif /* ! Cdrskin_libburn_p_sectoR */
-
  written_bytes= written_total_bytes-*last_count;
 
  old_track_idx= skin->supposed_track_idx;
@@ -3394,9 +3334,6 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  skin->fixed_size= 0.0;
  for(i=0;i<skin->track_counter;i++) {
    hflag= (skin->verbosity>=Cdrskin_verbose_debuG);
-#ifdef Cdrskin_burn_track_padding_brokeN
-   hflag|= 2;
-#endif
    if(i==skin->track_counter-1)
      Cdrtrack_ensure_padding(skin->tracklist[i],hflag&1);
    ret= Cdrtrack_add_to_session(skin->tracklist[i],i,session,hflag);

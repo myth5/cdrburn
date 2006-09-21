@@ -19,12 +19,6 @@ do
   if test "$i" = "-compile_cdrfifo"
   then
     compile_cdrfifo=1
-  elif test "$i" = "-tarball_0_2"
-  then
-    libvers=
-  elif test "$i" = "-cvs_A51208"
-  then
-    libvers="-DCdrskin_libburn_cvs_A51208_tS"
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
@@ -59,8 +53,6 @@ do
     echo "cdrskin/compile_cdrskin.sh : to be executed within  ./cdrskin-0.1.3.0.2.ts"
     echo "Options:"
     echo "  -compile_cdrfifo  compile program cdrskin/cdrfifo."
-    echo "  -tarball_0_2      set macro to match libburn-0.2.ts.tar.gz"
-    echo "  -cvs_A51208       set macro to match libburn-CVS of 8 Dec 2005."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
     echo "  -libburn_0_2_2    set macro to match libburn-0.2.2"
     echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
