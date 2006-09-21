@@ -3611,17 +3611,18 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
 #ifndef Cdrskin_oldfashioned_api_usE
- int i,ret,max_try= 3;
+ int i,ret,max_try= 5;
 
  if(!skin->do_eject)
    return(1);
  for(i= 0;i<max_try;i++) {
    ret= Cdrskin_grab_drive(skin,2|((i<max_try-1)<<2));
-   if(ret>0)
+   if(ret>0 || i>=max_try-1)
  break;
-   if(skin->verbosity>=Cdrskin_verbose_debuG)
+   if(skin->verbosity>=Cdrskin_verbose_progresS)
      fprintf(stderr,
-           "cdrskin: ------ Attempt #%d failed to grab drive for eject\n",i+1);
+          "cdrskin: NOTE : Attempt #%d of %d failed to grab drive for eject\n",
+          i+1,max_try);
    usleep(1000000);
  }
  if(ret>0) {
