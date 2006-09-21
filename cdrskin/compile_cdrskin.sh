@@ -6,7 +6,7 @@
 
 debug_opts=
 def_opts=
-libvers="-DCdrskin_libburn_0_2_2"
+libvers="-DCdrskin_libburn_0_2_3"
 do_strip=0
 static_opts=
 warn_opts="-Wall"
@@ -28,12 +28,12 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
-  elif test "$i" = "-libburn_0_2_1"
-  then
-    libvers="-DCdrskin_libburn_0_2_1"
   elif test "$i" = "-libburn_0_2_2"
   then
     libvers="-DCdrskin_libburn_0_2_2"
+  elif test "$i" = "-libburn_0_2_3"
+  then
+    libvers="-DCdrskin_libburn_0_2_3"
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
@@ -62,8 +62,8 @@ do
     echo "  -tarball_0_2      set macro to match libburn-0.2.ts.tar.gz"
     echo "  -cvs_A51208       set macro to match libburn-CVS of 8 Dec 2005."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
-    echo "  -libburn_0_2_1    set macro to match libburn-SVN of 15 Sep 2006."
     echo "  -libburn_0_2_2    set macro to match libburn-0.2.2"
+    echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
     echo "  -experimental     use newly introduced libburn features."
     echo "  -do_diet          produce capability reduced lean version."
@@ -120,6 +120,17 @@ then
     libburn/lec.o \
     \
     -lpthread
+
+    ret=$?
+    if test "$ret" = 0
+    then
+      dummy=dummy
+    else
+      echo >&2
+      echo "+++ FATAL : Compilation of cdrskin failed" >&2
+      echo >&2
+      exit 1
+    fi
 fi
 
 if test "$compile_cdrfifo" = 1
@@ -129,6 +140,17 @@ then
      -DCdrfifo_standalonE \
      -o cdrskin/cdrfifo \
      cdrskin/cdrfifo.c
+
+    ret=$?
+    if test "$ret" = 0
+    then
+      dummy=dummy
+    else
+      echo >&2
+      echo "+++ FATAL : Compilation of cdrfifo failed" >&2
+      echo >&2
+      exit 2
+    fi
 fi
 
 if test "$do_strip" = 1

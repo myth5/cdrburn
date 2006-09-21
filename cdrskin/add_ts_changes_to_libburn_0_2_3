@@ -20,18 +20,23 @@ set -x
 # The script is to be run in the directory above the toplevel
 # directory of libburn resp. cdrskin development.
 #
-# libburn version used:  http://libburn.pykix.org SVN of Aug 15 2006
-# packed up in a tarball just to save it from inadverted changes.
+# libburn version used:  http://libburn.pykix.org
+# Downloaded by:
+#  $ svn co http://libburn-svn.pykix.org/trunk libburn_pykix
+# packed up in a tarball just to save it from inadverted changes by
+#  $ tar czf libburn_svn.tgz libburn_pykix
+original="./libburn_svn.tgz"
+# Historic moments:
 # original="./libburn_svn_A60815.tgz"
-original="./libburn_cdrskin_A60819.tgz"
+# original="./libburn_cdrskin_A60819.tgz"
 
 # The top level directory in that snapshot is named
 intermediate="./libburn_pykix"
 
-# My changes are in libburn-0.2.1.ts.develop , mainly in ./cdrskin
+# My changes are in libburn-0.2.3.ts.develop , mainly in ./cdrskin
 
-changes="./libburn-0.2.1.ts.develop"
-skin_rev="0.1.5"
+changes="./libburn-0.2.3.ts.develop"
+skin_rev="0.2.3"
 
 # The result directory and the name of the result tarballs
 target="./cdrskin-${skin_rev}"
@@ -46,9 +51,7 @@ compile_cmd="./cdrskin/compile_cdrskin.sh"
 compile_static_opts="-static"
 compile_result="cdrskin/cdrskin"
 
-
-# addresses relative to compile_dir :
-bintarget_dynamic="../cdrskin_${skin_rev}-x86-suse9_0"
+bintarget_dynamic="cdrskin_${skin_rev}-x86-suse9_0"
 bintarget_static="$bintarget_dynamic"-static
 
 if test -d "$changes"
@@ -108,6 +111,9 @@ cp -a "$cdrskin_dir" "$cdrskin_target"
 rm "$cdrskin_target"/cdrfifo
 rm "$cdrskin_target"/cdrskin
 rm "$cdrskin_target"/cleanup
+rm "$cdrskin_target"/cdrskin_std
+rm "$cdrskin_target"/cdrskin_new
+rm "$cdrskin_target"/*.o
 
 # Remove unwanted SVN stuff (TODO: avoid downloading it)
 for i in "$target"/.svn "$target"/*/.svn
@@ -123,15 +129,14 @@ do
   fi
 done
 
-# For now: Add own libburn-README in toplevel
-cp -a "$changes"/README "$target"
+## No more : Add own libburn-README in toplevel
+# cp -a "$changes"/README "$target"
 
-# Add modified Makefile.am
-cp -a "$changes"/Makefile.am "$target"
+## No more : Add modified Makefile.am
+# cp -a "$changes"/Makefile.am "$target"
 
 
 # Make SVN state tarball for the libburn team
-# TODO: will probably be obsoleted after sucessful merge
 tar czf "$cdrskin_tarball_svn" "$target"
 
 
@@ -140,6 +145,20 @@ tar czf "$cdrskin_tarball_svn" "$target"
 # having to evaluate the quality of said "make dist"
 #
 ( cd "$target" ; ./bootstrap )
+
+# Remove unwanted stuff after bootstrap
+for i in "$target"/autom4te.cache
+do
+  if echo "$i" | grep '\*' >/dev/null
+  then
+    dummy=dummy
+  else
+    if test -e "$i"
+    then
+      rm -rf "$i"
+    fi
+  fi
+done
 
 
 # Pack it up to the new libburn+cdrskin-tarball
@@ -151,15 +170,22 @@ tar czf "$cdrskin_tarball" "$target"
  ./configure
  make
  $compile_cmd -do_strip
- cp "$compile_result" "$bintarget_dynamic"
+ cp "$compile_result" "../$bintarget_dynamic"
  if test -n "$compile_static_opts"
  then
    $compile_cmd $compile_static_opts -do_strip
-   cp "$compile_result" "$bintarget_static"
+   cp "$compile_result" "../$bintarget_static"
  fi
 )
 
+# Remove the build area
 # Disable this for debugging the merge process
 rm -rf "$target"
 
+# Show the result
+./"$bintarget_dynamic" -version
+./"$bintarget_static" -version
+ls -l "$cdrskin_tarball"
+ls -l "$bintarget_dynamic"
+ls -l "$bintarget_static"
 

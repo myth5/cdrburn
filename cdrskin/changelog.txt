@@ -470,27 +470,70 @@ Prepared cdrskin-build for version leap
 
 ----------------------------- cycled (last cdrskin-0.1.5 ?) - 2006.09.15.101326
 
-2006.09.15.101326  []
+2006.09.15.101326  [139]
 cdrskin/README
 cdrskin/changelog.txt
 New upload of scdbackup.sourceforge.net/cdrskin-0.1.5.tar.gz
 
+2006.09.15.174748  [143]
+cdrskin/cdrskin.c
+Revoked change of 1 Sep 2006 revision 78 (full -nopad) (ticket 41)
 
+16 Sep 2006  [144]
+libburn/libburn.h
+Made doxygen happy with parameter of burn_drive_get_adr
 
-Sep 2006  []
+2006.09.16.194730  [145]
 000_CAUTION_RELEASE_CANDIDATE
 zzz_CAUTION_RELEASE_CANDIDATE
 README
 Makefile.am
 cdrskin/README
-cdrskin/cdrskin_eng.html
-cdrskin/add_ts_changes_to_libburn_0_2_1
-cdrskin/add_ts_changes_to_libburn_0_2_2
+cdrskin/cdrskin.c
 cdrskin/compile_cdrskin.sh
-( cd_backup_planer_dir/aux/upload )
-Perfom version leap
+Perfomed version leap in respect to SVN
 
------------------------------- cycle 
+2006.09.19.124540  [160] [161]
+cdrskin/cdrskin.c
+Allowed driveropts=burnproof as alias for burnfree
+
+2006.09.19.140716  [162] [163]
+cdrskin/cdrskin.c
+Added error message in case of failed eject
+
+2006.09.20.134219  [175] [176] [177]
+cdrskin/cdrskin.c
+Fixed bug with dev=1,1,0 (ticket 75)
+
+21 Sep 2006  [186]
+configure.ac
+Makefile.am
+Forwarded changes from 0.2.2 to 0.2.3 
+
+
+Sep 2006  []
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin_eng.html
+cdrskin/README
+cdrskin/changelog.txt
+- cdrskin/add_ts_changes_to_libburn_0_2_1
++ cdrskin/add_ts_changes_to_libburn_0_2_3
+Perfomed development version leap to cdrskin-0.2.3
+
+------------------------------ cycle - cdrskin-0.2.3 - 2006.09.21.082411
+
+
+2006  []
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Give up -tarball_0_2 , -cvs_A51208 , -libburn_0_2_1
+Officialize most gestures out of Cdrskin_new_api_tesT
+
+2006  []
+cdrskin/cdrskin.c
+Tackle failure to open drive on eject
+
 
 2006  []
 test/libburner.c
@@ -500,13 +543,20 @@ test/libburner.c
 Resolve softlinks (ticket 33)
 
 2006  []
-Find matching /dev/sgN from srM or scdM 
+Find matching /dev/sgN from srM or scdK 
+Occupy /dev/srM and /dev/scdK when occupying /dev/sgN
 
 2006  []
 Implement a .wav decapitator (ticket 38)
 
 2006  []
 Clear outdated persistent read buffer after small CD image was read (ticket 57)
+
+2006  []
+Add an error message handling facility (ticket 74)
+
+2006  []
+Transplant signal handler from cdrskin to libburn
 
 
 2006  []

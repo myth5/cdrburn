@@ -127,7 +127,7 @@ or
 
 /** The official program version */
 #ifndef Cdrskin_prog_versioN
-#define Cdrskin_prog_versioN "0.2.2"
+#define Cdrskin_prog_versioN "0.2.3"
 #endif
 
 /** The source code release timestamp */
@@ -176,6 +176,11 @@ or
 #define Cdrskin_libburn_from_pykix_svN 1
 #endif
 
+#ifdef Cdrskin_libburn_0_2_3
+#define Cdrskin_libburn_versioN "0.2.3"
+#define Cdrskin_libburn_from_pykix_svN 1
+#endif
+
 #ifdef Cdrskin_libburn_from_pykix_svN
 #define Cdrskin_libburn_p_sectoR 1
 #define Cdrskin_libburn_with_fd_sourcE 1
@@ -198,7 +203,7 @@ or
 #endif /* Cdrskin_libburn_from_pykix_svN */
 
 #ifndef Cdrskin_libburn_versioN
-#define Cdrskin_libburn_versioN "0.2.2"
+#define Cdrskin_libburn_versioN "0.2.3"
 #endif
 
 #ifdef Cdrskin_libburn_largefilE
@@ -2261,6 +2266,7 @@ ex:
                 bit0= bus is unscanned, device is known, 
                       use burn_drive_scan_and_grab()
                 bit1= do not load drive tray
+                bit2= do not issue error message on failure
     @return <=0 error, 1 success
 */
 int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
@@ -2318,9 +2324,9 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
      if(skin->verbosity>=Cdrskin_verbose_debuG)   
        ClN(fprintf(stderr,
                "cdrskin_debug: burn_drive_scan_and_grab ret=%d\n",ret));
-
-     fprintf(stderr,"cdrskin: FATAL : unable to open drive '%s'\n",
-             skin->preskin->device_adr);
+     if(!(flag&4))
+       fprintf(stderr,"cdrskin: FATAL : unable to open drive '%s'\n",
+               skin->preskin->device_adr);
      goto ex;
    }
    skin->driveno= 0;
@@ -2371,8 +2377,9 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
    ret= burn_drive_grab(drive,!(flag&2));
    if(ret==0) {
-     fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
-             skin->driveno);
+     if(!(flag&4))
+       fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
+               skin->driveno);
      goto ex;
    }
 
@@ -2386,8 +2393,9 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    /* now grab the drive for real */
    ret= burn_drive_grab(drive,!(flag&2));
    if(ret==0) {
-     fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
-             skin->driveno);
+     if(!(flag&4))
+       fprintf(stderr,"cdrskin: FATAL : unable to open drive %d\n",
+               skin->driveno);
      goto ex;
    }
 #else
@@ -3667,6 +3675,37 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
+#ifdef Cdrskin_new_api_tesT
+ int i,ret,max_try= 3;
+
+ if(!skin->do_eject)
+   return(1);
+ for(i= 0;i<max_try;i++) {
+   ret= Cdrskin_grab_drive(skin,2|((i<max_try-1)<<2));
+   if(ret>0)
+ break;
+   if(skin->verbosity>=Cdrskin_verbose_debuG)
+     fprintf(stderr,
+           "cdrskin: ------ Attempt #%d failed to grab drive for eject\n",i+1);
+   usleep(1000000);
+ }
+ if(ret>0) {
+    ret= Cdrskin_release_drive(skin,1);
+    if(ret>0) {
+      if(skin->verbosity>=Cdrskin_verbose_debuG)
+        ClN(fprintf(stderr,
+                    "cdrskin_debug: supposing drive eject to have worked\n"));
+    } else
+      goto sorry_failed_to_eject;
+ } else {
+sorry_failed_to_eject:;
+   fprintf(stderr,"cdrskin: SORRY : Failed to finally eject tray.\n");
+   return(0);
+ }
+ return(1);
+
+#else 
+
  if(!skin->do_eject)
    return(1);
  if(Cdrskin_grab_drive(skin,2)>0) {
@@ -3679,6 +3718,8 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
    return(0);
  }
  return(1);
+
+#endif
 
 #else /* Cdrskin_burn_drive_eject_brokeN */
 

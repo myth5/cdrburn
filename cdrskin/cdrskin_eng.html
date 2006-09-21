@@ -51,7 +51,7 @@ A CD recorder suitable for
 GPL software included:<BR>
 </H2>
 <DL>
-<DT>libburn-0.2.1 (inofficially stable SVN snapshot)</DT>
+<DT>libburn-0.2.2</DT>
 <DD>(by Derek Foreman, Ben Jansens, and team of libburn.pykix.org)</DD>
 <DD>transfers data to CD</DD>
 </DL>
@@ -98,9 +98,9 @@ wishes as well as on the development of libburn.</DT>
 <DD>$ cdrskin -scanbus</DD>
 <DD>$ cdrskin dev=1,1,0 -checkdrive</DD>
 <DD>$ cdrskin dev=1,1,0 -atip</DD>
-<DD>$ cdrskin -v dev=1,1,0 blank=all eject_device=/dev/cdrom -eject</DD>
-<DD>$ cdrskin -v dev=1,1,0 blank=fast eject_device=/dev/cdrom -eject</DD>
-<DD>$ cdrskin -v dev=1,1,0 speed=12 fs=8m -sao driveropts=burnfree eject_device=/dev/cdrom -eject padsize=300k my_image.iso</DD>
+<DD>$ cdrskin -v dev=1,1,0 blank=all -eject</DD>
+<DD>$ cdrskin -v dev=1,1,0 blank=fast -eject</DD>
+<DD>$ cdrskin -v dev=1,1,0 speed=12 fs=8m -sao driveropts=burnfree -eject padsize=300k my_image.iso</DD>
 <DD>$ cdrskin -v dev=1,1,0 ... ... track_1.iso padsize=300k track_2.afio</DD>
 <DD>$ find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao driveropts=burnfree padsize=300k tsize=650m -</DD>
 </DL>
@@ -111,8 +111,8 @@ wishes as well as on the development of libburn.</DT>
 <UL>
 <DT></DT>
 <LI>
-No audio features yet. (Note: Option -audio is enabled in cdrskin-0.1.5 as
-offered below, but no beheading of .au or .wav files takes place yet.)
+Option -audio is enabled but by default not advertised via option -help, 
+because no beheading of .au or .wav files takes place yet.
 </LI>
 <LI>
 Burns only a single closed session. No -multi option yet.
@@ -133,12 +133,6 @@ In severe cases it might be necessary to guess the device name /dev/sgN resp.
 /dev/hdX of the non-ill burner if it cannot be found otherwise among its
 ill peers. Alternatively one can guess the address of the ill device, remove
 rw-permissions and retry the bus scan as non-superuser.
-<LI>
-Burners other than /dev/sg0 and /dev/hdX (i.e. without ide-scsi) need a user
-supplied device address for program eject. 
-(Note: -eject is now working in libburn-0.2.1 SVN and the workaround described
-here is obsolete with cdrskin-0.1.5 as offered below.)
-</LI>
 </UL>
 </P>
 
@@ -147,25 +141,25 @@ here is obsolete with cdrskin-0.1.5 as offered below.)
 <P>
 <DL>
 <DT>Download as source code (see README):</DT>
-<DD><A HREF="cdrskin-0.1.4.tar.gz">cdrskin-0.1.4.tar.gz</A>
-(580 KB).
+<DD><A HREF="cdrskin-0.2.2.tar.gz">cdrskin-0.2.2.tar.gz</A>
+(450 KB).
 </DD>
 <DD>
-The "stable" cdrskin tarballs are tested and eventually slightly modified
-SVN snapshots from libburn.pykix.org . All modifications are to be re-merged
-into that SVN repository.<BR>
+The "stable" cdrskin tarballs are source code identical with "stable" 
+libburn releases or with "stabilized" libburn SVN snapshots. They get
+produced via a different procedure, though.<BR>
 cdrskin is part of libburn - full libburn is provided with cdrskin releases.
 </DD>
 <DD>&nbsp;</DD>
 <DT>Download as single x86 binaries (untar and move to /usr/bin/cdrskin):</DT>
-<DD><A HREF="cdrskin_0.1.4-x86-suse9_0.tar.gz">
-cdrskin_0.1.4-x86-suse9_0.tar.gz</A>, (50 KB),
+<DD><A HREF="cdrskin_0.2.2-x86-suse9_0.tar.gz">
+cdrskin_0.2.2-x86-suse9_0.tar.gz</A>, (60 KB),
 <DL>
 <DD>runs on SuSE 9.0 (2.4.21) , RIP-14.4 (2.6.14) ,
  Gentoo (2.6.15 x86_64 Athlon).</DD>
 </DL>
-<DD><A HREF="cdrskin_0.1.4-x86-suse9_0-static.tar.gz">
-cdrskin_0.1.4-x86-suse9_0-static.tar.gz</A>, (250 KB), -static compiled,
+<DD><A HREF="cdrskin_0.2.2-x86-suse9_0-static.tar.gz">
+cdrskin_0.2.2-x86-suse9_0-static.tar.gz</A>, (250 KB), -static compiled,
 <DL>
 <DD>runs on SuSE 7.2 (2.4.4), and on the systems above.</DD>
 </DL>
@@ -193,9 +187,9 @@ cdrskin_0.1.4-x86-suse9_0-static.tar.gz</A>, (250 KB), -static compiled,
 <DL>
 <DT>Development snapshot:</DT>
 <DD>&nbsp;</DD>
-<DD><A HREF="README_cdrskin_devel">README 0.1.5</A>
-<DD><A HREF="cdrskin__help_devel">cdrskin_0.1.5 --help</A></DD>
-<DD><A HREF="cdrskin_help_devel">cdrskin_0.1.5 -help</A></DD>
+<DD><A HREF="README_cdrskin_devel">README 0.2.3</A>
+<DD><A HREF="cdrskin__help_devel">cdrskin_0.2.3 --help</A></DD>
+<DD><A HREF="cdrskin_help_devel">cdrskin_0.2.3 -help</A></DD>
 <DD>&nbsp;</DD>
 <DD>Maintainers of cdrskin unstable packages please use SVN of
 <A HREF="http://libburn.pykix.org"> libburn.pykix.org</A></DD>
@@ -215,15 +209,15 @@ admins with full system souvereignty.</DT>
 <A HREF="README_cdrskin_devel">upcoming README</A> ):
 </DT>
 <DD>
-<A HREF="cdrskin-0.1.5.tar.gz">cdrskin-0.1.5.tar.gz</A>
-(580 KB).
+<A HREF="cdrskin-0.2.3.tar.gz">cdrskin-0.2.3.tar.gz</A>
+(450 KB).
 </DD>
 <DT>Binary (untar and move to /usr/bin/cdrskin):</DT>
-<DD><A HREF="cdrskin_0.1.5-x86-suse9_0.tar.gz">
-cdrskin_0.1.5-x86-suse9_0.tar.gz</A>, (50 KB).
+<DD><A HREF="cdrskin_0.2.3-x86-suse9_0.tar.gz">
+cdrskin_0.2.3-x86-suse9_0.tar.gz</A>, (60 KB).
 </DD>
-<DD><A HREF="cdrskin_0.1.5-x86-suse9_0-static.tar.gz">
-cdrskin_0.1.5-x86-suse9_0-static.tar.gz</A>, (250 KB)
+<DD><A HREF="cdrskin_0.2.3-x86-suse9_0-static.tar.gz">
+cdrskin_0.2.3-x86-suse9_0-static.tar.gz</A>, (250 KB)
 </DD>
 </DL>
 </P>
@@ -281,8 +275,7 @@ is a GUI frontend which uses cdrecord for CD burning.)
 <DD><KBD>scsibus2:</KBD></DD>
 <DD><KBD>&nbsp;&nbsp;&nbsp; 2,2,0 &nbsp;&nbsp; 1)&nbsp; 'LITE-ON' 'LTR-48125S' '?' Removable CD-ROM</KBD></DD>
 <DD>$ <KBD><B>export SCDBACKUP_SCSI_ADR="2,2,0"</B></KBD></DD>
-<DD>$ <KBD><B>export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m eject_device=/dev/cdrecorder"</B></KBD></DD>
-<DD>(eject_device= has to be the appropriate address for program eject)</DD>
+<DD>$ <KBD><B>export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m"</B></KBD></DD>
 <DD>$ <KBD><B>scdbackup_home</B></KBD></DD>
 </DL>
 <DL>
@@ -292,7 +285,7 @@ is a GUI frontend which uses cdrecord for CD burning.)
 <DD>$ <KBD><B>export SCDBACKUP_EJECT_ADR=/dev/cdrecorder</B></KBD></DD>
 <DD>$ <KBD><B>./CONFIGURE_CD</B></KBD></DD>
 <DD><KBD>...</KBD></DD>
-<DD><KBD>cdrskin 0.1.2 : limited cdrecord compatibility wrapper for libburn</KBD></DD>
+<DD><KBD>cdrskin 0.2.2 : limited cdrecord compatibility wrapper for libburn</KBD></DD>
 <DD><KBD>...</KBD></DD>
 <DD><KBD> ------------------- SCSI devices. To be used like &nbsp;&nbsp; 0,0,0</KBD></DD>
 </DL>
