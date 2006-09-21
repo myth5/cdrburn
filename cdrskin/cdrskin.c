@@ -56,10 +56,6 @@ scanning and implicit drive address 0. A tradition of 9 months shall not
 be broken. So burns without dev= will stay possible - but harmless only
 on single drive systems.
 
-*
-Only if the new API compliance is enabled by macro  Cdrskin_new_api_tesT .
-Not yet by default. In many aspects this is already superior, note well :
-
 Burns without dev= resp. with dev=number are harmless on multi-drive systems.
 
 This is because Cdrskin_grab_drive() either drops the unwanted drives or
@@ -78,7 +74,6 @@ parts which have been transplanted to libburn in order to create
 achieved by most cdrskin runs. The remaining problem situations should now
 be defused by releasing any short time grabbed flocks of drives during the
 restart of libburn.
-*
 
 ------------------------------------------------------------------------------
 This program is currently copyright Thomas Schmitt only.
@@ -153,6 +148,9 @@ or
 
 #define Cdrskin_libburn_versioN "0.2.tsA60220"
 #define Cdrskin_libburn_no_burn_preset_device_opeN 1
+#ifndef Cdrskin_oldfashioned_api_usE
+#define Cdrskin_oldfashioned_api_usE 1
+#endif
 
 #endif /* Cdrskin_libburn_cvs_A60220_tS */
 
@@ -182,9 +180,13 @@ or
 
 #ifdef Cdrskin_new_api_tesT
 
-/* switches from old behavior with aquiring drives to new behavior */
+/* put macros under test caveat here */
 
-/* (put parasite macros under test caveat here) */
+#endif
+
+#ifdef Cdrskin_oldfashioned_api_usE
+
+/* switch back to pre-0.2.2 libburn usage */;
 
 #endif
 
@@ -264,7 +266,7 @@ or
 #define Cdrskin_strleN 4096
 
 /** The maximum length +1 of a drive address */
-#ifdef Cdrskin_new_api_tesT
+#ifndef Cdrskin_oldfashioned_api_usE
 #define Cdrskin_adrleN BURN_DRIVE_ADR_LEN
 #else
 #define Cdrskin_adrleN 80
@@ -2209,10 +2211,10 @@ ex:
 
 
 /** Obtain access to a libburn drive for writing or information retrieval.
-    Extended behavior with Cdrskin_new_api_tesT:
-    If libburn is not restricted to a single persistent address then it
-    gets shutdown and restarted with the wanted drive only. Thus, after
-    this call, libburn is supposed to have open only the grabbed drive.
+    If libburn is not restricted to a single persistent address then the
+    unused drives are dropped. This might be done by shutting down and
+    restartiing libburn with the wanted drive only. Thus, after this call,
+    libburn is supposed to have open only the reserved drive.
     All other drives should be free for other use.
     Warning: Do not store struct burn_drive pointer over this call.
              Any such pointer might be invalid afterwards.
@@ -2264,7 +2266,7 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
 #endif /* ! Cdrskin_grab_abort_brokeN */
 
-#ifdef Cdrskin_new_api_tesT
+#ifndef Cdrskin_oldfashioned_api_usE
 
 
  if(flag&1) {
@@ -2327,7 +2329,7 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
 
  {
 
-#endif /* ! Cdrskin_new_api_tesT */
+#endif /* Cdrskin_oldfashioned_api_usE */
 
    ret= burn_drive_grab(drive,!(flag&2));
    if(ret==0) {
@@ -2450,7 +2452,7 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
        burn_drive_cancel(skin->grabbed_drive);
      } else if(drive_status==BURN_DRIVE_GRABBING) {
 
-#ifdef Cdrskin_new_api_tesT
+#ifndef Cdrskin_oldfashioned_api_usE
        int ret;
 
        fprintf(stderr,
@@ -2471,7 +2473,7 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
 
 #else
        /* >>> what to do in this state ? */;
-#endif /* Cdrskin_new_api_tesT */
+#endif /* Cdrskin_oldfashioned_api_usE */
 
      } else if(drive_status!=BURN_DRIVE_IDLE) {
        fprintf(stderr,
@@ -2510,7 +2512,7 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
    Cdrskin_release_drive(skin,0);
  }
 
-#ifdef Cdrskin_new_api_tesT
+#ifndef Cdrskin_oldfashioned_api_usE
 try_to_finish_lib:;
 #endif
 
@@ -2855,11 +2857,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
           "cdrskin_debug: redoing startup for speed inquiry stabilization\n"));
 
 
-#ifdef Cdrskin_new_api_tesT
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,
-         "cdrskin_debug: Cdrskin_atip() on Cdrskin_new_api_tesT\n"));
+#ifndef Cdrskin_oldfashioned_api_usE
 
  if(strlen(skin->preskin->device_adr)<=0)
    burn_drive_get_adr(&(skin->drives[skin->driveno]),
@@ -2877,7 +2875,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
 
-#else /* Cdrskin_new_api_tesT */
+#else /* ! Cdrskin_oldfashioned_api_usE */
 
  Cdrskin_release_drive(skin,0);
  burn_finish();
@@ -2895,7 +2893,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
 
-#endif /* ! Cdrskin_new_api_tesT */
+#endif /* Cdrskin_oldfashioned_api_usE */
 
 #endif /* Cdrskin_atip_speed_brokeN */
 
@@ -3612,7 +3610,7 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
 #ifndef Cdrskin_burn_drive_eject_brokeN
 
-#ifdef Cdrskin_new_api_tesT
+#ifndef Cdrskin_oldfashioned_api_usE
  int i,ret,max_try= 3;
 
  if(!skin->do_eject)
@@ -4430,7 +4428,6 @@ int main(int argc, char **argv)
    {exit_value= 11; goto ex;}
  if(ret==2)
    {exit_value= 0; goto ex;}
-
  ret= Cdrskin_create(&skin,&preskin,&lib_initialized,&exit_value,0);
  if(ret<=0)
    {exit_value= 2; goto ex;}
@@ -4451,6 +4448,15 @@ int main(int argc, char **argv)
    {exit_value= 3; goto ex;}
  if(skin->verbosity>=Cdrskin_verbose_cmD)
    printf("cdrskin: called as :  %s\n",argv[0]);
+
+ if(skin->verbosity>=Cdrskin_verbose_debuG) {
+#ifdef Cdrskin_oldfashioned_api_usE
+   ClN(fprintf(stderr,"cdrskin_debug: Compiled with option -oldfashioned\n"));
+#endif
+#ifdef Cdrskin_new_api_tesT
+   ClN(fprintf(stderr,"cdrskin_debug: Compiled with option -experimental\n"));
+#endif
+ }
 
  Cdrskin_run(skin,&exit_value,0);
 

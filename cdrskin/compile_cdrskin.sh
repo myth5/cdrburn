@@ -31,6 +31,9 @@ do
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
+  elif test "$i" = "-oldfashioned"
+  then
+    def_opts="$def_opts -DCdrskin_oldfashioned_api_usE"
   elif test "$i" = "-do_not_compile_cdrskin"
   then
     compile_cdrskin=0
@@ -58,6 +61,7 @@ do
     echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
     echo "  -experimental     use newly introduced libburn features."
+    echo "  -oldfashioned     use pre-0.2.2 libburn features only."
     echo "  -do_diet          produce capability reduced lean version."
     echo "  -do_strip         apply program strip to compiled programs."
     echo "  -g                compile with cc option -g."
