@@ -248,6 +248,9 @@ void sg_enumerate(void)
 		close(fd);
 		if (sid.scsi_type != TYPE_ROM)
 			continue;
+/* <<< ts A60922 (use SCSI_IOCTL_GET_IDLUN on block devices) 
+		fprintf(stderr,"libburn experimental: SCSI triple: %d,%d,%d\n",sid.host_no,sid.scsi_id,sid.lun);
+*/
 
 		enumerate_common(fname);
 	}
@@ -555,4 +558,35 @@ enum response scsi_error(struct burn_drive *d, unsigned char *sense,
 	burn_print(1, "unknown failure\n");
 	burn_print(1, "key:0x%x, asc:0x%x, ascq:0x%x\n", key, asc, ascq);
 	return FAIL;
+}
+
+/* ts A60922 */
+/** Try to obtain SCSI address parameters.
+    @return  1 is success , 0 is failure
+*/
+int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+                       int *target_no, int *lun_no)
+{
+	int fd, ret;
+	struct my_scsi_idlun {
+		int x;
+		int host_unique_id;
+	};
+ 	struct my_scsi_idlun idlun;
+
+	fd = open(path, O_RDONLY | O_NONBLOCK);
+	if(fd < 0)
+		return 0;
+
+	/* http://www.tldp.org/HOWTO/SCSI-Generic-HOWTO/scsi_g_idlun.html */
+	ret= ioctl(fd, SCSI_IOCTL_GET_IDLUN, &idlun);
+
+	close(fd);
+	if(ret == -1)
+		return(0);
+	*host_no= (idlun.x>>24)&255;
+	*channel_no= (idlun.x>>16)&255;
+	*target_no= (idlun.x)&255;
+	*lun_no= (idlun.x>>8)&255;
+	return 1;
 }

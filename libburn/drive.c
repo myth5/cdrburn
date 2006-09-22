@@ -724,13 +724,59 @@ int burn_drive_find_devno(dev_t devno, char adr[])
 		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
 			return -1;
 
-fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%llX ) found %s\n", (long long) devno, fname);
+fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%lX ) found %s\n", (long) devno, fname);
 
 		strcpy(adr, fname);
 		return 1;
 	}
 	return 0;
 }
+
+/* ts A60922 ticket 33 */
+/* Try to find an enumerated address with the same host,channel,target,lun
+   as path */
+int burn_drive_find_scsi_adr(char *path, char adr[])
+{
+	char fname[4096];
+	int i, ret = 0, first = 1;
+	int host_no, channel_no, target_no, lun_no;
+	int i_host_no, i_channel_no, i_target_no, i_lun_no;
+
+	ret = sg_obtain_scsi_adr(path, &host_no, &channel_no, &target_no,
+			         &lun_no);
+	if(ret <= 0) {
+
+fprintf(stderr,"libburn experimental: sg_obtain_scsi_adr( %s ) returns %d\n", path, ret);
+
+		return 0;
+	}
+
+fprintf(stderr,"libburn experimental: burn_drive_find_scsi_adr( %s ) : %d,%d,%d,%d\n", path, host_no, channel_no, target_no, lun_no);
+
+
+	while (1) {
+		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		if(ret <= 0)
+	break;
+		first = 0;
+		ret = sg_obtain_scsi_adr(fname, &i_host_no, &i_channel_no,
+				 &i_target_no, &i_lun_no);
+		if(ret == -1)
+	continue;
+		if(i_host_no != host_no || i_channel_no != channel_no ||
+		   i_target_no != target_no || i_lun_no != lun_no)
+	continue;
+		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
+			return -1;
+
+fprintf(stderr,"libburn experimental: burn_drive_find_scsi_adr( %s ) found %s\n", path, fname);
+
+		strcpy(adr, fname);
+		return 1;
+	}
+	return 0;
+}
+
 
 /* ts A60922 ticket 33 */
 /** Try to convert a given existing filesystem address into a persistent drive
@@ -768,11 +814,9 @@ fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
 		ret = burn_drive_find_devno(stbuf.st_rdev, adr);
 		if(ret > 0)
 			return 1;
-
-		/* >>> if SCSI device :
-		       try to find enumerated device with same Bus,Target,Lun
-		*/;
-
+		ret = burn_drive_find_scsi_adr(path, adr);
+		if(ret > 0)
+			return 1;
 	}
 
 fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
