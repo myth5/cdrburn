@@ -1760,7 +1760,7 @@ dev_too_long:;
 
 #ifdef Cdrskin_libburn_has_convert_fs_adR
 
-   if(!o->no_follow_links) {
+   if(strlen(o->device_adr)>0 && !o->no_follow_links) {
      int lret;
      char link_adr[Cdrskin_strleN+1];
 
