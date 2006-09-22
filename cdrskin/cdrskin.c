@@ -1255,37 +1255,6 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
 }
 
 
-/** Evaluate wether the given address would surely be enumerated by libburn */
-int Cdrpreskin__is_enumerable_adr(char *adr, int flag)
-{
-
-#ifdef Cdrskin_libburn_has_is_enumerablE
- int ret;
-
- ret= burn_drive_is_enumerable_adr(adr);
- return(!!ret);
-
-#else
- int i;
- char dev[80];
-
- for(i=0;i<32;i++) {
-   sprintf(dev,"/dev/sg%d",i);
-   if(strcmp(adr,dev)==0)
-     return(1);
- }
- for(i=0;i<26;i++) {
-   sprintf(dev,"/dev/hd%c",'a'+i);
-   if(strcmp(adr,dev)==0)
-     return(1);
- }
- return(0);
-
-#endif
-
-}
-
-
 /** Convert a cdrecord-style device address into a libburn device address or
     into a libburn drive number. It depends on the "scsibus" number of the
     cdrecord-style address which kind of libburn address emerges:
@@ -1389,13 +1358,7 @@ return:
 */
 {
  int i,ret,bragg_with_audio= 0;
- char *value_pt,link_adr[Cdrskin_strleN+1];
-
-#ifndef Cdrskin_libburn_has_convert_fs_adR
- int k;
- char link_target[Cdrskin_strleN+1];
- struct stat stbuf;
-#endif
+ char *value_pt;
 
 #ifndef Cdrskin_extra_leaN
  if(argc>1)
@@ -1794,56 +1757,26 @@ dev_too_long:;
        {ret= 0; goto ex;}
      }
    }
-   if(!o->no_follow_links) {
-     strcpy(link_adr,o->device_adr);
 
 #ifdef Cdrskin_libburn_has_convert_fs_adR
 
-     ret = burn_drive_convert_fs_adr(link_adr,o->device_adr);
-     if(ret<0) {
+   if(!o->no_follow_links) {
+     int lret;
+     char link_adr[Cdrskin_strleN+1];
+
+     strcpy(link_adr,o->device_adr);
+     lret = burn_drive_convert_fs_adr(link_adr,o->device_adr);
+     if(lret<0) {
        fprintf(stderr,
            "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
        fprintf(stderr,
-	   "                burn_drive_convert_fs_adr() returned %d\n",ret);
+	   "                burn_drive_convert_fs_adr() returned %d\n",lret);
      }
-
-#else 
-
-     while(lstat(link_adr,&stbuf)!=-1) {
-       if(Cdrpreskin__is_enumerable_adr(link_adr,0))
-     break;
-       if((stbuf.st_mode&S_IFMT)!=S_IFLNK)
-     break;
-       ret= readlink(link_adr,link_target,Cdrskin_strleN+1);
-       if(ret==-1)
-         goto after_resolving_links;
-       if(ret>=Cdrskin_strleN) {
-link_too_long:;
-         fprintf(stderr,
-             "cdrskin: FATAL : Link target address too long (max. %d chars)\n",
-             Cdrskin_strleN-1);
-         {ret= 0; goto ex;}
-       }
-       for(k=0;k<ret;k++)
-         link_adr[k]= link_target[k];
-       link_adr[k]= 0;
-     }
-     if(strcmp(link_adr,o->device_adr)!=0) {
-       fprintf(stderr,"cdrskin: NOTE : Followed link '%s' to target '%s'\n",
-               o->device_adr,link_adr);
-       if(strlen(link_adr)>=sizeof(o->device_adr))
-         goto link_too_long;
-       strcpy(o->device_adr,link_adr);
-     }
+   }
 
 #endif /* Cdrskin_libburn_has_convert_fs_adR */
 
-   }
-#ifndef Cdrskin_libburn_has_convert_fs_adR
-after_resolving_links:;
-#endif
  }
- ret= 1;
 ex:;
 
 #ifndef Cdrskin_extra_leaN
