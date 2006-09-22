@@ -56,6 +56,28 @@ static int sgio_test(int fd)
 	return ioctl(fd, SG_IO, &s);
 }
 
+
+/* ts A60922 ticket 33 */
+int sg_is_enumerable_adr(char *adr)
+{
+	char fname[10];
+	int i;
+
+	for (i = 0; i < 26; i++) {
+		sprintf(fname, "/dev/hd%c", 'a' + i);
+		if (strcmp(adr, fname) == 0)
+			return 1;
+	}
+	for (i = 0; i < 32; i++) {
+		sprintf(fname, "/dev/sg%d", i);
+		if (strcmp(adr, fname) == 0)
+			return 1;
+		
+	}
+	return 0;
+}
+
+
 void ata_enumerate(void)
 {
 	struct hd_driveid tm;

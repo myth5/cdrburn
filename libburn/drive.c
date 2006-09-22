@@ -663,3 +663,10 @@ int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[])
 	return 1;
 }
 
+/* ts A60922 ticket 33 */
+/** Evaluate wether the given address would be enumerated by libburn */
+int burn_drive_is_enumerable_adr(char *adr)
+{
+	return sg_is_enumerable_adr(adr);
+}
+

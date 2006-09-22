@@ -579,6 +579,11 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[]);
 */
 int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[]);
 
+/* ts A60922 ticket 33 */
+/** Evaluate wether the given address would be enumerated by libburn
+    @return 1 means yes, 0 means no */
+int burn_drive_is_enumerable_adr(char *adr);
+
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc).

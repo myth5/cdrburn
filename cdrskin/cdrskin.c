@@ -163,11 +163,13 @@ or
 #ifdef Cdrskin_libburn_0_2_3
 #define Cdrskin_libburn_versioN "0.2.3"
 #define Cdrskin_libburn_from_pykix_svN 1
+#define Cdrskin_libburn_has_is_enumerablE 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
 #define Cdrskin_libburn_versioN "0.2.3"
 #define Cdrskin_libburn_from_pykix_svN 1
+#define Cdrskin_libburn_has_is_enumerablE 1
 #endif
 
 #ifdef Cdrskin_libburn_from_pykix_svN
@@ -247,7 +249,6 @@ or
 
 
 #include <stdio.h>
-#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -1153,6 +1154,9 @@ struct CdrpreskiN {
  /** Wether an option is given which needs a full bus scan */
  int no_whitelist;
 
+ /** Wether the translated device address shall follow softlinks */
+ int no_follow_links;
+
  /** Wether bus scans shall exit!=0 if no drive was found */
  int scan_demands_drive;
 
@@ -1206,6 +1210,7 @@ int Cdrpreskin_new(struct CdrpreskiN **preskin, int flag)
  o->allow_setuid= 0;
  o->allow_fd_source= 0;
  o->no_whitelist= 0;
+ o->no_follow_links= 0;
  o->scan_demands_drive= 0;
  o->abort_on_busy_drive= 0;
  o->drive_exclusive= 1;
@@ -1247,6 +1252,37 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
  free((char *) o);
  *preskin= NULL;
  return(1);
+}
+
+
+/** Evaluate wether the given address would surely be enumerated by libburn */
+int Cdrpreskin__is_enumerable_adr(char *adr, int flag)
+{
+
+#ifdef Cdrskin_libburn_has_is_enumerablE
+ int ret;
+
+ ret= burn_drive_is_enumerable_adr(adr);
+ return(!!ret);
+
+#else
+ int i;
+ char dev[80];
+
+ for(i=0;i<32;i++) {
+   sprintf(dev,"/dev/sg%d",i);
+   if(strcmp(adr,dev)==0)
+     return(1);
+ }
+ for(i=0;i<26;i++) {
+   sprintf(dev,"/dev/hd%c",'a'+i);
+   if(strcmp(adr,dev)==0)
+     return(1);
+ }
+ return(0);
+
+#endif
+
 }
 
 
@@ -1352,8 +1388,10 @@ return:
    2 end program run (--help)
 */
 {
- int i,ret,bragg_with_audio= 0;
- char *value_pt;
+ int i,k,ret,bragg_with_audio= 0;
+ char *value_pt,link_adr[Cdrskin_strleN+1];
+ char link_target[Cdrskin_strleN+1];
+ struct stat stbuf;
 
 #ifndef Cdrskin_extra_leaN
  if(argc>1)
@@ -1564,6 +1602,7 @@ set_dev:;
        " --ignore_signals   try to ignore any signals rather than to abort\n");
      printf(" --no_abort_handler exit even if the drive is in busy state\n");
      printf(" --no_blank_appendable  refuse to blank appendable CD-RW\n");
+     printf(" --no_follow_links  with dev= do not resolve symbolic links\n");
      printf(
          " --no_rc            as first argument: do not read startup files\n");
      printf(
@@ -1670,6 +1709,9 @@ see_cdrskin_eng_html:;
    } else if(strcmp(argv[i],"--no_abort_handler")==0) {
      o->abort_handler= 0;
 
+   } else if(strcmp(argv[i],"--no_follow_links")==0) {
+     o->no_follow_links= 0;
+
    } else if(strcmp(argv[i],"--no_rc")==0) {
      if(i!=1)
        fprintf(stderr,
@@ -1746,6 +1788,33 @@ dev_too_long:;
        fprintf(stderr,
          "cdrskin: FATAL : dev= expects /dev/xyz, Bus,Target,0 or a number\n");
        {ret= 0; goto ex;}
+     }
+   }
+   if(!o->no_follow_links) {
+     strcpy(link_adr,o->device_adr);
+     while(lstat(link_adr,&stbuf)!=-1) {
+       if(Cdrpreskin__is_enumerable_adr(link_adr,0))
+     break;
+       if((stbuf.st_mode&S_IFMT)!=S_IFLNK)
+     break;
+       ret= readlink(link_adr,link_target,Cdrskin_strleN+1);
+       if(ret>=Cdrskin_strleN) {
+link_too_long:;
+         fprintf(stderr,
+             "cdrskin: FATAL : Link target address too long (max. %d chars)\n",
+             Cdrskin_strleN-1);
+         {ret= 0; goto ex;}
+       }
+       for(k=0;k<ret;k++)
+         link_adr[k]= link_target[k];
+       link_adr[k]= 0;
+     }
+     if(strcmp(link_adr,o->device_adr)!=0) {
+       fprintf(stderr,"cdrskin: NOTE : Followed link '%s' to target '%s'\n",
+               o->device_adr,link_adr);
+       if(strlen(link_adr)>=sizeof(o->device_adr))
+         goto link_too_long;
+       strcpy(o->device_adr,link_adr);
      }
    }
  }
@@ -3615,6 +3684,12 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
  if(!skin->do_eject)
    return(1);
+
+/* not active yet :
+ if(skin->n_drives<=skin->driveno)
+   return(2);
+*/
+
  for(i= 0;i<max_try;i++) {
    ret= Cdrskin_grab_drive(skin,2|((i<max_try-1)<<2));
    if(ret>0 || i>=max_try-1)
@@ -4031,6 +4106,9 @@ gracetime_equals:;
    } else if(strcmp(argv[i],"--no_blank_appendable")==0) {
      skin->no_blank_appendable= 1;
 
+   } else if(strcmp(argv[i],"--no_follow_links")==0) {
+     /* is handled in Cdrpreskin_setup() */;
+
    } else if(strcmp(argv[i],"--no_rc")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
@@ -4226,9 +4304,14 @@ ignore_unknown:;
      printf("cdrskin: will install abort handler in eventual burn loop.\n");
  }
 
- if(strlen(skin->preskin->raw_device_adr)>0) {
-   ret= Cdrskin_dev_to_driveno(skin,skin->preskin->raw_device_adr,
-                               &(skin->driveno),0);
+ if(strlen(skin->preskin->raw_device_adr)>0 ||
+    strlen(skin->preskin->device_adr)>0) {
+   if(strlen(skin->preskin->device_adr)>0)
+     ret= Cdrskin_dev_to_driveno(skin,skin->preskin->device_adr,
+                                 &(skin->driveno),0);
+   else
+     ret= Cdrskin_dev_to_driveno(skin,skin->preskin->raw_device_adr,
+                                 &(skin->driveno),0);
    if(ret<=0)
      return(ret);
    if(skin->verbosity>=Cdrskin_verbose_cmD) {

@@ -9,6 +9,9 @@ struct command;
 enum response
 { RETRY, FAIL };
 
+/* ts A60922 ticket 33 */
+int sg_is_enumerable_adr(char *adr);
+
 void sg_enumerate(void);
 void ata_enumerate(void);
 int sg_grab(struct burn_drive *);
