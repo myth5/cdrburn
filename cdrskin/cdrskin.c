@@ -1155,7 +1155,7 @@ struct CdrpreskiN {
  int no_whitelist;
 
  /** Wether the translated device address shall follow softlinks */
- int no_follow_links;
+ int no_convert_fs_adr;
 
  /** Wether bus scans shall exit!=0 if no drive was found */
  int scan_demands_drive;
@@ -1210,7 +1210,7 @@ int Cdrpreskin_new(struct CdrpreskiN **preskin, int flag)
  o->allow_setuid= 0;
  o->allow_fd_source= 0;
  o->no_whitelist= 0;
- o->no_follow_links= 0;
+ o->no_convert_fs_adr= 0;
  o->scan_demands_drive= 0;
  o->abort_on_busy_drive= 0;
  o->drive_exclusive= 1;
@@ -1567,9 +1567,9 @@ set_dev:;
           "                    seconds, release drive, and do normal work\n");
      printf(
        " --ignore_signals   try to ignore any signals rather than to abort\n");
-     printf(" --no_abort_handler exit even if the drive is in busy state\n");
+     printf(" --no_abort_handler  exit even if the drive is in busy state\n");
      printf(" --no_blank_appendable  refuse to blank appendable CD-RW\n");
-     printf(" --no_follow_links  with dev= do not resolve symbolic links\n");
+     printf(" --no_convert_fs_adr  only literal translations of dev=\n");
      printf(
          " --no_rc            as first argument: do not read startup files\n");
      printf(
@@ -1676,8 +1676,8 @@ see_cdrskin_eng_html:;
    } else if(strcmp(argv[i],"--no_abort_handler")==0) {
      o->abort_handler= 0;
 
-   } else if(strcmp(argv[i],"--no_follow_links")==0) {
-     o->no_follow_links= 0;
+   } else if(strcmp(argv[i],"--no_convert_fs_adr")==0) {
+     o->no_convert_fs_adr= 1;
 
    } else if(strcmp(argv[i],"--no_rc")==0) {
      if(i!=1)
@@ -1760,7 +1760,7 @@ dev_too_long:;
 
 #ifdef Cdrskin_libburn_has_convert_fs_adR
 
-   if(strlen(o->device_adr)>0 && !o->no_follow_links) {
+   if(strlen(o->device_adr)>0 && !o->no_convert_fs_adr) {
      int lret;
      char link_adr[Cdrskin_strleN+1];
 
@@ -4061,7 +4061,7 @@ gracetime_equals:;
    } else if(strcmp(argv[i],"--no_blank_appendable")==0) {
      skin->no_blank_appendable= 1;
 
-   } else if(strcmp(argv[i],"--no_follow_links")==0) {
+   } else if(strcmp(argv[i],"--no_convert_fs_adr")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
    } else if(strcmp(argv[i],"--no_rc")==0) {
