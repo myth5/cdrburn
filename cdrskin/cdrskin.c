@@ -3710,12 +3710,8 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
 
  if(!skin->do_eject)
    return(1);
-
-/* not active yet :
  if(skin->n_drives<=skin->driveno)
    return(2);
-*/
-
  for(i= 0;i<max_try;i++) {
    ret= Cdrskin_grab_drive(skin,2|((i<max_try-1)<<2));
    if(ret>0 || i>=max_try-1)
