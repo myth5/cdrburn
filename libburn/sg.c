@@ -58,23 +58,59 @@ static int sgio_test(int fd)
 
 
 /* ts A60922 ticket 33 */
+/** Returns the next index number and the next enumerated drive address.
+    @param idx An opaque number handle. Make no own theories about it.
+    @param adr Takes the reply
+    @param adr_size Gives maximum size of reply including final 0
+    @param initialize  1 = start new, 0 = continue, use no other values for now
+    @return 1 = reply is a valid address , 0 = no further address available
+           -1 = severe error (e.g. adr_size too small)
+*/
+int sg_give_next_adr(int *idx, char adr[], int adr_size, int initialize)
+{
+	static int sg_limit = 32, ata_limit = 26;
+	int baseno = 0;
+
+	if (initialize  == 1)
+		*idx = -1;
+	(*idx)++;
+	if (*idx >= sg_limit)
+		goto next_ata;
+	if (adr_size < 10)
+		return -1;
+	sprintf(adr, "/dev/sg%d", *idx);
+	return 1;
+next_ata:;
+	baseno += sg_limit;
+	if (*idx - baseno >= ata_limit)
+		goto next_nothing;
+	if (adr_size < 9)
+		return -1;
+	sprintf(adr, "/dev/hd%c", 'a' + (*idx - baseno));
+	return 1;
+next_nothing:;
+	baseno += ata_limit;
+	return 0;
+}
+
 int sg_is_enumerable_adr(char *adr)
 {
-	char fname[10];
-	int i;
+	char fname[4096];
+	int i, ret = 0, first = 1;
 
-	for (i = 0; i < 26; i++) {
-		sprintf(fname, "/dev/hd%c", 'a' + i);
+	while (1) {
+		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		if(ret <= 0)
+	break;
+/* <<<
+		fprintf(stderr,"libburn experimental: idx %d : %s\n",i,fname);
+*/
+		first = 0;
 		if (strcmp(adr, fname) == 0)
 			return 1;
+
 	}
-	for (i = 0; i < 32; i++) {
-		sprintf(fname, "/dev/sg%d", i);
-		if (strcmp(adr, fname) == 0)
-			return 1;
-		
-	}
-	return 0;
+	return(0);
 }
 
 

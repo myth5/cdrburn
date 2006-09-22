@@ -10,6 +10,7 @@ enum response
 { RETRY, FAIL };
 
 /* ts A60922 ticket 33 */
+int sg_give_next_adr(int *idx, char adr[], int adr_size, int initialize);
 int sg_is_enumerable_adr(char *adr);
 
 void sg_enumerate(void);

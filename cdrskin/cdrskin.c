@@ -164,12 +164,12 @@ or
 #define Cdrskin_libburn_versioN "0.2.3"
 #define Cdrskin_libburn_from_pykix_svN 1
 #define Cdrskin_libburn_has_is_enumerablE 1
+#define Cdrskin_libburn_has_convert_fs_adR 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
 #define Cdrskin_libburn_versioN "0.2.3"
 #define Cdrskin_libburn_from_pykix_svN 1
-#define Cdrskin_libburn_has_is_enumerablE 1
 #endif
 
 #ifdef Cdrskin_libburn_from_pykix_svN
@@ -1388,10 +1388,14 @@ return:
    2 end program run (--help)
 */
 {
- int i,k,ret,bragg_with_audio= 0;
+ int i,ret,bragg_with_audio= 0;
  char *value_pt,link_adr[Cdrskin_strleN+1];
+
+#ifndef Cdrskin_libburn_has_convert_fs_adR
+ int k;
  char link_target[Cdrskin_strleN+1];
  struct stat stbuf;
+#endif
 
 #ifndef Cdrskin_extra_leaN
  if(argc>1)
@@ -1752,7 +1756,7 @@ final_checks:;
     "cdrskin: HINT  : to run cdrskin under your normal user identity.\n");
    fprintf(stderr,
     "cdrskin: HINT  : Option  --allow_setuid  disables this safety check.\n");
-   ret= 0;
+   ret= 0; goto ex;
  }
 
  if(strlen(o->raw_device_adr)>0 && !o->no_whitelist) {
@@ -1792,12 +1796,27 @@ dev_too_long:;
    }
    if(!o->no_follow_links) {
      strcpy(link_adr,o->device_adr);
+
+#ifdef Cdrskin_libburn_has_convert_fs_adR
+
+     ret = burn_drive_convert_fs_adr(link_adr,o->device_adr);
+     if(ret<0) {
+       fprintf(stderr,
+           "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
+       fprintf(stderr,
+	   "                burn_drive_convert_fs_adr() returned %d\n",ret);
+     }
+
+#else 
+
      while(lstat(link_adr,&stbuf)!=-1) {
        if(Cdrpreskin__is_enumerable_adr(link_adr,0))
      break;
        if((stbuf.st_mode&S_IFMT)!=S_IFLNK)
      break;
        ret= readlink(link_adr,link_target,Cdrskin_strleN+1);
+       if(ret==-1)
+         goto after_resolving_links;
        if(ret>=Cdrskin_strleN) {
 link_too_long:;
          fprintf(stderr,
@@ -1816,8 +1835,15 @@ link_too_long:;
          goto link_too_long;
        strcpy(o->device_adr,link_adr);
      }
+
+#endif /* Cdrskin_libburn_has_convert_fs_adR */
+
    }
+#ifndef Cdrskin_libburn_has_convert_fs_adR
+after_resolving_links:;
+#endif
  }
+ ret= 1;
 ex:;
 
 #ifndef Cdrskin_extra_leaN

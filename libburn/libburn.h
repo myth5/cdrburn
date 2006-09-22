@@ -584,6 +584,16 @@ int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[]);
     @return 1 means yes, 0 means no */
 int burn_drive_is_enumerable_adr(char *adr);
 
+/* ts A60922 ticket 33 */
+/** Try to convert a given existing filesystem address into a persistent drive
+    address.
+    @param path The address of an existing file system object
+    @param adr  An application provided array of at least BURN_DRIVE_ADR_LEN
+                characters size. The persistent address gets copied to it.
+    @return     1 = success , 0 = failure , -1 = severe error
+*/
+int burn_drive_convert_fs_adr(char *path, char adr[]);
+
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc).

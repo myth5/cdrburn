@@ -1,5 +1,7 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
@@ -668,5 +670,113 @@ int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[])
 int burn_drive_is_enumerable_adr(char *adr)
 {
 	return sg_is_enumerable_adr(adr);
+}
+
+/* ts A60922 ticket 33 */
+/* Try to find an enumerated address with the given stat.st_rdev number */
+int burn_drive_resolve_link(char *path, char adr[])
+{
+	int ret;
+	char link_target[4096];
+
+
+fprintf(stderr,"libburn experimental: burn_drive_resolve_link( %s )\n",path);
+
+	ret = readlink(path, link_target, sizeof(link_target));
+	if(ret == -1) {
+
+fprintf(stderr,"libburn experimental: readlink( %s ) returns -1\n",path);
+
+		return 0;
+	}
+	if(ret >= sizeof(link_target) - 1) {
+
+fprintf(stderr,"libburn experimental: readlink( %s ) returns %d (too much)\n",path,ret);
+
+		return -1;
+	}
+	link_target[ret] = 0;
+	ret = burn_drive_convert_fs_adr(link_target, adr);
+
+fprintf(stderr,"libburn experimental: burn_drive_convert_fs_adr( %s ) returns %d\n",link_target,ret);
+
+	return ret;
+}
+
+/* ts A60922 ticket 33 */
+/* Try to find an enumerated address with the given stat.st_rdev number */
+int burn_drive_find_devno(dev_t devno, char adr[])
+{
+	char fname[4096];
+	int i, ret = 0, first = 1;
+	struct stat stbuf;
+
+	while (1) {
+		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		if(ret <= 0)
+	break;
+		first = 0;
+		ret = stat(fname, &stbuf);
+		if(ret == -1)
+	continue;
+		if(devno != stbuf.st_rdev)
+	continue;
+		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
+			return -1;
+
+fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%llX ) found %s\n", (long long) devno, fname);
+
+		strcpy(adr, fname);
+		return 1;
+	}
+	return 0;
+}
+
+/* ts A60922 ticket 33 */
+/** Try to convert a given existing filesystem address into a persistent drive
+    address.  */
+int burn_drive_convert_fs_adr(char *path, char adr[])
+{
+	int ret;
+	struct stat stbuf;
+
+fprintf(stderr,"libburn experimental: burn_drive_convert_fs_adr( %s )\n",path);
+
+	if(burn_drive_is_enumerable_adr(path)) {
+		if(strlen(path) >= BURN_DRIVE_ADR_LEN)
+			return -1;
+
+fprintf(stderr,"libburn experimental: burn_drive_is_enumerable_adr( %s ) is true\n",path);
+
+		strcpy(adr, path);
+		return 1;
+	}
+
+	if(lstat(path, &stbuf) == -1) {
+
+fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
+
+		return 0;
+	}
+	if((stbuf.st_mode & S_IFMT) == S_IFLNK) {
+		ret = burn_drive_resolve_link(path, adr);
+		if(ret > 0)
+			return 1;
+	}
+	if((stbuf.st_mode&S_IFMT) == S_IFBLK ||
+	   (stbuf.st_mode&S_IFMT) == S_IFCHR) {
+		ret = burn_drive_find_devno(stbuf.st_rdev, adr);
+		if(ret > 0)
+			return 1;
+
+		/* >>> if SCSI device :
+		       try to find enumerated device with same Bus,Target,Lun
+		*/;
+
+	}
+
+fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
+
+	return 0;
 }
 
