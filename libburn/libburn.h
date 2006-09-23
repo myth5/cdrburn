@@ -580,19 +580,35 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[]);
 int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[]);
 
 /* ts A60922 ticket 33 */
-/** Evaluate wether the given address would be enumerated by libburn
-    @return 1 means yes, 0 means no */
+/** Evaluate wether the given address would be a possible persistent drive
+    address of libburn.
+    @return 1 means yes, 0 means no
+*/
 int burn_drive_is_enumerable_adr(char *adr);
 
 /* ts A60922 ticket 33 */
 /** Try to convert a given existing filesystem address into a persistent drive
-    address.
+    address. This succeeds with symbolic links or if a hint about the drive's
+    system address can be read from the filesystem object and a matching drive
+    is found.
     @param path The address of an existing file system object
     @param adr  An application provided array of at least BURN_DRIVE_ADR_LEN
                 characters size. The persistent address gets copied to it.
     @return     1 = success , 0 = failure , -1 = severe error
 */
 int burn_drive_convert_fs_adr(char *path, char adr[]);
+
+/* ts A60923 */
+/** Try to convert a given SCSI address of bus, channel, target, lun into
+    a persistent drive address. If a SCSI address component parameter is < 0
+    then it is not decisive and the first enumerated address which matches
+    the >= 0 parameters is taken as result.
+    @param adr  An application provided array of at least BURN_DRIVE_ADR_LEN
+                characters size. The persistent address gets copied to it.
+    @return     1 = success , 0 = failure , -1 = severe error
+*/
+int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
+                                int lun_no, char adr[]);
 
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
