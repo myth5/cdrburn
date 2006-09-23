@@ -2757,9 +2757,12 @@ int Cdrskin_driveno_to_btldev(struct CdrskiN *skin, int driveno,
        {ret= 2; goto adr_translation;}
      }
 fallback:;
- if(skin->preskin->no_pseudo_scsi_adr)
-   sprintf(btldev,"%d",driveno);
- else
+ if(skin->preskin->no_pseudo_scsi_adr) {
+   if(loc!=NULL)
+     strcpy(btldev,loc);
+   else
+     sprintf(btldev,"%d",driveno);
+ } else
    sprintf(btldev,"0,%d,0",driveno);
  ret= 0;
 

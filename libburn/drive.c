@@ -766,6 +766,9 @@ int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 			*channel_no = drive_array[i].channel;
 			*target_no = drive_array[i].id;
 			*lun_no = drive_array[i].lun;
+			if (*host_no < 0 || *channel_no < 0 ||
+			    *target_no < 0 || *lun_no < 0)
+				return 0;
 			return 1;
 		}
 	}
