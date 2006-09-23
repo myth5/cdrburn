@@ -143,6 +143,16 @@ It is not checked for the necessary degree of hacker safety.
 
 Get an overview of cdrecord style addresses of available devices
     cdrskin -scanbus 
+    cdrskin dev=ATA -scanbus 
+
+Note: Adresses reported with dev=ATA are to be used with prefix "ATA:".
+      Like "ATA:2,2,0" . Their numbers are not cdrecord compatible. See
+      "Pseudo-SCSI Adresses". It is well possible to use IDE device file
+      paths like "/dev/hdc" rather than "ATA:2,2,0".
+      With SCSI devices it is possible to use "/dev/sg1" or "/dev/scd0".
+Note: Address numbers have changed since cdrskin-0.2.2. To get the old number
+      scheme, use option  --old_pseudo_scsi_adr . Sorry for any inconvenience.
+
 
 Obtain some info about the drive
     cdrskin dev=1,1,0 -checkdrive 
@@ -233,18 +243,21 @@ the meaning of the components. A cdrecord-style address for cdrskin
   [prefix:]scsibus,target,lun
 can be interpreted in two different modes.
 
-Mode  --no_pseudo_scsi_adr  uses scsibus,target,lun as given by the operating
-system. On (old) real SCSI burners and on emulated SCSI it is compatible to
-cdrecord even in quite old versions.
-On plain ATAPI this mode offers no scsibus,target,lun addressing at all
-but refers directly to the device file names /dev/hdX. Modern versions of
-cdrecord on kernel 2.6 do accept these addresses too, but the advised method
-is rather ATA:scsibus,target,lun which is not supported by cdrskin, yet.
+Standard mode uses scsibus,target,lun as given by the operating system. On
+(old) real SCSI burners and on emulated SCSI it is compatible to cdrecord.
 
-In standard mode there is a scsibus,target,lun representation for any visible
-device. The price for this is that the numbering has nothing to do with SCSI
-and thus is not compatible to cdrecord. Each number triple corresponds either
-to a device file address or to a libburn drive number.
+On plain IDE this mode offers no compatible scsibus,target,lun addressing,
+but the cdrecord-ly advised methods ATA:scsibus,target,lun and ATAPI:...
+are supported by cdrskin via an own incompatible address enumeration.
+In this mode, option -scanbus will list only SCSI devices unless option
+dev=ATA or dev=ATAPI are given, which will suppress SCSI devices and only
+show IDE drives (i.e. /dev/hdX without ide-scsi emulation).
+
+
+In mode  --old_pseudo_scsi_adr  there is a scsibus,target,lun representation
+which has nothing to do with SCSI and thus is not compatible to cdrecord.
+Each number triple corresponds either to a device file address or to a
+libburn drive number.
 Component "scsibus" indicates the translation method. Defined busses are:
   0  target is the libburn drivenumber as listed with --devices
   1  associated to device file /dev/sgN , target chooses N
@@ -263,10 +276,13 @@ a meaning. To stay upward compatible, use addresses as printed by -scanbus.
 Some programs or users have their own ideas about the address of their burner.
 K3b 0.10 for example derives cdrecord addresses by own examination of the
 devices and not by calling cdrecord -scanbus.
-On systems where the burners are attached via (emulated) SCSI it is worth
-a try to use cdrskin with optio --no_pseudo_scsi_adr . If ATAPI devices are
-used directly then this will work well only if the frontend uses /dev/hdX as
-address and does not insist in ATA:scsibus,target,lun .
+On systems where the burners are attached via (emulated) SCSI, standard mode
+will hopefully be fully compatible. If IDE devices are used, then hope that
+the frontend uses directly /dev/hdX or asks its "cdrecord:" via 
+dev=ATA -scanbus for drive addresses and drive descriptions.
+
+Old frontends which do not know dev=ATA or dev=ATAPI and which do ask their
+"cdrecord" via -scanbus may be well served with option  --old_pseudo_scsi_adr .
 
 To direct any stubborn callers to the appropriate drives, cdrskin allows to
 define device address aliases. Like
