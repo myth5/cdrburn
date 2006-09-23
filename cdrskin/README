@@ -228,10 +228,23 @@ I have the hope that Joerg feels more flattered than annoyed by cdrskin.
 
                              Pseudo-SCSI Adresses
 
-cdrecord and cdrskin share only some syntax of addresses but not the meaning
-of the components. A cdrecord-style address for cdrskin
-  [[prefix:]scsibus,]target,lun
-corresponds either to a device file address or to a libburn drive number.
+cdrecord and cdrskin share only some syntax of addresses but not necessarily
+the meaning of the components. A cdrecord-style address for cdrskin
+  [prefix:]scsibus,target,lun
+can be interpreted in two different modes.
+
+Mode  --no_pseudo_scsi_adr  uses scsibus,target,lun as given by the operating
+system. On (old) real SCSI burners and on emulated SCSI it is compatible to
+cdrecord even in quite old versions.
+On plain ATAPI this mode offers no scsibus,target,lun addressing at all
+but refers directly to the device file names /dev/hdX. Modern versions of
+cdrecord on kernel 2.6 do accept these addresses too, but the advised method
+is rather ATA:scsibus,target,lun which is not supported by cdrskin, yet.
+
+In standard mode there is a scsibus,target,lun representation for any visible
+device. The price for this is that the numbering has nothing to do with SCSI
+and thus is not compatible to cdrecord. Each number triple corresponds either
+to a device file address or to a libburn drive number.
 Component "scsibus" indicates the translation method. Defined busses are:
   0  target is the libburn drivenumber as listed with --devices
   1  associated to device file /dev/sgN , target chooses N
@@ -246,11 +259,17 @@ drive accessability.
 Further busses may emerge as libburn evolves. "prefix" and "lun" may get
 a meaning. To stay upward compatible, use addresses as printed by -scanbus.
 
+
 Some programs or users have their own ideas about the address of their burner.
 K3b 0.10 for example derives cdrecord addresses by own examination of the
 devices and not by calling cdrecord -scanbus.
-To direct such callers to the appropriate drives, cdrskin allows to define
-device address aliases. Like
+On systems where the burners are attached via (emulated) SCSI it is worth
+a try to use cdrskin with optio --no_pseudo_scsi_adr . If ATAPI devices are
+used directly then this will work well only if the frontend uses /dev/hdX as
+address and does not insist in ATA:scsibus,target,lun .
+
+To direct any stubborn callers to the appropriate drives, cdrskin allows to
+define device address aliases. Like
   cdrskin dev_translation=+1,0,0+/dev/sg1 \
           dev_translation=+ATA:1,0,0+/dev/sg1 \
           dev_translation=-"cd+dvd"-1,1,0 \
