@@ -610,6 +610,16 @@ int burn_drive_convert_fs_adr(char *path, char adr[]);
 int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
                                 int lun_no, char adr[]);
 
+/* ts A60923 */
+/** Try to obtain host,channel,target,lun from path. If there is an SCSI
+    address at all, then this call should succeed with a persistent
+    drive address obtained via burn_drive_get_adr(). It is also supposed to
+    succeed with any device file of a (possibly emulated) SCSI device.
+    @return     1 = success , 0 = failure , -1 = severe error
+*/
+int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+                               int *target_no, int *lun_no);
+
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc).

@@ -842,3 +842,16 @@ fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
 	return 0;
 }
 
+/* ts A60923 */
+/** Try to obtain host,channel,target,lun from path.
+    @return     1 = success , 0 = failure , -1 = severe error
+*/
+int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+			       int *target_no, int *lun_no)
+{
+	int ret;
+
+	ret = sg_obtain_scsi_adr(path, host_no, channel_no, target_no, lun_no);
+	return ret;
+}
+
