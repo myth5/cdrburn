@@ -732,10 +732,7 @@ fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%lX ) found %s\n"
 	return 0;
 }
 
-/* ts A60922 ticket 33 */
-/* Try to find an enumerated address with the same host,channel,target,lun.
-   If a _no parameter is < 0 then it matches any number.
-*/
+/* ts A60923 */
 int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
 				int lun_no, char adr[])
 {

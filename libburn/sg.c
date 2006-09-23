@@ -126,9 +126,7 @@ void ata_enumerate(void)
 	/* ts A60813
 	   O_EXCL with block devices is an unpublished feature
 	   of Linux kernels. Possibly introduced 2002.
-	   It can only be used if libburn stops opening several
-	   file descriptor on the same block device.
-	   See comment in sg_grab() */
+	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
 	if(burn_sg_open_o_excl)
 		open_mode |= O_EXCL;
 	/* ts A60813
@@ -195,9 +193,7 @@ void sg_enumerate(void)
 	/* ts A60813
 	   O_EXCL with block devices is an unpublished feature
 	   of Linux kernels. Possibly introduced 2002.
-	   It can only be used if libburn stops opening several
-	   file descriptor on the same block device.
-	   See comment in sg_grab() */
+	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
 	if(burn_sg_open_o_excl)
 		open_mode |= O_EXCL;
 	/* ts A60813
