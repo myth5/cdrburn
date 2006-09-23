@@ -23,7 +23,8 @@
 #include "toc.h"
 #include "util.h"
 
-static void enumerate_common(char *fname);
+static void enumerate_common(char *fname, int host_no, int channel_no,
+                             int target_no, int lun_no);
 
 /* ts A51221 */
 int burn_drive_is_banned(char *device_address);
@@ -177,7 +178,7 @@ void ata_enumerate(void)
 			return;
 		}
 		close(fd);
-		enumerate_common(fname);
+		enumerate_common(fname, -1, -1, -1, -1);
 	}
 }
 
@@ -248,14 +249,22 @@ void sg_enumerate(void)
 		fprintf(stderr,"libburn experimental: SCSI triple: %d,%d,%d\n",sid.host_no,sid.scsi_id,sid.lun);
 */
 
-		enumerate_common(fname);
+		enumerate_common(fname, sid.host_no, sid.channel, 
+				sid.scsi_id, sid.lun);
 	}
 }
-
-static void enumerate_common(char *fname)
+/* ts A60923 : introduced new SCSI parameters */
+static void enumerate_common(char *fname, int host_no, int channel_no, 
+			     int target_no, int lun_no)
 {
 	struct burn_drive *t;
 	struct burn_drive out;
+
+	/* ts A60923 */
+	out.host = host_no;
+	out.id = target_no;
+	out.channel = channel_no;
+	out.lun = lun_no;
 
 	out.devname = burn_strdup(fname);
 	out.fd = -1337;
@@ -321,7 +330,7 @@ static void enumerate_common(char *fname)
 	if refcount is not one, drive is open somewhere else.
 
 	ts A60813: this test is too late. O_EXCL is the stronger solution.
-	After all the test was diabled already in icculus.org/burn CVS.
+	After all the test was disabled already in icculus.org/burn CVS.
 */
 int sg_grab(struct burn_drive *d)
 {

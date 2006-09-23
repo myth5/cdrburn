@@ -656,14 +656,26 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 	return 1;
 }
 
-/* ts A60823 */
+/* ts A60923 */
+/** Inquire the persistent address of the given drive. */
+int burn_drive_raw_get_adr(struct burn_drive *d, char adr[])
+{
+	assert(strlen(d->devname) < BURN_DRIVE_ADR_LEN);
+	strcpy(adr,d->devname);
+	return 1;
+}
+
+/* ts A60823 - A60923 */
 /** Inquire the persistent address of the given drive. */
 int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[])
 {
-	assert(strlen(drive_info->location) < BURN_DRIVE_ADR_LEN);
-	strcpy(adr,drive_info->location);
-	return 1;
+	int ret;
+
+	assert(drive_info->drive!=NULL);
+	ret = burn_drive_raw_get_adr(drive_info->drive, adr);
+	return ret;
 }
+
 
 /* ts A60922 ticket 33 */
 /** Evaluate wether the given address would be enumerated by libburn */
@@ -849,7 +861,24 @@ fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
 int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 			       int *target_no, int *lun_no)
 {
-	int ret;
+	int ret, i;
+	char adr[BURN_DRIVE_ADR_LEN];
+
+	/* open drives cannot be inquired by sg_obtain_scsi_adr() */
+	for (i = 0; i < drivetop + 1; i++) {
+		if (drive_array[i].global_index < 0)
+	continue;
+		ret = burn_drive_raw_get_adr(&(drive_array[i]),adr);
+		if (ret <= 0)
+	continue;
+		if (strcmp(adr, path) == 0) {
+			*host_no = drive_array[i].host;
+			*channel_no = drive_array[i].channel;
+			*target_no = drive_array[i].id;
+			*lun_no = drive_array[i].lun;
+			return 1;
+		}
+	}
 
 	ret = sg_obtain_scsi_adr(path, host_no, channel_no, target_no, lun_no);
 	return ret;
