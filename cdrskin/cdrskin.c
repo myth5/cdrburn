@@ -2901,8 +2901,8 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
          if((ret%1000)==busno) {
            skipped_devices++;
            if(skin->verbosity>=Cdrskin_verbose_debuG)
-             ClN(fprintf(stderr,"cdrskin_debug: skipping drive '%s'\n",
-                                btldev));
+             ClN(fprintf(stderr,"cdrskin_debug: skipping drive '%s%s'\n",
+                         ((ret/1000)==2?"ATA:":""), btldev));
          }
      continue;
        }
