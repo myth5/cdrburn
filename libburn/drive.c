@@ -733,14 +733,54 @@ fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%lX ) found %s\n"
 }
 
 /* ts A60922 ticket 33 */
-/* Try to find an enumerated address with the same host,channel,target,lun
-   as path */
-int burn_drive_find_scsi_adr(char *path, char adr[])
+/* Try to find an enumerated address with the same host,channel,target,lun.
+   If a _no parameter is < 0 then it matches any number.
+*/
+int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
+				int lun_no, char adr[])
 {
 	char fname[4096];
 	int i, ret = 0, first = 1;
+	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
+
+
+fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr( %d,%d,%d,%d )\n", host_no, channel_no, target_no, lun_no);
+
+	while (1) {
+		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		if(ret <= 0)
+	break;
+		first = 0;
+		ret = sg_obtain_scsi_adr(fname, &i_host_no, &i_channel_no,
+				 &i_target_no, &i_lun_no);
+		if(ret <= 0)
+	continue;
+		if(host_no >=0 && i_host_no != host_no)
+	continue;
+		if(channel_no >= 0 && i_channel_no != channel_no)
+	continue;
+		if(target_no >= 0 && i_target_no != target_no)
+	continue;
+		if(lun_no >= 0 && i_lun_no != lun_no)
+	continue;
+		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
+			return -1;
+
+fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr() found %s\n", fname);
+
+		strcpy(adr, fname);
+		return 1;
+	}
+	return 0;
+}
+
+/* ts A60922 ticket 33 */
+/* Try to find an enumerated address with the same host,channel,target,lun
+   as path */
+int burn_drive_find_scsi_equiv(char *path, char adr[])
+{
+	int ret = 0;
 	int host_no, channel_no, target_no, lun_no;
-	int i_host_no, i_channel_no, i_target_no, i_lun_no;
 
 	ret = sg_obtain_scsi_adr(path, &host_no, &channel_no, &target_no,
 			         &lun_no);
@@ -751,30 +791,11 @@ fprintf(stderr,"libburn experimental: sg_obtain_scsi_adr( %s ) returns %d\n", pa
 		return 0;
 	}
 
-fprintf(stderr,"libburn experimental: burn_drive_find_scsi_adr( %s ) : %d,%d,%d,%d\n", path, host_no, channel_no, target_no, lun_no);
+fprintf(stderr,"libburn experimental: burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d\n", path, host_no, channel_no, target_no, lun_no);
 
-
-	while (1) {
-		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
-		if(ret <= 0)
-	break;
-		first = 0;
-		ret = sg_obtain_scsi_adr(fname, &i_host_no, &i_channel_no,
-				 &i_target_no, &i_lun_no);
-		if(ret == -1)
-	continue;
-		if(i_host_no != host_no || i_channel_no != channel_no ||
-		   i_target_no != target_no || i_lun_no != lun_no)
-	continue;
-		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
-			return -1;
-
-fprintf(stderr,"libburn experimental: burn_drive_find_scsi_adr( %s ) found %s\n", path, fname);
-
-		strcpy(adr, fname);
-		return 1;
-	}
-	return 0;
+	ret= burn_drive_convert_scsi_adr(host_no, channel_no, target_no,
+		lun_no, adr);
+	return ret;
 }
 
 
@@ -814,7 +835,7 @@ fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
 		ret = burn_drive_find_devno(stbuf.st_rdev, adr);
 		if(ret > 0)
 			return 1;
-		ret = burn_drive_find_scsi_adr(path, adr);
+		ret = burn_drive_find_scsi_equiv(path, adr);
 		if(ret > 0)
 			return 1;
 	}
