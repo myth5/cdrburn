@@ -745,6 +745,36 @@ fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%lX ) found %s\n"
 }
 
 /* ts A60923 */
+/** Try to obtain host,channel,target,lun from path.
+    @return     1 = success , 0 = failure , -1 = severe error
+*/
+int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+			       int *target_no, int *lun_no)
+{
+	int ret, i;
+	char adr[BURN_DRIVE_ADR_LEN];
+
+	/* open drives cannot be inquired by sg_obtain_scsi_adr() */
+	for (i = 0; i < drivetop + 1; i++) {
+		if (drive_array[i].global_index < 0)
+	continue;
+		ret = burn_drive_raw_get_adr(&(drive_array[i]),adr);
+		if (ret <= 0)
+	continue;
+		if (strcmp(adr, path) == 0) {
+			*host_no = drive_array[i].host;
+			*channel_no = drive_array[i].channel;
+			*target_no = drive_array[i].id;
+			*lun_no = drive_array[i].lun;
+			return 1;
+		}
+	}
+
+	ret = sg_obtain_scsi_adr(path, host_no, channel_no, target_no, lun_no);
+	return ret;
+}
+
+/* ts A60923 */
 int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
 				int lun_no, char adr[])
 {
@@ -760,8 +790,8 @@ fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr( %d,%d,%d,%d )
 		if(ret <= 0)
 	break;
 		first = 0;
-		ret = sg_obtain_scsi_adr(fname, &i_host_no, &i_channel_no,
-				 &i_target_no, &i_lun_no);
+		ret = burn_drive_obtain_scsi_adr(fname, &i_host_no,
+				 &i_channel_no, &i_target_no, &i_lun_no);
 		if(ret <= 0)
 	continue;
 		if(host_no >=0 && i_host_no != host_no)
@@ -791,11 +821,11 @@ int burn_drive_find_scsi_equiv(char *path, char adr[])
 	int ret = 0;
 	int host_no, channel_no, target_no, lun_no;
 
-	ret = sg_obtain_scsi_adr(path, &host_no, &channel_no, &target_no,
-			         &lun_no);
+	ret = burn_drive_obtain_scsi_adr(path, &host_no, &channel_no,
+				 &target_no, &lun_no);
 	if(ret <= 0) {
 
-fprintf(stderr,"libburn experimental: sg_obtain_scsi_adr( %s ) returns %d\n", path, ret);
+fprintf(stderr,"libburn experimental: burn_drive_obtain_scsi_adr( %s ) returns %d\n", path, ret);
 
 		return 0;
 	}
@@ -852,35 +882,5 @@ fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
 fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
 
 	return 0;
-}
-
-/* ts A60923 */
-/** Try to obtain host,channel,target,lun from path.
-    @return     1 = success , 0 = failure , -1 = severe error
-*/
-int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
-			       int *target_no, int *lun_no)
-{
-	int ret, i;
-	char adr[BURN_DRIVE_ADR_LEN];
-
-	/* open drives cannot be inquired by sg_obtain_scsi_adr() */
-	for (i = 0; i < drivetop + 1; i++) {
-		if (drive_array[i].global_index < 0)
-	continue;
-		ret = burn_drive_raw_get_adr(&(drive_array[i]),adr);
-		if (ret <= 0)
-	continue;
-		if (strcmp(adr, path) == 0) {
-			*host_no = drive_array[i].host;
-			*channel_no = drive_array[i].channel;
-			*target_no = drive_array[i].id;
-			*lun_no = drive_array[i].lun;
-			return 1;
-		}
-	}
-
-	ret = sg_obtain_scsi_adr(path, host_no, channel_no, target_no, lun_no);
-	return ret;
 }
 
