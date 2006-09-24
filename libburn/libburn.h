@@ -1072,6 +1072,45 @@ int burn_session_get_hidefirst(struct burn_session *session);
 */
 void burn_version(int *major, int *minor, int *micro);
 
+
+/* ts A60924 : ticket 74 */
+/** Control queueing and stderr printing of messages from libburn.
+    Severity may be one of "NEVER", "FATAL", "SORRY", "WARNING", "HINT",
+    "NOTE", "UPDATE", "DEBUG", "ALL".
+    @param queue_severity Gives the minimum limit for messages to be queued.
+                          Default: "NEVER". If you queue messages then you
+                          must consume them by burn_msgs_obtain().
+    @param print_severity Does the same for messages to be printed directly
+                          to stderr.
+    @param print_id       A text prefix to be printed before the message.
+    @return               >0 for success, <=0 for error
+
+*/
+int burn_msgs_set_severities(char *queue_severity,
+                             char *print_severity, char *print_id);
+
+/* ts A60924 : ticket 74 */
+#define BURM_MSGS_MESSAGE_LEN 4096
+
+/** Obtain the oldest pending libburn message from the queue which has at
+    least the given minimum_severity. This message and any older message of
+    lower severity will get discarded from the queue and is then lost forever.
+    Severity may be one of "NEVER", "FATAL", "SORRY", "WARNING", "HINT",
+    "NOTE", "UPDATE", "DEBUG", "ALL". To call with minimum_severity "NEVER"
+    will discard the whole queue.
+    @param error_code Will become a unique error code as liste in
+                      libburn/libdax_msgs.h
+    @param msg_text   Must provide at least BURM_MSGS_MESSAGE_LEN bytes.
+    @param os_errno   Will become the eventual errno related to the message
+    @param severity   Will become the severity related to the message and
+                      should provide at least 80 bytes.
+    @return 1 if a matching item was found, 0 if not, <0 for severe errors
+*/
+int burn_msgs_obtain(char *minimum_severity,
+                     int *error_code, char msg_text[], int *os_errno,
+                     char severity[]);
+
+
 #ifndef DOXYGEN
 
 BURN_END_DECLS

@@ -26,6 +26,8 @@ libburn_libburn_la_SOURCES = \
 	libburn/lec.c \
 	libburn/lec.h \
 	libburn/libburn.h \
+	libburn/libdax_msgs.h \
+	libburn/libdax_msgs.c \
 	libburn/message.c \
 	libburn/message.h \
 	libburn/mmc.c \

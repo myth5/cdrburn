@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <signal.h>
+#include <string.h>
+
 #include "init.h"
 #include "sg.h"
 #include "error.h"
@@ -13,6 +15,11 @@
 /* ts A60825 : The storage location for back_hacks.h variables. */
 #define BURN_BACK_HACKS_INIT 1
 #include "back_hacks.h"
+
+/* ts A60924 : a new message handling facility */
+#include "libdax_msgs.h"
+static struct libdax_msgs *libdax_messenger= NULL;
+
 
 int burn_running = 0;
 
@@ -31,10 +38,20 @@ int burn_sg_open_o_nonblock = 1;
 int burn_sg_open_abort_busy = 0;
 
 
+/* ts A60924 : ticket 74 : Added use of global libdax_messenger */
 int burn_initialize(void)
 {
+	int ret;
+
 	if (burn_running)
 		return 1;
+
+	ret = libdax_msgs_new(&libdax_messenger,0);
+	if (ret <= 0)
+		return 0;
+	/* A60924: Apps enable queueing via burn_msgs_set_severities() */
+	libdax_msgs_set_severities(libdax_messenger, LIBDAX_MSGS_SEV_NEVER,
+				   LIBDAX_MSGS_SEV_FATAL, "libburn: ", 0);
 
 	burn_running = 1;
 	return 1;
@@ -48,6 +65,9 @@ void burn_finish(void)
 
 	/* ts A60904 : ticket 62, contribution by elmom : name addon "_all" */
 	burn_drive_free_all();
+
+	/* ts A60924 : ticket 74 */
+	libdax_msgs_destroy(&libdax_messenger,0);
 
 	burn_running = 0;
 }
@@ -76,5 +96,93 @@ void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy)
 	burn_sg_open_o_excl= !!exclusive;
 	burn_sg_open_o_nonblock= !blocking;
 	burn_sg_open_abort_busy= !!abort_on_busy;
+}
+
+
+/* ts A60924 : ticket 74 */
+/** Control queueing and stderr printing of messages from libburn.
+    Severity may be one of "NEVER", "FATAL", "SORRY", "WARNING", "HINT",
+    "NOTE", "UPDATE", "DEBUG", "ALL".
+    @param queue_severity Gives the minimum limit for messages to be queued.
+                          Default: "NEVER". If you queue messages then you
+                          must consume them by burn_msgs_obtain().
+    @param print_severity Does the same for messages to be printed directly
+                          to stderr.
+    @param print_id       A text prefix to be printed before the message.
+    @return               >0 for success, <=0 for error
+
+*/
+int burn_msgs_set_severities(char *queue_severity,
+                             char *print_severity, char *print_id)
+{
+	int ret, queue_sevno, print_sevno;
+
+	ret = libdax_msgs__text_to_sev(queue_severity, &queue_sevno, 0);
+	if (ret <= 0)
+		return 0;
+	ret = libdax_msgs__text_to_sev(print_severity, &print_sevno, 0);
+	if (ret <= 0)
+		return 0;
+	ret = libdax_msgs_set_severities(libdax_messenger, queue_sevno,
+					 print_sevno, print_id, 0);
+	if (ret <= 0)
+		return 0;
+	return 1;
+}
+
+
+/* ts A60924 : ticket 74 */
+#define BURM_MSGS_MESSAGE_LEN 4096
+
+/** Obtain the oldest pending libburn message from the queue which has at
+    least the given minimum_severity. This message and any older message of
+    lower severity will get discarded from the queue and is then lost forever.
+    Severity may be one of "NEVER", "FATAL", "SORRY", "WARNING", "HINT",
+    "NOTE", "UPDATE", "DEBUG", "ALL". To call with minimum_severity "NEVER"
+    will discard the whole queue.
+    @param error_code Will become a unique error code as liste in 
+                      libburn/libdax_msgs.h
+    @param msg_text   Must provide at least BURM_MSGS_MESSAGE_LEN bytes.
+    @param os_errno   Will become the eventual errno related to the message
+    @param severity   Will become the severity related to the message and
+                      should provide at least 80 bytes.
+    @return 1 if a matching item was found, 0 if not, <0 for severe errors
+*/
+int burn_msgs_obtain(char *minimum_severity,
+                     int *error_code, char msg_text[], int *os_errno,
+                     char severity[])
+{
+	int ret, minimum_sevno, sevno, priority;
+	char *textpt, *sev_name;
+	struct libdax_msgs_item *item = NULL;
+
+	ret = libdax_msgs__text_to_sev(minimum_severity, &minimum_sevno, 0);
+	if (ret <= 0)
+		return 0;
+	ret = libdax_msgs_obtain(libdax_messenger, &item, minimum_sevno,
+				LIBDAX_MSGS_PRIO_ZERO, 0);
+	if (ret <= 0)
+		goto ex;
+
+	ret = libdax_msgs_item_get_msg(item, error_code, &textpt, os_errno, 0);
+	if (ret <= 0)
+		goto ex;
+	strncpy(msg_text, textpt, BURM_MSGS_MESSAGE_LEN-1);
+	if(strlen(textpt) >= BURM_MSGS_MESSAGE_LEN)
+		msg_text[BURM_MSGS_MESSAGE_LEN-1] = 0;
+
+	severity[0]= 0;
+	ret = libdax_msgs_item_get_rank(item, &sevno, &priority, 0);
+	if(ret <= 0)
+		goto ex;
+	ret = libdax_msgs__sev_to_text(sevno, &sev_name, 0);
+	if(ret <= 0)
+		goto ex;
+	strcpy(severity,sev_name);
+
+	ret = 1;
+ex:
+	libdax_msgs_destroy_item(libdax_messenger, &item, 0);
+	return ret;
 }
 

@@ -166,6 +166,7 @@ or
 #define Cdrskin_libburn_has_is_enumerablE 1
 #define Cdrskin_libburn_has_convert_fs_adR 1
 #define Cdrskin_libburn_has_convert_scsi_adR 1
+#define Cdrskin_libburn_has_burn_msgS 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -1280,7 +1281,7 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
 int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
                                 int *driveno, int flag)
 {
- int comma_seen= 0,digit_seen= 0,busno= 0,k,lun_no= -1,ret= 0;
+ int comma_seen= 0,digit_seen= 0,busno= 0,k,lun_no= -1;
 
  *driveno= -1;
  device_adr[0]= 0;
@@ -1344,6 +1345,8 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
 
 #ifdef Cdrskin_libburn_has_convert_scsi_adR
        } else {
+         int ret;
+
          ret= burn_drive_convert_scsi_adr(busno,-1,*driveno,lun_no,device_adr);
          return(ret);
 #endif
@@ -4463,6 +4466,10 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
    {*exit_value= 11; goto ex;}
  }
  *lib_initialized= 1;
+
+#ifdef Cdrskin_libburn_has_burn_msgS
+ burn_msgs_set_severities("NEVER","SORRY","cdrskin: ");
+#endif
 
 #ifndef Cdrskin_libburn_no_burn_preset_device_opeN
  burn_preset_device_open((*preskin)->drive_exclusive,

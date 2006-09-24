@@ -7,6 +7,7 @@
 debug_opts=
 def_opts=
 libvers="-DCdrskin_libburn_0_2_3"
+libdax_msgs_o="libburn/libdax_msgs.o"
 do_strip=0
 static_opts=
 warn_opts="-Wall"
@@ -22,12 +23,15 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
+    libdax_msgs_o=
   elif test "$i" = "-libburn_0_2_2"
   then
     libvers="-DCdrskin_libburn_0_2_2"
+    libdax_msgs_o=
   elif test "$i" = "-libburn_0_2_3"
   then
     libvers="-DCdrskin_libburn_0_2_3"
+    libdax_msgs_o="libburn/libdax_msgs.o"
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
@@ -103,6 +107,7 @@ then
     libburn/message.o \
     libburn/sg.o \
     libburn/write.o \
+    $libdax_msgs_o \
     \
     libburn/mmc.o \
     libburn/sbc.o \
