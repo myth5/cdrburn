@@ -28,8 +28,6 @@ libburn_libburn_la_SOURCES = \
 	libburn/libburn.h \
 	libburn/libdax_msgs.h \
 	libburn/libdax_msgs.c \
-	libburn/message.c \
-	libburn/message.h \
 	libburn/mmc.c \
 	libburn/mmc.h \
 	libburn/null.c \
@@ -58,6 +56,11 @@ libburn_libburn_la_SOURCES = \
 	libburn/write.c \
 	libburn/write.h \
 	version.h
+
+## ts A60924 : Obsoleted
+##	libburn/message.c \
+##	libburn/message.h \
+
 
 libisofs_libisofs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

@@ -448,7 +448,9 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	int first = 1, i;
 	int res;
 
+/* ts A60924 : libburn/message.c gets obsoleted
 	burn_message_clear_queue();
+*/
 
 	burn_print(1, "sync write of %d sessions\n", disc->sessions);
 	d->buffer = &buf;

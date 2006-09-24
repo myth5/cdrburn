@@ -175,6 +175,10 @@ enum burn_disc_status
 	BURN_DISC_FULL
 };
 
+
+/* ts A60924 : libburn/message.c gets obsoleted */
+#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
+
 /** Possible types of messages form the library. */
 enum burn_message_type
 {
@@ -205,6 +209,9 @@ enum burn_message_error
 {
 	BURN_ERROR_CANCELLED
 };
+
+#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
+
 
 /** Possible data source return values */
 enum burn_source_status
@@ -378,6 +385,10 @@ struct burn_drive_info
 	struct burn_drive *drive;
 };
 
+
+/* ts A60924 : libburn/message.c gets obsoleted */
+#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
+
 /** Messages from the library */
 struct burn_message
 {
@@ -401,6 +412,10 @@ struct burn_message
 		} error;
 	} detail;
 };
+
+#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
+
+
 
 /** Operation progress report. All values are 0 based indices. 
  * */
@@ -470,6 +485,9 @@ void burn_set_verbosity(int level);
 */
 void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy);
 
+/* ts A60924 : libburn/message.c gets obsoleted */
+#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
+
 /** Returns a newly allocated burn_message structure. This message should be
     freed with burn_message_free() when you are finished with it.
     @return A message or NULL when there are no more messages to retrieve.
@@ -478,6 +496,8 @@ struct burn_message* burn_get_message(void);
 
 /** Frees a burn_message structure */
 void burn_message_free(struct burn_message *msg);
+
+#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
 
 
 /* ts A60823 */

@@ -296,7 +296,9 @@ void burn_wait_all(void)
 
 void burn_disc_erase_sync(struct burn_drive *d, int fast)
 {
+/* ts A60924 : libburn/message.c gets obsoleted
 	burn_message_clear_queue();
+*/
 
 	burn_print(1, "erasing drive %s %s\n", d->idata->vendor,
 		   d->idata->product);
