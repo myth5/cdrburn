@@ -168,8 +168,8 @@ int libdax_msgs_destroy(struct libdax_msgs **m, int flag);
                    occasions but those should be equivalent out of the view
                    of a libdax application. (E.g. "cannot open ATA drive"
                    versus "cannot open SCSI drive" would be equivalent.)
-    @param severity The LIBDAX_MSGS_SEVERITY_* of the event.
-    @param priority The LIBDAX_MSGS_PRIORITY_* number of the event.
+    @param severity The LIBDAX_MSGS_SEV_* of the event.
+    @param priority The LIBDAX_MSGS_PRIO_* number of the event.
     @param msg_text Printable and human readable message text.
     @param os_errno Eventual error code from operating system (0 if none)
     @param flag Bitfield for control purposes (unused yet, submit 0)

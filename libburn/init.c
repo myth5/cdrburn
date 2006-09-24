@@ -18,7 +18,7 @@
 
 /* ts A60924 : a new message handling facility */
 #include "libdax_msgs.h"
-static struct libdax_msgs *libdax_messenger= NULL;
+struct libdax_msgs *libdax_messenger= NULL;
 
 
 int burn_running = 0;

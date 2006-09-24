@@ -4454,14 +4454,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  *exit_value= 0;
  *lib_initialized= 0;
 
- printf("cdrskin: initializing libburn ..."); 
- fflush(stdout);
- if(burn_initialize()) {
-   printf(" ok\n");
-   fflush(stdout);
- } else {
-   printf(" failed\n");
-   fflush(stdout);
+ if(!burn_initialize()) {
    fprintf(stderr,"cdrskin : FATAL : initialization of libburn failed\n");
    {*exit_value= 11; goto ex;}
  }
@@ -4496,7 +4489,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  else if(skin->preskin->abort_handler==2)
    Cleanup_set_handlers(skin,(Cleanup_app_handler_T) Cdrskin_abort_handler,2|8);
 
- printf("cdrskin: scanning for devices ...");
+ printf("cdrskin: scanning for devices ...\n");
  fflush(stdout);
  while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) {
    if(skin->verbosity>=Cdrskin_verbose_debuG) 
@@ -4504,7 +4497,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
    /* >>> ??? wait a while ? */
    /* >>> ??? set a timeout ? */
  }
- printf(" done\n");
+ printf("cdrskin: ... scanning for devices done\n");
  fflush(stdout);
 ex:;
  return((*exit_value)==0);

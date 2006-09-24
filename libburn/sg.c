@@ -23,6 +23,9 @@
 #include "toc.h"
 #include "util.h"
 
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
 static void enumerate_common(char *fname, int host_no, int channel_no,
                              int target_no, int lun_no);
 
@@ -115,6 +118,27 @@ int sg_is_enumerable_adr(char *adr)
 }
 
 
+/* ts A60924 */
+int sg_handle_busy_drive(char *fname, int os_errno)
+{
+	char msg[4096];
+
+	/* ts A60814 : i saw no way to do this more nicely */ 
+	if (burn_sg_open_abort_busy) {
+		fprintf(stderr,
+	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
+			fname);
+		assert("drive busy" == "non fatal");
+	}
+
+	/* ts A60924 : now reporting to libdax_msgs */
+	sprintf(msg, "Cannot open busy drive '%s'", fname);
+	libdax_msgs_submit(libdax_messenger, -1, 0x00020001,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_LOW,
+			msg, os_errno, 0);
+	return 1;
+}
+
 void ata_enumerate(void)
 {
 	struct hd_driveid tm;
@@ -152,14 +176,8 @@ void ata_enumerate(void)
 			"\nlibburn: experimental: fname= %s , errno= %d\n",
 				fname,errno);
 */
-			/* ts A60814 : i see no way to do this more nicely */ 
-			if (errno == EBUSY && burn_sg_open_abort_busy) {
-				fprintf(stderr,
-	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
-					fname);
-				/* <<< maybe one should plainly exit here */
-				assert("drive busy" == "non fatal");
-			}
+			if (errno == EBUSY) 
+				sg_handle_busy_drive(fname, errno);
 			continue;
 		}
 		/* found a drive */
@@ -230,14 +248,8 @@ void sg_enumerate(void)
 			"\n cdrskin: experimental: fname= %s , errno= %d\n",
 				fname,errno);
 */
-			/* ts A60814 : i see no way to do this more nicely */ 
-			if (errno == EBUSY && burn_sg_open_abort_busy) {
-				fprintf(stderr,
-	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
-					fname);
-				/* <<< maybe one should plainly exit here */
-				assert("drive busy" == "non fatal");
-			}
+			if (errno == EBUSY) 
+				sg_handle_busy_drive(fname, errno);
 			continue;
 		}
 		/* found a drive */
