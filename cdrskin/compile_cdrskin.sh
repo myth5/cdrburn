@@ -23,11 +23,11 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
-    libdax_msgs_o=
+    libdax_msgs_o="libburn/message.o"
   elif test "$i" = "-libburn_0_2_2"
   then
     libvers="-DCdrskin_libburn_0_2_2"
-    libdax_msgs_o=
+    libdax_msgs_o="libburn/message.o"
   elif test "$i" = "-libburn_0_2_3"
   then
     libvers="-DCdrskin_libburn_0_2_3"
@@ -104,7 +104,6 @@ then
     libburn/source.o \
     libburn/structure.o \
     \
-    libburn/message.o \
     libburn/sg.o \
     libburn/write.o \
     $libdax_msgs_o \
