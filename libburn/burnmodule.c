@@ -7,7 +7,7 @@ static PyObject *ErrorObject;
 /* Declarations for objects of type toc_entry */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_toc_entry *toc;
 } b_toc_entryobject;
 
 static PyTypeObject B_toc_entrytype;
@@ -16,7 +16,7 @@ static PyTypeObject B_toc_entrytype;
 /* Declarations for objects of type source */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_source *source;
 } b_sourceobject;
 
 static PyTypeObject B_sourcetype;
@@ -25,25 +25,16 @@ static PyTypeObject B_sourcetype;
 /* Declarations for objects of type drive_info */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_drive_info *info;
 } b_drive_infoobject;
 
 static PyTypeObject B_drive_infotype;
 
 
-/* Declarations for objects of type drive */
-typedef struct {
-    PyObject_HEAD
-    /* XXXX Add your own stuff here */
-} b_driveobject;
-
-static PyTypeObject B_drivetype;
-
-
 /* Declarations for objects of type message */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_message *message;
 } b_messageobject;
 
 static PyTypeObject B_messagetype;
@@ -52,35 +43,26 @@ static PyTypeObject B_messagetype;
 /* Declarations for objects of type progress */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_progress *progress;
 } b_progressobject;
 
 static PyTypeObject B_progresstype;
 
+/* These are virtual types */
 
-/* Declarations for objects of type write_options */
+/* Declarations for objects of type drive */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
-} b_write_optsobject;
+    struct burn_drive *drive; 
+} b_driveobject;
 
-static PyTypeObject B_write_optstype;
-
-
-/* Declarations for objects of type read_options */
-typedef struct {
-    PyObject_HEAD
-    /* XXXX Add your own stuff here */
-} b_read_optsobject;
-
-static PyTypeObject B_read_optstype;
+static PyTypeObject B_drivetype;
 
 
 /* Declarations for objects of type disc */
-
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_disc *disc;
 } b_discobject;
 
 static PyTypeObject B_disctype;
@@ -89,7 +71,7 @@ static PyTypeObject B_disctype;
 /* Declarations for objects of type session */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_session *session;
 } b_sessionobject;
 
 static PyTypeObject B_sessiontype;
@@ -98,15 +80,33 @@ static PyTypeObject B_sessiontype;
 /* Declarations for objects of type track */
 typedef struct {
     PyObject_HEAD
-    /* XXXX Add your own stuff here */
+    struct burn_track *track;
 } b_trackobject;
 
 static PyTypeObject B_tracktype;
 
 
+/* Declarations for objects of type write_options */
+typedef struct {
+    PyObject_HEAD
+    struct burn_write_opts *options; 
+} b_write_optsobject;
+
+static PyTypeObject B_write_optstype;
+
+
+/* Declarations for objects of type read_options */
+typedef struct {
+    PyObject_HEAD
+    struct burn_read_opts *options;
+} b_read_optsobject;
+
+static PyTypeObject B_read_optstype;
+
+
 /* BEGIN burn_toc_entry */
 static struct PyMethodDef b_toc_entry_methods[] = {
-    {NULL,      NULL}       /* sentinel */
+    {NULL,      NULL}    
 };
 
 static b_toc_entryobject *
@@ -117,7 +117,7 @@ newb_toc_entryobject()
     self = PyObject_NEW(b_toc_entryobject, &B_toc_entrytype);
     if (self == NULL)
         return NULL;
-    /* XXXX Add your own initializers here */
+    
     return self;
 }
 
@@ -133,28 +133,11 @@ static char B_toc_entrytype__doc__[] =
 ;
 static PyTypeObject B_toc_entrytype = {
     PyObject_HEAD_INIT(&PyType_Type)
-    0,                          /*ob_size*/
-    "burn.toc_entry",                /*tp_name*/
-    sizeof(b_toc_entryobject),  /*tp_basicsize*/
-    0,                          /*tp_itemsize*/
-
-    /* methods */
-    (destructor)b_toc_entry_dealloc,    /*tp_dealloc*/
-    (printfunc)0,                       /*tp_print*/
-    (getattrfunc)0,                     /*tp_getattr*/
-    (setattrfunc)0,                     /*tp_setattr*/
-    (cmpfunc)0,                         /*tp_compare*/
-    (reprfunc)0,                        /*tp_repr*/
-    0,                                  /*tp_as_number*/
-    0,                                  /*tp_as_sequence*/
-    0,                                  /*tp_as_mapping*/
-    (hashfunc)0,                        /*tp_hash*/
-    (ternaryfunc)0,                     /*tp_call*/
-    (reprfunc)0,                        /*tp_str*/
-
-    /* Space for future expansion */
-    0L,0L,0L,0L,
-    B_toc_entrytype__doc__              /* Documentation string */
+    .tp_name = "burn.toc_entry",
+    .tp_basicsize = sizeof(b_toc_entryobject),
+    .tp_dealloc = (destructor)b_toc_entry_dealloc,   
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_doc = B_toc_entrytype__doc__,
 };
 /* END burn_toc_entry */
 
@@ -294,19 +277,26 @@ static struct PyMethodDef b_drive_info_methods[] = {
 static PyObject *
 b_drive_info_getattr(b_drive_infoobject *self, char *name)
 {
-    /* XXXX Add your own getattr code here */
-    return Py_FindMethod(b_drive_info_methods, (PyObject *)self, name);
+    if (!strcmp (name, "vendor"))
+        return PyString_FromString(self->info->vendor);
+    else if (!strcmp (name, "product"))
+        return PyString_FromString(self->info->product);
+    else if (!strcmp (name, "revision"))
+        return PyString_FromString(self->info->revision);
+    else if (!strcmp (name, "location"))
+        return PyString_FromString(self->info->location);
+    else if (!strcmp (name, "buffer_size"))
+        return PyInt_FromLong(self->info->buffer_size);
 }
 
 static b_drive_infoobject *
-newb_drive_infoobject()
+newb_drive_infoobject(struct burn_drive_info *obj)
 {
     b_drive_infoobject *self;
     
     self = PyObject_NEW(b_drive_infoobject, &B_drive_infotype);
-    if (self == NULL)
-        return NULL;
-    /* XXXX Add your own initializers here */
+    self->info = obj;
+    
     return self;
 }
 
@@ -322,29 +312,16 @@ static char B_drive_infotype__doc__[] =
 ;
 static PyTypeObject B_drive_infotype = {
     PyObject_HEAD_INIT(&PyType_Type)
-    0,                          /*ob_size*/
-    "burn.drive_info",          /*tp_name*/
-    sizeof(b_drive_infoobject), /*tp_basicsize*/
-    0,                          /*tp_itemsize*/
-
-    /* methods */
-    (destructor)b_drive_info_dealloc,   /*tp_dealloc*/
-    (printfunc)0,                       /*tp_print*/
-    (getattrfunc)b_drive_info_getattr,  /*tp_getattr*/
-    (setattrfunc)0,                     /*tp_setattr*/
-    (cmpfunc)0,                         /*tp_compare*/
-    (reprfunc)0,                        /*tp_repr*/
-    0,                                  /*tp_as_number*/
-    0,                                  /*tp_as_sequence*/
-    0,                                  /*tp_as_mapping*/
-    (hashfunc)0,                        /*tp_hash*/
-    (ternaryfunc)0,                     /*tp_call*/
-    (reprfunc)0,                        /*tp_str*/
-
-    /* Space for future expansion */
-    0L,0L,0L,0L,
-    B_drive_infotype__doc__             /* Documentation string */
+    .tp_name = "burn.drive_info",
+    .tp_basicsize = sizeof(b_drive_infoobject), 
+    .tp_dealloc = (destructor)b_drive_info_dealloc, 
+    .tp_getattr = (getattrfunc)b_drive_info_getattr,
+    .tp_methods = b_drive_info_methods,
+    .tp_new = PyType_GenericNew,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES | Py_TPFLAGS_BASETYPE,
+    .tp_doc = B_drive_infotype__doc__,
 };
+
 /* END burn_drive_info */
 
 
@@ -1525,7 +1502,6 @@ static char b_main_preset_device_open__doc__[] =
 static PyObject *
 b_main_preset_device_open(PyObject *self /* Not used */, PyObject *args)
 {
-
     if (!PyArg_ParseTuple(args, ""))
         return NULL;
     Py_INCREF(Py_None);
@@ -1538,7 +1514,6 @@ static char b_main_get_message__doc__[] =
 static PyObject *
 b_main_get_message(PyObject *self /* Not used */, PyObject *args)
 {
-
     if (!PyArg_ParseTuple(args, ""))
         return NULL;
     Py_INCREF(Py_None);
@@ -1577,11 +1552,33 @@ static char b_main_drive_scan__doc__[] =
 static PyObject *
 b_main_drive_scan(PyObject *self /* Not used */, PyObject *args)
 {
+    struct burn_drive_info *drives;
+    unsigned int n_drives;
+    int i;
 
     if (!PyArg_ParseTuple(args, ""))
         return NULL;
-    Py_INCREF(Py_None);
-    return Py_None;
+
+    while (!burn_drive_scan(&drives, &n_drives));
+
+    if (!drives)
+        return NULL;
+    
+    /*
+    PyObject *infos = PyList_New(n_drives);
+    for (i=0; i < n_drives; i++) {
+        struct burn_drive_info *current = &drives[i];
+        PyObject *obj = newb_drive_infoobject(current);
+        PyList_SetItem(infos, i, obj);
+    }
+
+    return infos;
+    */
+
+    struct burn_drive_info curr = drives[0];
+    PyObject *obj = (PyObject *)newb_drive_infoobject(&curr);
+    Py_INCREF(obj);
+    return obj;
 }
 
 static char b_main_msf_to_sectors__doc__[] =
@@ -1682,7 +1679,12 @@ initburn()
     /* Add objects */
     PyModule_AddObject(m, "toc_entry", (PyObject *)&B_toc_entrytype);
     PyModule_AddObject(m, "source", (PyObject *)&B_sourcetype);
+
+    if (PyType_Ready(&B_drive_infotype) < 0)
+        return;
+    Py_INCREF(&B_drive_infotype);
     PyModule_AddObject(m, "drive_info", (PyObject *)&B_drive_infotype);
+
     PyModule_AddObject(m, "drive", (PyObject *)&B_drivetype);
     PyModule_AddObject(m, "message", (PyObject *)&B_messagetype);
     PyModule_AddObject(m, "progress", (PyObject *)&B_progresstype);
