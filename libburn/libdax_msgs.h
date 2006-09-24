@@ -274,21 +274,22 @@ Format: error_code  (LIBDAX_MSGS_SEV_*,LIBDAX_MSGS_PRIO_*) = explanation
 If no severity or priority are fixely associates, use "(,)".
 
 ------------------------------------------------------------------------------
-Range "libdax_msgs"    :  0x00000000 to 0x0000ffff
+Range "libdax_msgs"        :  0x00000000 to 0x0000ffff
 
- 0x0000 (ALL,ZERO)     = Initial setting in new libdax_msgs_item
- 0x0001 (DEBUG,ZERO)   = Test error message
-
-
-------------------------------------------------------------------------------
-Range "elmom"          :  0x00010000 to 0x0001ffff
-
+ 0x00000000 (ALL,ZERO)     = Initial setting in new libdax_msgs_item
+ 0x00000001 (DEBUG,ZERO)   = Test error message
 
 
 ------------------------------------------------------------------------------
-Range "scdbackup"      :  0x00020000 to 0x0002ffff
+Range "elmom"              :  0x00010000 to 0x0001ffff
 
 
+
+------------------------------------------------------------------------------
+Range "scdbackup"          :  0x00020000 to 0x0002ffff
+
+ 0x00020001 (SORRY,LOW)    = Cannot open busy drive
+           
 
 ------------------------------------------------------------------------------
 
