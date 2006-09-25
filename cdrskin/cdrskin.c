@@ -250,6 +250,16 @@ or
 #endif
 
 
+/** Verbosity level for pacifying progress messages */
+#define Cdrskin_verbose_progresS 1
+
+/** Verbosity level for command recognition and execution logging */
+#define Cdrskin_verbose_cmD 2
+
+/** Verbosity level for reporting of debugging messages */
+#define Cdrskin_verbose_debuG 3
+
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1119,11 +1129,13 @@ static char Cdrpreskin_sys_rc_nameS[Cdrpreskin_rc_nuM][80]= {
 };
 
 
-/** A structure which bundles several parameters for initialization of
-    libburn and creation of the CdrskiN object. It finally becomes a managed
-    subordinate of the CdrskiN object. 
+/** A structure which bundles several parameters for creation of the CdrskiN
+    object. It finally becomes a managed subordinate of the CdrskiN object. 
 */
 struct CdrpreskiN {
+
+ /* to be transfered into skin */
+ int verbosity;
 
  /** Stores eventually given absolute device address before translation */
  char raw_device_adr[Cdrskin_adrleN];
@@ -1212,6 +1224,7 @@ int Cdrpreskin_new(struct CdrpreskiN **preskin, int flag)
  if(o==NULL)
    return(-1);
 
+ o->verbosity= 0;
  o->raw_device_adr[0]= 0;
  o->device_adr[0]= 0;
  o->adr_trn= NULL;
@@ -1265,6 +1278,19 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
 
  free((char *) o);
  *preskin= NULL;
+ return(1);
+}
+
+
+int Cdrpreskin_initialize_lib(struct CdrpreskiN *preskin, int flag)
+{
+ if(!burn_initialize()) {
+   fprintf(stderr,"cdrskin : FATAL : Initialization of libburn failed\n");
+   return(0);
+ }
+#ifdef Cdrskin_libburn_has_burn_msgS
+ burn_msgs_set_severities("NEVER","SORRY","cdrskin: ");
+#endif
  return(1);
 }
 
@@ -1732,6 +1758,16 @@ see_cdrskin_eng_html:;
    } else if(strcmp(argv[i],"-scanbus")==0) {
      o->no_whitelist= 1;
 
+   } else if(strcmp(argv[i],"-v")==0 || strcmp(argv[i],"-verbose")==0) {
+     (o->verbosity)++;
+     printf("cdrskin: verbosity level : %d\n",o->verbosity);
+
+#ifdef Cdrskin_libburn_has_burn_msgS
+     if(o->verbosity>=Cdrskin_verbose_debuG)
+       burn_msgs_set_severities("NEVER","DEBUG","cdrskin: ");
+#endif
+
+
    } else if(strcmp(argv[i],"-version")==0) {
      printf(
         "Cdrecord 2.01-Emulation Copyright (C) 2006, see libburn.pykix.org\n");
@@ -1836,16 +1872,6 @@ ex:;
 
 /* --------------------------------------------------------------------- */
 
-
-
-/** Verbosity level for pacifying progress messages */
-#define Cdrskin_verbose_progresS 1
-
-/** Verbosity level for command recognition and execution logging */
-#define Cdrskin_verbose_cmD 2
-
-/** Verbosity level for reporting of debugging messages */
-#define Cdrskin_verbose_debuG 3
 
 
 /** The maximum number of tracks */
@@ -2018,7 +2044,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  if(o==NULL)
    return(-1);
  o->preskin= preskin;
- o->verbosity= 0;
+ o->verbosity= preskin->verbosity;
  o->x_speed= -1.0;
  o->gracetime= 0;
  o->dummy_mode= 0;
@@ -4288,9 +4314,7 @@ track_too_large:;
        printf("cdrskin: fixed track size : %.f\n",skin->fixed_size);
 
    } else if(strcmp(argv[i],"-v")==0 || strcmp(argv[i],"-verbose")==0) {
-     (skin->verbosity)++;
-     /* <<< is much too verbous: burn_set_verbosity(skin->verbosity); */
-     printf("cdrskin: verbosity level : %d\n",skin->verbosity);
+     /* is handled in Cdrpreskin_setup() */;
 
    } else if( i==argc-1 ||
              (skin->single_track==0 && strchr(argv[i],'=')==NULL 
@@ -4370,7 +4394,6 @@ ignore_unknown:;
 
  if(flag&1) /* no finalizing yet */
    return(1);
-
  if(skin->verbosity>=Cdrskin_verbose_cmD) {
    if(skin->preskin->abort_handler==1)
      printf("cdrskin: installed abort handler.\n");
@@ -4445,24 +4468,13 @@ ignore_unknown:;
     @return <=0 error, 1 success
 */
 int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
-                   int *lib_initialized, int *exit_value, int flag)
+                   int *exit_value, int flag)
 {
  int ret;
  struct CdrskiN *skin;
 
  *o= NULL;
  *exit_value= 0;
- *lib_initialized= 0;
-
- if(!burn_initialize()) {
-   fprintf(stderr,"cdrskin : FATAL : initialization of libburn failed\n");
-   {*exit_value= 11; goto ex;}
- }
- *lib_initialized= 1;
-
-#ifdef Cdrskin_libburn_has_burn_msgS
- burn_msgs_set_severities("NEVER","SORRY","cdrskin: ");
-#endif
 
 #ifndef Cdrskin_libburn_no_burn_preset_device_opeN
  burn_preset_device_open((*preskin)->drive_exclusive,
@@ -4492,9 +4504,11 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  printf("cdrskin: scanning for devices ...\n");
  fflush(stdout);
  while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) {
+/*
    if(skin->verbosity>=Cdrskin_verbose_debuG) 
-     ClN(fprintf(stderr,"\ncdrskin_debug: ... still scanning ..."));
-   /* >>> ??? wait a while ? */
+     ClN(fprintf(stderr,"cdrskin_debug: ... still scanning ...\n"));
+*/
+   usleep(20000);
    /* >>> ??? set a timeout ? */
  }
  printf("cdrskin: ... scanning for devices done\n");
@@ -4581,15 +4595,26 @@ int main(int argc, char **argv)
 
  ret= Cdrpreskin_new(&preskin,0);
  if(ret<=0) {
-   fprintf(stderr,"cdrskin: FATAL : creation of control object failed\n");
+   fprintf(stderr,"cdrskin: FATAL : Creation of control object failed\n");
    {exit_value= 2; goto ex;}
  }
+
+ /* <<< A60925: i would prefer to do this later, after it is clear that no
+       -version or -help cause idle end. But address conversion and its debug
+       messaging need libburn running */
+ ret= Cdrpreskin_initialize_lib(preskin,0);
+ if(ret<=0) {
+   fprintf(stderr,"cdrskin: FATAL : Initializiation of burn library failed\n");
+   {exit_value= 2; goto ex;}
+ }
+ lib_initialized= 1;
+
  ret= Cdrpreskin_setup(preskin,argc,argv,0);
  if(ret<=0)
    {exit_value= 11; goto ex;}
  if(ret==2)
    {exit_value= 0; goto ex;}
- ret= Cdrskin_create(&skin,&preskin,&lib_initialized,&exit_value,0);
+ ret= Cdrskin_create(&skin,&preskin,&exit_value,0);
  if(ret<=0)
    {exit_value= 2; goto ex;}
  if(skin->n_drives<=0) {

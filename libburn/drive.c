@@ -13,7 +13,11 @@
 #include "libburn.h"
 #include "drive.h"
 #include "transport.h"
+
+/* ts A60925 : obsoleted by libdax_msgs.h
 #include "message.h"
+*/
+
 #include "debug.h"
 #include "init.h"
 #include "toc.h"
@@ -21,6 +25,9 @@
 #include "sg.h"
 #include "structure.h"
 #include "back_hacks.h"
+
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
 
 static struct burn_drive drive_array[255];
 static int drivetop = -1;
@@ -658,6 +665,29 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 	return 1;
 }
 
+/* ts A60925 */
+/** Simple debug message frontend to libdax_msgs_submit().
+    If arg is not NULL, then fmt MUST contain exactly one %s and no
+    other sprintf() %-formatters.
+*/
+int burn_drive_adr_debug_msg(char *fmt, char *arg)
+{
+	int ret;
+	char msg[4096], *msgpt;
+
+        msgpt= msg;
+	if(arg != NULL)
+		sprintf(msg, fmt, arg);
+	else
+		msgpt= fmt;
+	if(libdax_messenger == NULL)
+		return 0;
+	ret = libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+				msgpt, 0, 0);
+	return ret;
+}
+
 /* ts A60923 */
 /** Inquire the persistent address of the given drive. */
 int burn_drive_raw_get_adr(struct burn_drive *d, char adr[])
@@ -691,29 +721,24 @@ int burn_drive_is_enumerable_adr(char *adr)
 int burn_drive_resolve_link(char *path, char adr[])
 {
 	int ret;
-	char link_target[4096];
+	char link_target[4096], msg[4096+100];
 
-
-fprintf(stderr,"libburn experimental: burn_drive_resolve_link( %s )\n",path);
-
+	burn_drive_adr_debug_msg("burn_drive_resolve_link( %s )",path);
 	ret = readlink(path, link_target, sizeof(link_target));
 	if(ret == -1) {
-
-fprintf(stderr,"libburn experimental: readlink( %s ) returns -1\n",path);
-
+		burn_drive_adr_debug_msg("readlink( %s ) returns -1", path);
 		return 0;
 	}
 	if(ret >= sizeof(link_target) - 1) {
-
-fprintf(stderr,"libburn experimental: readlink( %s ) returns %d (too much)\n",path,ret);
-
+		sprintf(msg,"readlink( %s ) returns %d (too much)", path, ret);
+		burn_drive_adr_debug_msg(msg, NULL);
 		return -1;
 	}
 	link_target[ret] = 0;
 	ret = burn_drive_convert_fs_adr(link_target, adr);
-
-fprintf(stderr,"libburn experimental: burn_drive_convert_fs_adr( %s ) returns %d\n",link_target,ret);
-
+	sprintf(msg,"burn_drive_convert_fs_adr( %s ) returns %d",
+		link_target, ret);
+	burn_drive_adr_debug_msg(msg, NULL);
 	return ret;
 }
 
@@ -721,7 +746,7 @@ fprintf(stderr,"libburn experimental: burn_drive_convert_fs_adr( %s ) returns %d
 /* Try to find an enumerated address with the given stat.st_rdev number */
 int burn_drive_find_devno(dev_t devno, char adr[])
 {
-	char fname[4096];
+	char fname[4096], msg[4096+100];
 	int i, ret = 0, first = 1;
 	struct stat stbuf;
 
@@ -738,8 +763,9 @@ int burn_drive_find_devno(dev_t devno, char adr[])
 		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
 			return -1;
 
-fprintf(stderr,"libburn experimental: burn_drive_find_devno( 0x%lX ) found %s\n", (long) devno, fname);
-
+		sprintf(msg, "burn_drive_find_devno( 0x%lX ) found %s",
+			 (long) devno, fname);
+		burn_drive_adr_debug_msg(msg, NULL);
 		strcpy(adr, fname);
 		return 1;
 	}
@@ -783,12 +809,14 @@ int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
 				int lun_no, char adr[])
 {
-	char fname[4096];
+	char fname[4096],msg[4096+100];
 	int i, ret = 0, first = 1;
 	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
 
 
-fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr( %d,%d,%d,%d )\n", host_no, channel_no, target_no, lun_no);
+	sprintf(msg,"burn_drive_convert_scsi_adr( %d,%d,%d,%d )",
+		 host_no, channel_no, target_no, lun_no);
+	burn_drive_adr_debug_msg(msg, NULL);
 
 	while (1) {
 		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
@@ -809,9 +837,8 @@ fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr( %d,%d,%d,%d )
 	continue;
 		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
 			return -1;
-
-fprintf(stderr,"libburn experimental: burn_drive_convert_scsi_adr() found %s\n", fname);
-
+		burn_drive_adr_debug_msg(
+			"burn_drive_convert_scsi_adr() found %s", fname);
 		strcpy(adr, fname);
 		return 1;
 	}
@@ -825,17 +852,19 @@ int burn_drive_find_scsi_equiv(char *path, char adr[])
 {
 	int ret = 0;
 	int host_no, channel_no, target_no, lun_no;
+	char msg[4096];
 
 	ret = burn_drive_obtain_scsi_adr(path, &host_no, &channel_no,
 				 &target_no, &lun_no);
 	if(ret <= 0) {
-
-fprintf(stderr,"libburn experimental: burn_drive_obtain_scsi_adr( %s ) returns %d\n", path, ret);
-
+		sprintf(msg,"burn_drive_obtain_scsi_adr( %s ) returns %d\n",
+			path, ret);
+		burn_drive_adr_debug_msg(msg, NULL);
 		return 0;
 	}
-
-fprintf(stderr,"libburn experimental: burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d\n", path, host_no, channel_no, target_no, lun_no);
+	sprintf(msg, "burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d\n",
+		path, host_no, channel_no, target_no, lun_no);
+	burn_drive_adr_debug_msg(msg, NULL);
 
 	ret= burn_drive_convert_scsi_adr(host_no, channel_no, target_no,
 		lun_no, adr);
@@ -850,23 +879,20 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 {
 	int ret;
 	struct stat stbuf;
+	char msg[4096];
 
-fprintf(stderr,"libburn experimental: burn_drive_convert_fs_adr( %s )\n",path);
-
+	burn_drive_adr_debug_msg("burn_drive_convert_fs_adr( %s )", path);
 	if(burn_drive_is_enumerable_adr(path)) {
 		if(strlen(path) >= BURN_DRIVE_ADR_LEN)
 			return -1;
-
-fprintf(stderr,"libburn experimental: burn_drive_is_enumerable_adr( %s ) is true\n",path);
-
+		burn_drive_adr_debug_msg(
+			"burn_drive_is_enumerable_adr( %s ) is true", path);
 		strcpy(adr, path);
 		return 1;
 	}
 
 	if(lstat(path, &stbuf) == -1) {
-
-fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
-
+		burn_drive_adr_debug_msg("lstat( %s ) returns -1", path);
 		return 0;
 	}
 	if((stbuf.st_mode & S_IFMT) == S_IFLNK) {
@@ -883,9 +909,7 @@ fprintf(stderr,"libburn experimental: lstat( %s ) returns -1\n",path);
 		if(ret > 0)
 			return 1;
 	}
-
-fprintf(stderr,"libburn experimental: Nothing found for %s \n",path);
-
+	burn_drive_adr_debug_msg("Nothing found for %s", path);
 	return 0;
 }
 

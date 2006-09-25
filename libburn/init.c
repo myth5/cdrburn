@@ -38,6 +38,21 @@ int burn_sg_open_o_nonblock = 1;
 int burn_sg_open_abort_busy = 0;
 
 
+/* ts A60925 : ticket 74 */
+/** Create the messenger object for libburn. */
+int burn_msgs_initialize(void)
+{
+	int ret;
+
+	if(libdax_messenger == NULL)
+		ret = libdax_msgs_new(&libdax_messenger,0);
+	if (ret <= 0)
+		return 0;
+	libdax_msgs_set_severities(libdax_messenger, LIBDAX_MSGS_SEV_NEVER,
+				   LIBDAX_MSGS_SEV_FATAL, "libburn: ", 0);
+	return 1;
+}
+
 /* ts A60924 : ticket 74 : Added use of global libdax_messenger */
 int burn_initialize(void)
 {
@@ -45,14 +60,9 @@ int burn_initialize(void)
 
 	if (burn_running)
 		return 1;
-
-	ret = libdax_msgs_new(&libdax_messenger,0);
+	ret = burn_msgs_initialize();
 	if (ret <= 0)
 		return 0;
-	/* A60924: Apps enable queueing via burn_msgs_set_severities() */
-	libdax_msgs_set_severities(libdax_messenger, LIBDAX_MSGS_SEV_NEVER,
-				   LIBDAX_MSGS_SEV_FATAL, "libburn: ", 0);
-
 	burn_running = 1;
 	return 1;
 }
