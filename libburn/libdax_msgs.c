@@ -270,7 +270,7 @@ int libdax_msgs_submit(struct libdax_msgs *m, int driveno, int error_code,
                        int os_errno, int flag)
 {
  int ret;
- char *textpt,*sev_name,sev_text[81],error_buf[1024];
+ char *textpt,*sev_name,sev_text[81];
  struct libdax_msgs_item *item= NULL;
 
  if(severity >= m->print_severity) {
@@ -285,10 +285,12 @@ int libdax_msgs_submit(struct libdax_msgs *m, int driveno, int error_code,
 
    fprintf(stderr,"%s%s%s\n",m->print_id,sev_text,textpt);
    if(os_errno!=0) {
-     error_buf[0]= 0;
-     strerror_r(os_errno, error_buf,1024);
+     ret= libdax_msgs_lock(m,0);
+     if(ret<=0)
+       return(-1);
      fprintf(stderr,"%s( Most recent system error: %d  '%s' )\n",
-                    m->print_id,os_errno,error_buf);
+                    m->print_id,os_errno,strerror(os_errno));
+     libdax_msgs_unlock(m,0);
    }
 
  }
