@@ -42,7 +42,7 @@ void burn_drive_free(struct burn_drive *d)
 		return;
 	/* ts A60822 : close open fds before forgetting them */
 	if (burn_drive_is_open(d))
-		close(d->fd);
+		sg_close_drive_fd(d->devname, d->global_index, &(d->fd), 0);
 	free((void *) d->idata);
 	free((void *) d->mdata);
 	free((void *) d->toc_entry);
@@ -879,7 +879,6 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 {
 	int ret;
 	struct stat stbuf;
-	char msg[4096];
 
 	burn_drive_adr_debug_msg("burn_drive_convert_fs_adr( %s )", path);
 	if(burn_drive_is_enumerable_adr(path)) {

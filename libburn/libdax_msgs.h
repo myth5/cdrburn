@@ -278,6 +278,7 @@ Range "libdax_msgs"        :  0x00000000 to 0x0000ffff
 
  0x00000000 (ALL,ZERO)     = Initial setting in new libdax_msgs_item
  0x00000001 (DEBUG,ZERO)   = Test error message
+ 0x00000002 (DEBUG,ZERO)   = Debugging message
 
 
 ------------------------------------------------------------------------------
@@ -289,6 +290,9 @@ Range "elmom"              :  0x00010000 to 0x0001ffff
 Range "scdbackup"          :  0x00020000 to 0x0002ffff
 
  0x00020001 (SORRY,LOW)    = Cannot open busy drive
+ 0x00020002 (SORRY,HIGH)   = Encountered error when closing drive
+ 0x00020003 (FATAL,HIGH)   = Could not grab drive
+
            
 
 ------------------------------------------------------------------------------

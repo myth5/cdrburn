@@ -61,6 +61,34 @@ static int sgio_test(int fd)
 }
 
 
+/* ts A60925 : ticket 74 */
+int sg_close_drive_fd(char *fname, int driveno, int *fd, int sorry)
+{
+	int ret, os_errno, sevno= LIBDAX_MSGS_SEV_DEBUG;
+	char msg[4096+100];
+
+	if(*fd < 0)
+		return(0);
+	ret = close(*fd);
+	*fd = -1337;
+	if(ret != -1)
+		return 1;
+	os_errno= errno;
+
+	if (fname != NULL)
+		sprintf(msg, "Encountered error when closing drive '%s'",
+			fname);
+	else
+		sprintf(msg, "Encountered error when closing drive");
+
+	if (sorry)
+		sevno = LIBDAX_MSGS_SEV_SORRY;
+	libdax_msgs_submit(libdax_messenger, driveno, 0x00020002,
+			sevno, LIBDAX_MSGS_PRIO_HIGH, msg, os_errno, 0);
+	return 0;	
+}
+
+
 /* ts A60922 ticket 33 */
 /** Returns the next index number and the next enumerated drive address.
     @param idx An opaque number handle. Make no own theories about it.
@@ -185,17 +213,18 @@ void ata_enumerate(void)
 
 		/* not atapi */
 		if (!(tm.config & 0x8000) || (tm.config & 0x4000)) {
-			close(fd);
+			sg_close_drive_fd(fname, -1, &fd, 0);
 			continue;
 		}
 
 		/* if SG_IO fails on an atapi device, we should stop trying to 
 		   use hd* devices */
 		if (sgio_test(fd) == -1) {
-			close(fd);
+			sg_close_drive_fd(fname, -1, &fd, 0);
 			return;
 		}
-		close(fd);
+		if (sg_close_drive_fd(fname, -1, &fd, 1) <= 0)
+			continue;
 		enumerate_common(fname, -1, -1, -1, -1);
 	}
 }
@@ -254,13 +283,11 @@ void sg_enumerate(void)
 		}
 		/* found a drive */
 		ioctl(fd, SG_GET_SCSI_ID, &sid);
-		close(fd);
+		if (sg_close_drive_fd(fname, -1, &fd, 
+				sid.scsi_type == TYPE_ROM ) <= 0)
+			continue;
 		if (sid.scsi_type != TYPE_ROM)
 			continue;
-/* <<< ts A60922 (use SCSI_IOCTL_GET_IDLUN on block devices) 
-		fprintf(stderr,"libburn experimental: SCSI triple: %d,%d,%d\n",sid.host_no,sid.scsi_id,sid.lun);
-*/
-
 		enumerate_common(fname, sid.host_no, sid.channel, 
 				sid.scsi_id, sid.lun);
 	}
@@ -346,7 +373,7 @@ static void enumerate_common(char *fname, int host_no, int channel_no,
 */
 int sg_grab(struct burn_drive *d)
 {
-	int fd, count;
+	int fd, count, os_errno= 0;
 
 	/* ts A60813 */
 	int open_mode = O_RDWR;
@@ -383,6 +410,7 @@ int sg_grab(struct burn_drive *d)
 		mmc_function_spy("sg_grab ----------- opening");
 
 		fd = open(d->devname, open_mode);
+		os_errno = errno;
 	} else
 		fd= d->fd;
 
@@ -400,11 +428,17 @@ int sg_grab(struct burn_drive *d)
 			d->released = 0;
 			return 1;
 		}
-		burn_print(1, "could not acquire drive - already open\n");
-		close(fd);
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+			0x00020003,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Could not grab drive - already in use", 0, 0);
+		sg_close_drive_fd(d->devname, d->global_index, &fd, 0);
+		d->fd = -1337;
 		return 0;
 	}
-	burn_print(1, "could not acquire drive\n");
+	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00020003,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Could not grab drive", os_errno, 0);
 	return 0;
 }
 
@@ -428,8 +462,7 @@ int sg_release(struct burn_drive *d)
    	<<< debug: for tracing calls which might use open drive fds */
 	mmc_function_spy("sg_release ----------- closing");
 
-	close(d->fd);
-	d->fd = -1337;
+	sg_close_drive_fd(d->devname, d->global_index, &(d->fd), 0);
 	return 0;
 }
 
@@ -598,8 +631,8 @@ int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 	/* http://www.tldp.org/HOWTO/SCSI-Generic-HOWTO/scsi_g_idlun.html */
 	ret= ioctl(fd, SCSI_IOCTL_GET_IDLUN, &idlun);
 
-	close(fd);
-	if(ret == -1)
+	sg_close_drive_fd(path, -1, &fd, 0);
+	if (ret == -1)
 		return(0);
 	*host_no= (idlun.x>>24)&255;
 	*channel_no= (idlun.x>>16)&255;

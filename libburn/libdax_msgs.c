@@ -284,9 +284,12 @@ int libdax_msgs_submit(struct libdax_msgs *m, int driveno, int error_code,
      sprintf(sev_text,"%s : ",sev_name);
 
    fprintf(stderr,"%s%s%s\n",m->print_id,sev_text,textpt);
-   if(os_errno!=0)
+   if(os_errno!=0) {
+     error_buf[0]= 0;
+     strerror_r(os_errno, error_buf,1024);
      fprintf(stderr,"%s( Most recent system error: %d  '%s' )\n",
-                    m->print_id,os_errno,strerror_r(os_errno, error_buf,1024));
+                    m->print_id,os_errno,error_buf);
+   }
 
  }
  if(severity < m->queue_severity)
@@ -312,6 +315,12 @@ int libdax_msgs_submit(struct libdax_msgs *m, int driveno, int error_code,
  m->youngest= item;
  m->count++;
  libdax_msgs_unlock(m,0);
+
+/*
+fprintf(stderr,"libdax_experimental: message submitted to queue (now %d)\n",
+                m->count);
+*/
+
  return(1);
 failed:;
  libdax_msgs_item_destroy(&item,0);
