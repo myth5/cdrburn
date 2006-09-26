@@ -885,8 +885,8 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 		return 1;
 	}
 
-	if(lstat(path, &stbuf) == -1) {
-		burn_drive_adr_debug_msg("lstat( %s ) returns -1", path);
+	if(stat(path, &stbuf) == -1) {
+		burn_drive_adr_debug_msg("stat( %s ) returns -1", path);
 		return 0;
 	}
 	if((stbuf.st_mode & S_IFMT) == S_IFLNK) {
