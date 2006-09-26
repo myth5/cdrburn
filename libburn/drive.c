@@ -740,7 +740,7 @@ int burn_drive_resolve_link(char *path, char adr[])
 		} else
 			adrpt = link_target;
 	}
-	ret = burn_drive_convert_fs_adr(link_adr, adr);
+	ret = burn_drive_convert_fs_adr(adrpt, adr);
 	sprintf(msg,"burn_drive_convert_fs_adr( %s ) returns %d",
 		link_target, ret);
 	burn_drive_adr_debug_msg(msg, NULL);
