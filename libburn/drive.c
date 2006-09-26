@@ -711,26 +711,36 @@ int burn_drive_is_enumerable_adr(char *adr)
 	return sg_is_enumerable_adr(adr);
 }
 
+
 /* ts A60922 ticket 33 */
 /* Try to find an enumerated address with the given stat.st_rdev number */
 int burn_drive_resolve_link(char *path, char adr[])
 {
 	int ret;
-	char link_target[4096], msg[4096+100];
+	char link_target[4096], msg[4096+100], link_adr[4096], *adrpt;
 
 	burn_drive_adr_debug_msg("burn_drive_resolve_link( %s )",path);
 	ret = readlink(path, link_target, sizeof(link_target));
-	if(ret == -1) {
+	if (ret == -1) {
 		burn_drive_adr_debug_msg("readlink( %s ) returns -1", path);
 		return 0;
 	}
-	if(ret >= sizeof(link_target) - 1) {
+	if (ret >= sizeof(link_target) - 1) {
 		sprintf(msg,"readlink( %s ) returns %d (too much)", path, ret);
 		burn_drive_adr_debug_msg(msg, NULL);
 		return -1;
 	}
 	link_target[ret] = 0;
-	ret = burn_drive_convert_fs_adr(link_target, adr);
+	adrpt= link_target;
+	if (link_target[0] != '/') {
+		strcpy(link_adr, path);
+		if ((adrpt = strrchr(link_adr, '/')) != NULL) {
+			strcpy(adrpt + 1, link_target);
+			adrpt = link_adr;
+		} else
+			adrpt = link_target;
+	}
+	ret = burn_drive_convert_fs_adr(link_adr, adr);
 	sprintf(msg,"burn_drive_convert_fs_adr( %s ) returns %d",
 		link_target, ret);
 	burn_drive_adr_debug_msg(msg, NULL);
@@ -885,14 +895,19 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 		return 1;
 	}
 
-	if(stat(path, &stbuf) == -1) {
-		burn_drive_adr_debug_msg("stat( %s ) returns -1", path);
+	if(lstat(path, &stbuf) == -1) {
+		burn_drive_adr_debug_msg("lstat( %s ) returns -1", path);
 		return 0;
 	}
 	if((stbuf.st_mode & S_IFMT) == S_IFLNK) {
 		ret = burn_drive_resolve_link(path, adr);
 		if(ret > 0)
 			return 1;
+		burn_drive_adr_debug_msg("link fallback via stat( %s )", path);
+		if(stat(path, &stbuf) == -1) {
+			burn_drive_adr_debug_msg("stat( %s ) returns -1",path);
+			return 0;
+		}
 	}
 	if((stbuf.st_mode&S_IFMT) == S_IFBLK ||
 	   (stbuf.st_mode&S_IFMT) == S_IFCHR) {
