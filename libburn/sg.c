@@ -147,20 +147,20 @@ int sg_is_enumerable_adr(char *adr)
 
 
 /* ts A60924 */
-int sg_handle_busy_drive(char *fname, int os_errno)
+int sg_handle_busy_device(char *fname, int os_errno)
 {
 	char msg[4096];
 
 	/* ts A60814 : i saw no way to do this more nicely */ 
 	if (burn_sg_open_abort_busy) {
 		fprintf(stderr,
-	"\nlibburn: FATAL : Application triggered abort on busy drive '%s'\n",
+	"\nlibburn: FATAL : Application triggered abort on busy device '%s'\n",
 			fname);
 		assert("drive busy" == "non fatal");
 	}
 
 	/* ts A60924 : now reporting to libdax_msgs */
-	sprintf(msg, "Cannot open busy drive '%s'", fname);
+	sprintf(msg, "Cannot open busy device '%s'", fname);
 	libdax_msgs_submit(libdax_messenger, -1, 0x00020001,
 			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_LOW,
 			msg, os_errno, 0);
@@ -205,7 +205,7 @@ void ata_enumerate(void)
 				fname,errno);
 */
 			if (errno == EBUSY) 
-				sg_handle_busy_drive(fname, errno);
+				sg_handle_busy_device(fname, errno);
 			continue;
 		}
 		/* found a drive */
@@ -278,7 +278,7 @@ void sg_enumerate(void)
 				fname,errno);
 */
 			if (errno == EBUSY) 
-				sg_handle_busy_drive(fname, errno);
+				sg_handle_busy_device(fname, errno);
 			continue;
 		}
 		/* found a drive */

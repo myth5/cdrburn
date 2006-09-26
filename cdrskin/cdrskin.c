@@ -1289,6 +1289,12 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
 int Cdrpreskin_set_severities(struct CdrpreskiN *preskin, char *queue_severity,
                               char *print_severity, int flag)
 {
+/*
+ if(preskin->verbosity>=Cdrskin_verbose_debuG)
+   fprintf(stderr,
+           "cdrskin: DEBUG : queue_severity='%s'  print_severity='%s'\n",
+           queue_severity,print_severity);
+*/
  
  if(queue_severity!=NULL)
    strcpy(preskin->queue_severity,queue_severity);
@@ -1312,6 +1318,76 @@ int Cdrpreskin_initialize_lib(struct CdrpreskiN *preskin, int flag)
    return(0);
  }
  Cdrpreskin_set_severities(preskin,NULL,NULL,0);
+ return(1);
+}
+
+
+/** Enable queuing of libburn messages or disable and print queue content.
+    @param flag Bitfield for control purposes:
+                bit0= enable queueing, else disable and print
+*/
+int Cdrpreskin_queue_msgs(struct CdrpreskiN *o, int flag)
+{
+#ifdef Cdrskin_libburn_has_burn_msgS
+#ifndef Cdrskin_extra_leaN
+#define Cdrskin_debug_libdax_msgS 1
+#endif
+/* <<< In cdrskin there is not much sense in queueing library messages.
+        It is done here only for debugging */
+#ifdef Cdrskin_debug_libdax_msgS
+
+ int ret;
+ static char queue_severity[81]= {"NEVER"}, print_severity[81]= {"SORRY"};
+ static int queueing= 0;
+ char msg[BURN_MSGS_MESSAGE_LEN],msg_severity[81],filler[81];
+ int error_code,os_errno,first,i;
+
+ if(flag&1) {
+   if(!queueing) {
+     strcpy(queue_severity,o->queue_severity);
+     strcpy(print_severity,o->print_severity);
+   }
+   if(o->verbosity>=Cdrskin_verbose_debuG)
+     Cdrpreskin_set_severities(o,"DEBUG","NEVER",0);
+   else
+     Cdrpreskin_set_severities(o,"NOTE","NEVER",0);
+   queueing= 1;
+   return(1);
+ }
+
+ if(queueing)
+   Cdrpreskin_set_severities(o,queue_severity,print_severity,0);
+ queueing= 0;
+
+ for(first= 1; ; first= 0) {
+   ret= burn_msgs_obtain("ALL",&error_code,msg,&os_errno,msg_severity);
+   if(ret==0)
+ break;
+   if(ret<0) {
+     fprintf(stderr,
+           "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
+     fprintf(stderr,
+           "cdrskin:        burn_msgs_obtain() returns %d\n",ret);
+ break;
+   }
+   if(first)
+     fprintf(stderr,
+"cdrskin: -------------------- Messages from Libburn ---------------------\n");
+   for(i=0;msg_severity[i]!=0;i++)
+     filler[i]= ' ';
+   filler[i]= 0;
+   fprintf(stderr,"cdrskin: %s : %s\n",msg_severity,msg);
+   if(strcmp(msg_severity,"DEBUG")!=0 && os_errno!=0)
+     fprintf(stderr,"cdrskin: %s   ( errno=%d  '%s')\n",
+                    filler,os_errno,strerror(os_errno));
+ }
+ if(first==0)
+   fprintf(stderr,
+"cdrskin: ----------------------------------------------------------------\n");
+
+#endif /* Cdrskin_debug_libdax_msgS */
+#endif /* Cdrskin_libburn_has_burn_msgS */
+
  return(1);
 }
 
@@ -1783,7 +1859,7 @@ see_cdrskin_eng_html:;
      (o->verbosity)++;
      printf("cdrskin: verbosity level : %d\n",o->verbosity);
      if(o->verbosity>=Cdrskin_verbose_debuG)
-       Cdrpreskin_set_severities(o,"DEBUG","DEBUG",0);
+       Cdrpreskin_set_severities(o,"NEVER","DEBUG",0);
 
    } else if(strcmp(argv[i],"-version")==0) {
      printf(
@@ -4488,7 +4564,6 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
                    int *exit_value, int flag)
 {
  int ret;
- char queue_severity[81],print_severity[81];
  struct CdrskiN *skin;
 
  *o= NULL;
@@ -4522,70 +4597,20 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  printf("cdrskin: scanning for devices ...\n");
  fflush(stdout);
 
-#define Cdrskin_debug_libdax_msgS
-/*
-*/
- /* <<< In cdrskin there is not much sense in queueing library messages.
-        It is done here only for debugging */
-#ifdef Cdrskin_debug_libdax_msgS
-
- strcpy(queue_severity,skin->preskin->queue_severity);
- strcpy(print_severity,skin->preskin->print_severity);
- Cdrpreskin_set_severities(skin->preskin,"NOTE","NEVER",0);
-
-#endif /* Cdrskin_debug_libdax_msgS */
+ /* In cdrskin there is not much sense in queueing library messages.
+    It is done here only for debugging */
+ Cdrpreskin_queue_msgs(skin->preskin,1);
 
  while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) {
    usleep(20000);
    /* >>> ??? set a timeout ? */
  }
 
-
-#ifdef Cdrskin_debug_libdax_msgS
-
- Cdrpreskin_set_severities(skin->preskin,queue_severity,print_severity,0);
-
-#endif /* Cdrskin_debug_libdax_msgS */
+ /* This prints the eventual queued messages */
+ Cdrpreskin_queue_msgs(skin->preskin,0);
 
  printf("cdrskin: ... scanning for devices done\n");
  fflush(stdout);
-
-
-#ifdef Cdrskin_debug_libdax_msgS
-#ifdef Cdrskin_libburn_has_burn_msgS
-
- {
-   char msg[BURN_MSGS_MESSAGE_LEN],msg_severity[81],filler[81];
-   int error_code,os_errno,first,i;
-
-   for(first= 1; ; first= 0) {
-     ret= burn_msgs_obtain("ALL",&error_code,msg,&os_errno,msg_severity);
-     if(ret==0)
-   break;
-     if(ret<0) {
-       fprintf(stderr,
-           "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
-       fprintf(stderr,
-           "cdrskin:        burn_msgs_obtain() returns %d\n",ret);
-   break;
-     }
-     for(i=0;msg_severity[i]!=0;i++)
-       filler[i]= ' ';
-     filler[i]= 0;
-     if(first)
-       fprintf(stderr,
-"cdrskin: -------------------- Messages from scanning --------------------\n");
-     fprintf(stderr,"cdrskin: %s : %s\n",msg_severity,msg);
-     fprintf(stderr,"cdrskin: %s   ( code=%X , os_errno=%d )\n",
-                    filler,error_code,os_errno);
-   }
-   if(first==0)
-     fprintf(stderr,
-"cdrskin: ----------------------------------------------------------------\n");
- }
-#endif /* Cdrskin_libburn_has_burn_msgS */
-#endif /* Cdrskin_debug_libdax_msgS */
-
 ex:;
  return((*exit_value)==0);
 }

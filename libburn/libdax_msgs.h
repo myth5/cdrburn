@@ -289,7 +289,7 @@ Range "elmom"              :  0x00010000 to 0x0001ffff
 ------------------------------------------------------------------------------
 Range "scdbackup"          :  0x00020000 to 0x0002ffff
 
- 0x00020001 (SORRY,LOW)    = Cannot open busy drive
+ 0x00020001 (SORRY,LOW)    = Cannot open busy device
  0x00020002 (SORRY,HIGH)   = Encountered error when closing drive
  0x00020003 (FATAL,HIGH)   = Could not grab drive
 
