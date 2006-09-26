@@ -12,11 +12,6 @@
 #include "libburn.h"
 #include "drive.h"
 #include "transport.h"
-
-/* ts A60925 : obsoleted by libdax_msgs.h
-#include "message.h"
-*/
-
 #include "crc.h"
 #include "debug.h"
 #include "init.h"

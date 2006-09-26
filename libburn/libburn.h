@@ -176,43 +176,6 @@ enum burn_disc_status
 };
 
 
-/* ts A60924 : libburn/message.c gets obsoleted */
-#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
-
-/** Possible types of messages form the library. */
-enum burn_message_type
-{
-	/** Diagnostic/Process information. For the curious user. */
-	BURN_MESSAGE_INFO,
-	/** A warning regarding a possible problem. The user should probably
-	    be notified, but its not fatal. */
-	BURN_MESSAGE_WARNING,
-	/** An error message. This usually means the current process will be
-	    aborted, and the user should definately see these. */
-	BURN_MESSAGE_ERROR
-};
-
-/** Possible information messages */
-enum burn_message_info
-{
-	BURN_INFO_FOO
-};
-
-/** Possible warning messages */
-enum burn_message_warning
-{
-	BURN_WARNING_FOO
-};
-
-/** Possible error messages */
-enum burn_message_error
-{
-	BURN_ERROR_CANCELLED
-};
-
-#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
-
-
 /** Possible data source return values */
 enum burn_source_status
 {
@@ -386,37 +349,6 @@ struct burn_drive_info
 };
 
 
-/* ts A60924 : libburn/message.c gets obsoleted */
-#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
-
-/** Messages from the library */
-struct burn_message
-{
-	/** The drive associated with the message. NULL if the error is not
-	    related to a specific drive. */
-	struct burn_drive *drive;
-
-	/** The type of message this is. See message_type for details. */
-	enum burn_message_type type;
-
-	/** The actual message */
-	union detail {
-		struct {
-			enum burn_message_info    message;
-		} info;
-		struct {
-			enum burn_message_warning message;
-		} warning;
-		struct {
-			enum burn_message_error   message;
-		} error;
-	} detail;
-};
-
-#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
-
-
-
 /** Operation progress report. All values are 0 based indices. 
  * */
 struct burn_progress {
@@ -484,20 +416,6 @@ void burn_set_verbosity(int level);
                           Use this only after thorough tests with your app.
 */
 void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy);
-
-/* ts A60924 : libburn/message.c gets obsoleted */
-#ifdef BURN_WITH_OBSOLETED_MESSAGE_C
-
-/** Returns a newly allocated burn_message structure. This message should be
-    freed with burn_message_free() when you are finished with it.
-    @return A message or NULL when there are no more messages to retrieve.
-*/
-struct burn_message* burn_get_message(void);
-
-/** Frees a burn_message structure */
-void burn_message_free(struct burn_message *msg);
-
-#endif /* BURN_WITH_OBSOLETED_MESSAGE_C */
 
 
 /* ts A60823 */
