@@ -1110,7 +1110,7 @@ int burn_msgs_set_severities(char *queue_severity,
                              char *print_severity, char *print_id);
 
 /* ts A60924 : ticket 74 */
-#define BURM_MSGS_MESSAGE_LEN 4096
+#define BURN_MSGS_MESSAGE_LEN 4096
 
 /** Obtain the oldest pending libburn message from the queue which has at
     least the given minimum_severity. This message and any older message of
@@ -1120,7 +1120,7 @@ int burn_msgs_set_severities(char *queue_severity,
     will discard the whole queue.
     @param error_code Will become a unique error code as liste in
                       libburn/libdax_msgs.h
-    @param msg_text   Must provide at least BURM_MSGS_MESSAGE_LEN bytes.
+    @param msg_text   Must provide at least BURN_MSGS_MESSAGE_LEN bytes.
     @param os_errno   Will become the eventual errno related to the message
     @param severity   Will become the severity related to the message and
                       should provide at least 80 bytes.

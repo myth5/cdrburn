@@ -58,20 +58,38 @@ static int libdax_msgs_item_new(struct libdax_msgs_item **item,
 }
 
 
-int libdax_msgs_item_destroy(struct libdax_msgs_item **item,
-                             int flag)
+/** Detaches item from its queue and eventually readjusts start, end pointers
+    of the queue */
+int libdax_msgs_item_unlink(struct libdax_msgs_item *o,
+                            struct libdax_msgs_item **chain_start,
+                            struct libdax_msgs_item **chain_end, int flag)
 {
- struct libdax_msgs_item *o;
- 
- o= *item;
- if(o==NULL)
-   return(0);
- if(o->msg_text!=NULL)
-   free((char *) o->msg_text);
  if(o->prev!=NULL)
    o->prev->next= o->next;
  if(o->next!=NULL)
    o->next->prev= o->prev;
+ if(chain_start!=NULL)
+   if(*chain_start == o)
+     *chain_start= o->next;
+ if(chain_end!=NULL)
+   if(*chain_end == o)
+     *chain_end= o->prev;
+ o->next= o->prev= NULL;
+ return(1);
+}
+
+
+int libdax_msgs_item_destroy(struct libdax_msgs_item **item,
+                             int flag)
+{
+ struct libdax_msgs_item *o;
+
+ o= *item;
+ if(o==NULL)
+   return(0);
+ libdax_msgs_item_unlink(o,NULL,NULL,0); 
+ if(o->msg_text!=NULL)
+   free((char *) o->msg_text);
  free((char *) o);
  *item= NULL;
  return(1);
@@ -314,6 +332,8 @@ int libdax_msgs_submit(struct libdax_msgs *m, int driveno, int error_code,
    strcpy(item->msg_text,msg_text);
  }
  item->os_errno= os_errno;
+ if(m->oldest==NULL)
+   m->oldest= item;
  m->youngest= item;
  m->count++;
  libdax_msgs_unlock(m,0);
@@ -337,6 +357,7 @@ int libdax_msgs_obtain(struct libdax_msgs *m, struct libdax_msgs_item **item,
  int ret;
  struct libdax_msgs_item *im, *next_im= NULL;
 
+ *item= NULL;
  ret= libdax_msgs_lock(m,0);
  if(ret<=0)
    return(-1);
@@ -345,6 +366,7 @@ int libdax_msgs_obtain(struct libdax_msgs *m, struct libdax_msgs_item **item,
      next_im= im->next;
      if(im->severity>=severity)
    break;
+     libdax_msgs_item_unlink(im,&(m->oldest),&(m->youngest),0);
      libdax_msgs_item_destroy(&im,0); /* severity too low: delete */
    }
    if(im==NULL)
@@ -354,6 +376,7 @@ int libdax_msgs_obtain(struct libdax_msgs *m, struct libdax_msgs_item **item,
  }
  if(im==NULL)
    {ret= 0; goto ex;}
+ libdax_msgs_item_unlink(im,&(m->oldest),&(m->youngest),0);
  *item= im;
  ret= 1;
 ex:;

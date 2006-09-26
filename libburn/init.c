@@ -44,10 +44,11 @@ int burn_msgs_initialize(void)
 {
 	int ret;
 
-	if(libdax_messenger == NULL)
+	if(libdax_messenger == NULL) {
 		ret = libdax_msgs_new(&libdax_messenger,0);
-	if (ret <= 0)
-		return 0;
+		if (ret <= 0)
+			return 0;
+	}
 	libdax_msgs_set_severities(libdax_messenger, LIBDAX_MSGS_SEV_NEVER,
 				   LIBDAX_MSGS_SEV_FATAL, "libburn: ", 0);
 	return 1;
@@ -173,7 +174,6 @@ int burn_msgs_obtain(char *minimum_severity,
 				LIBDAX_MSGS_PRIO_ZERO, 0);
 	if (ret <= 0)
 		goto ex;
-
 	ret = libdax_msgs_item_get_msg(item, error_code, &textpt, os_errno, 0);
 	if (ret <= 0)
 		goto ex;

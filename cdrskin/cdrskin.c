@@ -1136,6 +1136,8 @@ struct CdrpreskiN {
 
  /* to be transfered into skin */
  int verbosity;
+ char queue_severity[81];
+ char print_severity[81];
 
  /** Stores eventually given absolute device address before translation */
  char raw_device_adr[Cdrskin_adrleN];
@@ -1225,6 +1227,8 @@ int Cdrpreskin_new(struct CdrpreskiN **preskin, int flag)
    return(-1);
 
  o->verbosity= 0;
+ strcpy(o->queue_severity,"NEVER");
+ strcpy(o->print_severity,"SORRY");
  o->raw_device_adr[0]= 0;
  o->device_adr[0]= 0;
  o->adr_trn= NULL;
@@ -1282,15 +1286,32 @@ int Cdrpreskin_destroy(struct CdrpreskiN **preskin, int flag)
 }
 
 
+int Cdrpreskin_set_severities(struct CdrpreskiN *preskin, char *queue_severity,
+                              char *print_severity, int flag)
+{
+ 
+ if(queue_severity!=NULL)
+   strcpy(preskin->queue_severity,queue_severity);
+ if(print_severity!=NULL)
+   strcpy(preskin->print_severity,print_severity);
+#ifdef Cdrskin_libburn_has_burn_msgS
+ burn_msgs_set_severities(preskin->queue_severity, preskin->print_severity,
+                          "cdrskin: ");
+#endif
+ return(1);
+}
+ 
+
 int Cdrpreskin_initialize_lib(struct CdrpreskiN *preskin, int flag)
 {
- if(!burn_initialize()) {
+ int ret;
+
+ ret= burn_initialize();
+ if(ret==0) {
    fprintf(stderr,"cdrskin : FATAL : Initialization of libburn failed\n");
    return(0);
  }
-#ifdef Cdrskin_libburn_has_burn_msgS
- burn_msgs_set_severities("NEVER","SORRY","cdrskin: ");
-#endif
+ Cdrpreskin_set_severities(preskin,NULL,NULL,0);
  return(1);
 }
 
@@ -1761,12 +1782,8 @@ see_cdrskin_eng_html:;
    } else if(strcmp(argv[i],"-v")==0 || strcmp(argv[i],"-verbose")==0) {
      (o->verbosity)++;
      printf("cdrskin: verbosity level : %d\n",o->verbosity);
-
-#ifdef Cdrskin_libburn_has_burn_msgS
      if(o->verbosity>=Cdrskin_verbose_debuG)
-       burn_msgs_set_severities("NEVER","DEBUG","cdrskin: ");
-#endif
-
+       Cdrpreskin_set_severities(o,"DEBUG","DEBUG",0);
 
    } else if(strcmp(argv[i],"-version")==0) {
      printf(
@@ -1852,7 +1869,7 @@ dev_too_long:;
        fprintf(stderr,
            "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
        fprintf(stderr,
-	   "                burn_drive_convert_fs_adr() returned %d\n",lret);
+	   "cdrskin:        burn_drive_convert_fs_adr() returned %d\n",lret);
      }
    }
 
@@ -4471,6 +4488,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
                    int *exit_value, int flag)
 {
  int ret;
+ char queue_severity[81],print_severity[81];
  struct CdrskiN *skin;
 
  *o= NULL;
@@ -4503,16 +4521,71 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
 
  printf("cdrskin: scanning for devices ...\n");
  fflush(stdout);
- while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) {
+
+#define Cdrskin_debug_libdax_msgS
 /*
-   if(skin->verbosity>=Cdrskin_verbose_debuG) 
-     ClN(fprintf(stderr,"cdrskin_debug: ... still scanning ...\n"));
 */
+ /* <<< In cdrskin there is not much sense in queueing library messages.
+        It is done here only for debugging */
+#ifdef Cdrskin_debug_libdax_msgS
+
+ strcpy(queue_severity,skin->preskin->queue_severity);
+ strcpy(print_severity,skin->preskin->print_severity);
+ Cdrpreskin_set_severities(skin->preskin,"NOTE","NEVER",0);
+
+#endif /* Cdrskin_debug_libdax_msgS */
+
+ while (!burn_drive_scan(&(skin->drives), &(skin->n_drives))) {
    usleep(20000);
    /* >>> ??? set a timeout ? */
  }
+
+
+#ifdef Cdrskin_debug_libdax_msgS
+
+ Cdrpreskin_set_severities(skin->preskin,queue_severity,print_severity,0);
+
+#endif /* Cdrskin_debug_libdax_msgS */
+
  printf("cdrskin: ... scanning for devices done\n");
  fflush(stdout);
+
+
+#ifdef Cdrskin_debug_libdax_msgS
+#ifdef Cdrskin_libburn_has_burn_msgS
+
+ {
+   char msg[BURN_MSGS_MESSAGE_LEN],msg_severity[81],filler[81];
+   int error_code,os_errno,first,i;
+
+   for(first= 1; ; first= 0) {
+     ret= burn_msgs_obtain("ALL",&error_code,msg,&os_errno,msg_severity);
+     if(ret==0)
+   break;
+     if(ret<0) {
+       fprintf(stderr,
+           "cdrskin: NOTE : Please inform libburn-hackers@pykix.org about:\n");
+       fprintf(stderr,
+           "cdrskin:        burn_msgs_obtain() returns %d\n",ret);
+   break;
+     }
+     for(i=0;msg_severity[i]!=0;i++)
+       filler[i]= ' ';
+     filler[i]= 0;
+     if(first)
+       fprintf(stderr,
+"cdrskin: -------------------- Messages from scanning --------------------\n");
+     fprintf(stderr,"cdrskin: %s : %s\n",msg_severity,msg);
+     fprintf(stderr,"cdrskin: %s   ( code=%X , os_errno=%d )\n",
+                    filler,error_code,os_errno);
+   }
+   if(first==0)
+     fprintf(stderr,
+"cdrskin: ----------------------------------------------------------------\n");
+ }
+#endif /* Cdrskin_libburn_has_burn_msgS */
+#endif /* Cdrskin_debug_libdax_msgS */
+
 ex:;
  return((*exit_value)==0);
 }
