@@ -1927,9 +1927,12 @@ dev_too_long:;
      ret= Cdrpreskin__cdrecord_to_dev(adr,o->device_adr,&driveno,
                                       !!o->old_pseudo_scsi_adr);
      if(ret<=0) {
+/*
        fprintf(stderr,
          "cdrskin: FATAL : dev= expects /dev/xyz, Bus,Target,0 or a number\n");
        {ret= 0; goto ex;}
+*/
+       strcpy(o->device_adr,adr);
      }
    }
 
@@ -1952,6 +1955,7 @@ dev_too_long:;
 #endif /* Cdrskin_libburn_has_convert_fs_adR */
 
  }
+ ret= 1;
 ex:;
 
 #ifndef Cdrskin_extra_leaN
@@ -4570,7 +4574,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  *exit_value= 0;
 
 #ifndef Cdrskin_libburn_no_burn_preset_device_opeN
- burn_preset_device_open((*preskin)->drive_exclusive,
+ burn_preset_device_open((*preskin)->drive_exclusive*1,
                          (*preskin)->drive_blocking,
                          (*preskin)->abort_on_busy_drive);
 #endif
