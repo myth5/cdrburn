@@ -460,6 +460,13 @@ int Sfile_multi_read_argv(char *progname, char **filenames, int filename_count,
    continue;
        {ret= 0; goto ex;}
      }
+
+#ifdef Cdrskin_new_api_tesT
+     if(pass>0)
+       fprintf(stderr,"cdrskin: DEBUG : Reading arguments from file '%s'\n",
+                      filenames[i]);
+#endif
+
      line_no= 0;
      while(Sfile_fgets(buf,sizeof(buf)-1,fp)!=NULL) {
        line_no++;
@@ -1484,7 +1491,7 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
 #ifndef Cdrskin_extra_leaN
 
 /** Load content startup files into preskin cache */
-int Cdrpreskin_read_rc(struct CdrpreskiN *o, char *progname,int flag)
+int Cdrpreskin_read_rc(struct CdrpreskiN *o, char *progname, int flag)
 {
  int ret,i;
  char *filenames_v[3];
@@ -1933,6 +1940,7 @@ dev_too_long:;
        {ret= 0; goto ex;}
 */
        strcpy(o->device_adr,adr);
+       ret= 1;
      }
    }
 
@@ -1955,7 +1963,9 @@ dev_too_long:;
 #endif /* Cdrskin_libburn_has_convert_fs_adR */
 
  }
- ret= 1;
+
+ /* A60927 : note to myself : no "ret= 1;" here. It breaks --help , -version */
+
 ex:;
 
 #ifndef Cdrskin_extra_leaN
