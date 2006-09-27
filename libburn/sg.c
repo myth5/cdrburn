@@ -835,6 +835,10 @@ int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 	};
  	struct my_scsi_idlun idlun;
 
+	if (strncmp(path, "/dev/hd", 7) == 0 
+	    && path[7] >= 'a' && path[7] <= 'z' && path[8] == 0)
+		return 0; /* on RIP 14 all hdx return SCSI adr 0,0,0,0 */
+
 	fd = open(path, O_RDONLY | O_NONBLOCK);
 	if(fd < 0)
 		return 0;
