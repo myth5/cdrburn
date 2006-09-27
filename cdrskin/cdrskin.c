@@ -1359,7 +1359,7 @@ int Cdrpreskin_queue_msgs(struct CdrpreskiN *o, int flag)
    if(o->verbosity>=Cdrskin_verbose_debuG)
      Cdrpreskin_set_severities(o,"DEBUG","NEVER",0);
    else
-     Cdrpreskin_set_severities(o,"NOTE","NEVER",0);
+     Cdrpreskin_set_severities(o,"SORRY","NEVER",0);
    queueing= 1;
    return(1);
  }

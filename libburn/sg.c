@@ -89,6 +89,28 @@ int sg_close_drive_fd(char *fname, int driveno, int *fd, int sorry)
 }
 
 
+/* ts A60924 */
+int sg_handle_busy_device(char *fname, int os_errno)
+{
+	char msg[4096];
+
+	/* ts A60814 : i saw no way to do this more nicely */ 
+	if (burn_sg_open_abort_busy) {
+		fprintf(stderr,
+	"\nlibburn: FATAL : Application triggered abort on busy device '%s'\n",
+			fname);
+		assert("drive busy" == "non fatal");
+	}
+
+	/* ts A60924 : now reporting to libdax_msgs */
+	sprintf(msg, "Cannot open busy device '%s'", fname);
+	libdax_msgs_submit(libdax_messenger, -1, 0x00020001,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_LOW,
+			msg, os_errno, 0);
+	return 1;
+}
+
+
 /* ts A60922 ticket 33 */
 /** Returns the next index number and the next enumerated drive address.
     @param idx An opaque number handle. Make no own theories about it.
@@ -146,25 +168,144 @@ int sg_is_enumerable_adr(char *adr)
 }
 
 
-/* ts A60924 */
-int sg_handle_busy_device(char *fname, int os_errno)
+/* ts A60926 */
+int sg_release_siblings(int sibling_fds[], int *sibling_count)
 {
-	char msg[4096];
+	int i;
+	char msg[81];
 
-	/* ts A60814 : i saw no way to do this more nicely */ 
-	if (burn_sg_open_abort_busy) {
-		fprintf(stderr,
-	"\nlibburn: FATAL : Application triggered abort on busy device '%s'\n",
-			fname);
-		assert("drive busy" == "non fatal");
+	for(i= 0; i < *sibling_count; i++)
+		sg_close_drive_fd(NULL, -1, &(sibling_fds[i]), 0);
+	if(*sibling_count > 0) {
+		sprintf(msg, "Closed %d O_EXCL scsi siblings", *sibling_count);
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020007,
+			LIBDAX_MSGS_SEV_NOTE, LIBDAX_MSGS_PRIO_HIGH, msg, 0,0);
 	}
-
-	/* ts A60924 : now reporting to libdax_msgs */
-	sprintf(msg, "Cannot open busy device '%s'", fname);
-	libdax_msgs_submit(libdax_messenger, -1, 0x00020001,
-			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_LOW,
-			msg, os_errno, 0);
+	*sibling_count = 0;
 	return 1;
+}
+
+
+/* ts A60926 */
+int sg_open_drive_fd(char *fname, int scan_mode)
+{
+	int open_mode = O_RDWR, fd;
+	char msg[81];
+
+	/* ts A60813
+	   O_EXCL with block devices is an unpublished feature
+	   of Linux kernels. Possibly introduced 2002.
+	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
+	if(burn_sg_open_o_excl)
+		open_mode |= O_EXCL;
+	/* ts A60813
+	   O_NONBLOCK was already hardcoded in ata_ but not in sg_.
+	   There must be some reason for this. So O_NONBLOCK is
+	   default mode for both now. Disable on own risk. */
+	if(burn_sg_open_o_nonblock)
+		open_mode |= O_NONBLOCK;
+
+/* <<< debugging
+	fprintf(stderr,
+		"\nlibburn: experimental: o_excl= %d , o_nonblock= %d, abort_on_busy= %d\n",
+	burn_sg_open_o_excl,burn_sg_open_o_nonblock,burn_sg_open_abort_busy);
+	fprintf(stderr,
+		"libburn: experimental: O_EXCL= %d , O_NONBLOCK= %d\n",
+		!!(open_mode&O_EXCL),!!(open_mode&O_NONBLOCK));
+*/
+          
+	fd = open(fname, open_mode);
+	if (fd == -1) {
+/* <<< debugging
+		fprintf(stderr,
+		"\nlibburn: experimental: fname= %s , errno= %d\n",
+			fname,errno);
+*/
+		if (errno == EBUSY) {
+			sg_handle_busy_device(fname, errno);
+			return -1;
+			
+		}
+		if (scan_mode)
+			return -1;
+		sprintf(msg, "Failed to open device '%s'",fname);
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020005,
+				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				msg, errno, 0);
+		return -1;
+	}
+	return fd;
+}
+
+
+/* ts A60926 */
+int sg_open_scsi_siblings(char *path, int driveno,
+			  int sibling_fds[], int *sibling_count,
+			  int host_no, int channel_no, int id_no, int lun_no)
+{
+	int tld, i, ret, fd;
+	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
+	char msg[161], fname[81];
+
+	static char tldev[][81]= {"/dev/sr%d", "/dev/scd%d", "/dev/st%d", ""};
+
+	if(host_no < 0 || id_no < 0 || channel_no < 0 || lun_no < 0)
+		return(2);
+	if(*sibling_count > 0)
+		sg_release_siblings(sibling_fds, sibling_count);
+		
+	for (tld = 0; tldev[tld][0] != 0; tld++) {
+		for (i = 0; i < 32; i++) {
+			sprintf(fname, tldev[tld], i);
+			ret = sg_obtain_scsi_adr(fname, &i_host_no,
+				&i_channel_no, &i_target_no, &i_lun_no);
+			if (ret <= 0)
+		continue;
+			if (i_host_no != host_no || i_channel_no != channel_no)
+		continue;
+			if (i_target_no != id_no || i_lun_no != lun_no)
+		continue;
+
+			fd = sg_open_drive_fd(fname, 0);
+			if (fd < 0)
+				goto failed;
+
+			if (*sibling_count>=LIBBURN_SG_MAX_SIBLINGS) {
+				sprintf(msg, "Too many scsi siblings of '%s'",
+					path);
+				libdax_msgs_submit(libdax_messenger,
+					driveno, 0x00020006,
+					LIBDAX_MSGS_SEV_FATAL,
+					LIBDAX_MSGS_PRIO_HIGH, msg, 0, 0);
+				goto failed;
+			}
+			sprintf(msg, "Opened O_EXCL scsi sibling '%s' of '%s'",
+				 fname, path);
+			libdax_msgs_submit(libdax_messenger, driveno,
+				0x00020004,
+				LIBDAX_MSGS_SEV_NOTE, LIBDAX_MSGS_PRIO_HIGH,
+				msg, 0, 0);
+			sibling_fds[*sibling_count] = fd;
+			(*sibling_count)++;
+		}
+	}
+	return(1);
+failed:;
+	sg_release_siblings(sibling_fds, sibling_count);
+	return 0;
+}
+
+
+/* ts A60926 */
+int sg_close_drive(struct burn_drive *d)
+{
+	int ret;
+
+	if (!burn_drive_is_open(d))
+		return 0;
+	sg_release_siblings(d->sibling_fds, &(d->sibling_count));
+	ret = sg_close_drive_fd(d->devname, d->global_index, &(d->fd), 0);
+	return ret;
 }
 
 void ata_enumerate(void)
@@ -172,6 +313,9 @@ void ata_enumerate(void)
 	struct hd_driveid tm;
 	int i, fd;
 	char fname[10];
+
+
+#ifdef No_sg_open_drive_fD
 
 	/* ts A60813 */
 	int open_mode = O_RDWR;
@@ -189,6 +333,9 @@ void ata_enumerate(void)
 	if(burn_sg_open_o_nonblock)
 		open_mode |= O_NONBLOCK;
 
+#endif /* No_sg_open_drive_fD */
+
+
 	for (i = 0; i < 26; i++) {
 		sprintf(fname, "/dev/hd%c", 'a' + i);
 		/* open O_RDWR so we don't think read only drives are
@@ -197,6 +344,8 @@ void ata_enumerate(void)
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
 			continue;
+
+#ifdef No_sg_open_drive_fD
 		fd = open(fname, open_mode);
 		if (fd == -1) {
 /* <<< debugging
@@ -208,6 +357,12 @@ void ata_enumerate(void)
 				sg_handle_busy_device(fname, errno);
 			continue;
 		}
+#else
+		fd = sg_open_drive_fd(fname, 1);
+		if (fd == -1)
+			continue;
+#endif /* ! No_sg_open_drive_fD */
+
 		/* found a drive */
 		ioctl(fd, HDIO_GET_IDENTITY, &tm);
 
@@ -232,8 +387,11 @@ void ata_enumerate(void)
 void sg_enumerate(void)
 {
 	struct sg_scsi_id sid;
-	int i, fd;
+	int i, fd, sibling_fds[LIBBURN_SG_MAX_SIBLINGS], sibling_count= 0, ret;
 	char fname[10];
+
+
+#ifdef No_sg_open_drive_fD
 
 	/* ts A60813 */
 	int open_mode = O_RDWR;
@@ -261,6 +419,9 @@ void sg_enumerate(void)
           
 */
 
+#endif /* No_sg_open_drive_fD */
+
+
 	for (i = 0; i < 32; i++) {
 		sprintf(fname, "/dev/sg%d", i);
 		/* open RDWR so we don't accidentally think read only drives
@@ -268,7 +429,10 @@ void sg_enumerate(void)
 		 */
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
-			continue;
+	continue;
+
+#ifdef No_sg_open_drive_fD
+
 		fd = open(fname, open_mode);
 
 		if (fd == -1) {
@@ -279,15 +443,38 @@ void sg_enumerate(void)
 */
 			if (errno == EBUSY) 
 				sg_handle_busy_device(fname, errno);
-			continue;
+	continue;
 		}
+#else
+
+		fd = sg_open_drive_fd(fname, 1);
+		if (fd == -1)
+			continue;
+
+#endif /* ! No_sg_open_drive_fD */
+
 		/* found a drive */
 		ioctl(fd, SG_GET_SCSI_ID, &sid);
 		if (sg_close_drive_fd(fname, -1, &fd, 
 				sid.scsi_type == TYPE_ROM ) <= 0)
-			continue;
+	continue;
 		if (sid.scsi_type != TYPE_ROM)
-			continue;
+	continue;
+
+		/* ts A60927 : trying to do locking with growisofs */
+		if(burn_sg_open_o_excl>1) {
+			ret = sg_open_scsi_siblings(
+					fname, -1, sibling_fds, &sibling_count,
+					sid.host_no, sid.channel,
+					sid.scsi_id, sid.lun);
+			if (ret<=0) {
+				sg_handle_busy_device(fname, 0);
+	continue;
+			}
+			/* the final occupation will be done in sg_grab() */
+			sg_release_siblings(sibling_fds, &sibling_count);
+		}
+
 		enumerate_common(fname, sid.host_no, sid.channel, 
 				sid.scsi_id, sid.lun);
 	}
@@ -296,6 +483,7 @@ void sg_enumerate(void)
 static void enumerate_common(char *fname, int host_no, int channel_no, 
 			     int target_no, int lun_no)
 {
+	int i;
 	struct burn_drive *t;
 	struct burn_drive out;
 
@@ -307,6 +495,9 @@ static void enumerate_common(char *fname, int host_no, int channel_no,
 
 	out.devname = burn_strdup(fname);
 	out.fd = -1337;
+	out.sibling_count = 0;
+	for(i= 0; i<LIBBURN_SG_MAX_SIBLINGS; i++)
+		out.sibling_fds[i] = -1337;
 
 	out.grab = sg_grab;
 	out.release = sg_release;
@@ -355,6 +546,7 @@ static void enumerate_common(char *fname, int host_no, int channel_no,
 		t->released = 1;
 	} else {
 		burn_print(2, "unable to grab new located drive\n");
+		burn_drive_unregister(t);
 	}
 
 /* ts A60821
@@ -373,7 +565,7 @@ static void enumerate_common(char *fname, int host_no, int channel_no,
 */
 int sg_grab(struct burn_drive *d)
 {
-	int fd, count, os_errno= 0;
+	int fd, count, os_errno= 0, ret;
 
 	/* ts A60813 */
 	int open_mode = O_RDWR;
@@ -409,6 +601,17 @@ int sg_grab(struct burn_drive *d)
    		<<< debug: for tracing calls which might use open drive fds */
 		mmc_function_spy("sg_grab ----------- opening");
 
+		/* ts A60926 */
+		if(burn_sg_open_o_excl>1) {
+			fd = -1;
+			ret = sg_open_scsi_siblings(d->devname,
+					d->global_index,d->sibling_fds,
+					&(d->sibling_count),
+					d->host, d->channel, d->id, d->lun);
+			if(ret <= 0)
+				goto drive_is_in_use;
+		}
+
 		fd = open(d->devname, open_mode);
 		os_errno = errno;
 	} else
@@ -420,19 +623,27 @@ int sg_grab(struct burn_drive *d)
 		/* ts A60814:
 		   according to my experiments this test would work now ! */
 
-/*		er = ioctl(fd, SG_GET_ACCESS_COUNT, &count);*/
+		/* ts A60926 : this was disabled */
+		/* Tests with growisofs on kernel 2.4.21 yielded that this
+		   does not help against blocking on busy drives.
+		*/
+/* <<< the old dummy */
+/*              er = ioctl(fd, SG_GET_ACCESS_COUNT, &count);*/
 		count = 1;
+
 		if (1 == count) {
 			d->fd = fd;
 			fcntl(fd, F_SETOWN, getpid());
 			d->released = 0;
 			return 1;
 		}
+
+drive_is_in_use:;
 		libdax_msgs_submit(libdax_messenger, d->global_index,
 			0x00020003,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
 			"Could not grab drive - already in use", 0, 0);
-		sg_close_drive_fd(d->devname, d->global_index, &fd, 0);
+		sg_close_drive(d);
 		d->fd = -1337;
 		return 0;
 	}
@@ -462,7 +673,7 @@ int sg_release(struct burn_drive *d)
    	<<< debug: for tracing calls which might use open drive fds */
 	mmc_function_spy("sg_release ----------- closing");
 
-	sg_close_drive_fd(d->devname, d->global_index, &(d->fd), 0);
+	sg_close_drive(d);
 	return 0;
 }
 

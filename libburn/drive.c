@@ -37,7 +37,7 @@ void burn_drive_free(struct burn_drive *d)
 		return;
 	/* ts A60822 : close open fds before forgetting them */
 	if (burn_drive_is_open(d))
-		sg_close_drive_fd(d->devname, d->global_index, &(d->fd), 0);
+		sg_close_drive(d);
 	free((void *) d->idata);
 	free((void *) d->mdata);
 	free((void *) d->toc_entry);
@@ -247,6 +247,18 @@ struct burn_drive *burn_drive_register(struct burn_drive *d)
 #endif /* ! Libburn_ticket_62_re_register_is_possiblE */
 
 }
+
+
+/* unregister most recently registered drive */
+int burn_drive_unregister(struct burn_drive *d)
+{
+	if(d->global_index != drivetop)
+		return 0;
+	burn_drive_free(d);
+	drivetop--;
+	return 1;
+}
+
 
 void burn_drive_release(struct burn_drive *d, int le)
 {
@@ -710,7 +722,6 @@ int burn_drive_is_enumerable_adr(char *adr)
 {
 	return sg_is_enumerable_adr(adr);
 }
-
 
 /* ts A60922 ticket 33 */
 /* Try to find an enumerated address with the given stat.st_rdev number */

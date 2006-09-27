@@ -18,6 +18,13 @@ int sg_is_enumerable_adr(char *adr);
 int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
                        int *target_no, int *lun_no);
 
+/* ts A60926 : ticket 33 ++ */
+int sg_open_scsi_siblings(char *fname, int driveno,
+                          int sibling_fds[], int *sibling_count,
+                          int host_no, int channel_no, int id_no, int lun_no);
+int sg_release_siblings(int sibling_fds[], int *sibling_count);
+int sg_close_drive(struct burn_drive *d);
+
 void sg_enumerate(void);
 void ata_enumerate(void);
 int sg_grab(struct burn_drive *);
