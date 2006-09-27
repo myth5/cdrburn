@@ -192,8 +192,8 @@ int sg_open_drive_fd(char *fname, int scan_mode)
 	int open_mode = O_RDWR, fd;
 	char msg[81];
 
-	/* ts A60813
-	   O_EXCL with block devices is an unpublished feature
+	/* ts A60813 - A60927
+	   O_EXCL with devices is a non-POSIX feature
 	   of Linux kernels. Possibly introduced 2002.
 	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
 	if(burn_sg_open_o_excl)
@@ -314,54 +314,14 @@ void ata_enumerate(void)
 	int i, fd;
 	char fname[10];
 
-
-#ifdef No_sg_open_drive_fD
-
-	/* ts A60813 */
-	int open_mode = O_RDWR;
-
-	/* ts A60813
-	   O_EXCL with block devices is an unpublished feature
-	   of Linux kernels. Possibly introduced 2002.
-	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
-	if(burn_sg_open_o_excl)
-		open_mode |= O_EXCL;
-	/* ts A60813
-	   O_NONBLOCK was already hardcoded in ata_ but not in sg_.
-	   There must be some reason for this. So O_NONBLOCK is
-	   default mode for both now. Disable on own risk. */
-	if(burn_sg_open_o_nonblock)
-		open_mode |= O_NONBLOCK;
-
-#endif /* No_sg_open_drive_fD */
-
-
 	for (i = 0; i < 26; i++) {
 		sprintf(fname, "/dev/hd%c", 'a' + i);
-		/* open O_RDWR so we don't think read only drives are
-		   in some way useful
-		 */
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
-			continue;
-
-#ifdef No_sg_open_drive_fD
-		fd = open(fname, open_mode);
-		if (fd == -1) {
-/* <<< debugging
-			fprintf(stderr,
-			"\nlibburn: experimental: fname= %s , errno= %d\n",
-				fname,errno);
-*/
-			if (errno == EBUSY) 
-				sg_handle_busy_device(fname, errno);
-			continue;
-		}
-#else
+	continue;
 		fd = sg_open_drive_fd(fname, 1);
 		if (fd == -1)
-			continue;
-#endif /* ! No_sg_open_drive_fD */
+	continue;
 
 		/* found a drive */
 		ioctl(fd, HDIO_GET_IDENTITY, &tm);
@@ -369,7 +329,7 @@ void ata_enumerate(void)
 		/* not atapi */
 		if (!(tm.config & 0x8000) || (tm.config & 0x4000)) {
 			sg_close_drive_fd(fname, -1, &fd, 0);
-			continue;
+	continue;
 		}
 
 		/* if SG_IO fails on an atapi device, we should stop trying to 
@@ -379,7 +339,7 @@ void ata_enumerate(void)
 			return;
 		}
 		if (sg_close_drive_fd(fname, -1, &fd, 1) <= 0)
-			continue;
+	continue;
 		enumerate_common(fname, -1, -1, -1, -1);
 	}
 }
@@ -390,68 +350,15 @@ void sg_enumerate(void)
 	int i, fd, sibling_fds[LIBBURN_SG_MAX_SIBLINGS], sibling_count= 0, ret;
 	char fname[10];
 
-
-#ifdef No_sg_open_drive_fD
-
-	/* ts A60813 */
-	int open_mode = O_RDWR;
-
-	/* ts A60813
-	   O_EXCL with block devices is an unpublished feature
-	   of Linux kernels. Possibly introduced 2002.
-	   Mentioned in "The Linux SCSI Generic (sg) HOWTO" */
-	if(burn_sg_open_o_excl)
-		open_mode |= O_EXCL;
-	/* ts A60813
-	   O_NONBLOCK was not hardcoded in sg_ but was in ata_.
-	   I myself test mainly sg_ and it seems to be ok with 
-	   O_NONBLOCK. So it should stay default mode. */
-	if(burn_sg_open_o_nonblock)
-		open_mode |= O_NONBLOCK;
-
-/* <<< debugging
-	fprintf(stderr,
-		"\nlibburn: experimental: o_excl= %d , o_nonblock= %d, abort_on_busy= %d\n",
-	burn_sg_open_o_excl,burn_sg_open_o_nonblock,burn_sg_open_abort_busy);
-	fprintf(stderr,
-		"libburn: experimental: O_EXCL= %d , O_NONBLOCK= %d\n",
-		!!(open_mode&O_EXCL),!!(open_mode&O_NONBLOCK));
-          
-*/
-
-#endif /* No_sg_open_drive_fD */
-
-
 	for (i = 0; i < 32; i++) {
 		sprintf(fname, "/dev/sg%d", i);
-		/* open RDWR so we don't accidentally think read only drives
-		   are in some way useful
-		 */
 		/* ts A51221 */
 		if (burn_drive_is_banned(fname))
 	continue;
-
-#ifdef No_sg_open_drive_fD
-
-		fd = open(fname, open_mode);
-
-		if (fd == -1) {
-/* <<< debugging
-			fprintf(stderr,
-			"\n cdrskin: experimental: fname= %s , errno= %d\n",
-				fname,errno);
-*/
-			if (errno == EBUSY) 
-				sg_handle_busy_device(fname, errno);
-	continue;
-		}
-#else
-
+		/* ts A60927 */
 		fd = sg_open_drive_fd(fname, 1);
 		if (fd == -1)
-			continue;
-
-#endif /* ! No_sg_open_drive_fD */
+	continue;
 
 		/* found a drive */
 		ioctl(fd, SG_GET_SCSI_ID, &sid);
@@ -575,12 +482,11 @@ int sg_grab(struct burn_drive *d)
 	mmc_function_spy("sg_grab");
 
 
-	/* ts A60813
-	   O_EXCL with block devices is an unpublished feature
+	/* ts A60813 - A60927
+	   O_EXCL with devices is a non-POSIX feature
 	   of Linux kernels. Possibly introduced 2002.
-	   It can only be used if libburn stops opening several
-	   file descriptor on the same block device.
-	   See comment below */
+	   Mentioned in "The Linux SCSI Generic (sg) HOWTO".
+	*/
 	if(burn_sg_open_o_excl)
 		open_mode |= O_EXCL;
 
