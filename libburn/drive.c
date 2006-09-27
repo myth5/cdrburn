@@ -28,6 +28,8 @@ static struct burn_drive drive_array[255];
 static int drivetop = -1;
 
 int burn_drive_is_open(struct burn_drive *d);
+int burn_drive_convert_fs_adr_sub(char *path, char adr[], int *rec_count);
+
 
 /* ts A60904 : ticket 62, contribution by elmom */
 /* splitting former burn_drive_free() (which freed all, into two calls) */
@@ -723,14 +725,23 @@ int burn_drive_is_enumerable_adr(char *adr)
 	return sg_is_enumerable_adr(adr);
 }
 
+#define BURN_DRIVE_MAX_LINK_DEPTH 20
+
 /* ts A60922 ticket 33 */
 /* Try to find an enumerated address with the given stat.st_rdev number */
-int burn_drive_resolve_link(char *path, char adr[])
+int burn_drive_resolve_link(char *path, char adr[], int *recursion_count)
 {
 	int ret;
 	char link_target[4096], msg[4096+100], link_adr[4096], *adrpt;
 
-	burn_drive_adr_debug_msg("burn_drive_resolve_link( %s )",path);
+	burn_drive_adr_debug_msg("burn_drive_resolve_link( %s )", path);
+	if (*recursion_count >= BURN_DRIVE_MAX_LINK_DEPTH) {
+		burn_drive_adr_debug_msg(
+			"burn_drive_resolve_link aborts because link too deep",
+			NULL);
+		return 0;
+	}
+	(*recursion_count)++;
 	ret = readlink(path, link_target, sizeof(link_target));
 	if (ret == -1) {
 		burn_drive_adr_debug_msg("readlink( %s ) returns -1", path);
@@ -751,7 +762,7 @@ int burn_drive_resolve_link(char *path, char adr[])
 		} else
 			adrpt = link_target;
 	}
-	ret = burn_drive_convert_fs_adr(adrpt, adr);
+	ret = burn_drive_convert_fs_adr_sub(adrpt, adr, recursion_count);
 	sprintf(msg,"burn_drive_convert_fs_adr( %s ) returns %d",
 		link_target, ret);
 	burn_drive_adr_debug_msg(msg, NULL);
@@ -891,7 +902,7 @@ int burn_drive_find_scsi_equiv(char *path, char adr[])
 /* ts A60922 ticket 33 */
 /** Try to convert a given existing filesystem address into a persistent drive
     address.  */
-int burn_drive_convert_fs_adr(char *path, char adr[])
+int burn_drive_convert_fs_adr_sub(char *path, char adr[], int *rec_count)
 {
 	int ret;
 	struct stat stbuf;
@@ -911,7 +922,7 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 		return 0;
 	}
 	if((stbuf.st_mode & S_IFMT) == S_IFLNK) {
-		ret = burn_drive_resolve_link(path, adr);
+		ret = burn_drive_resolve_link(path, adr, rec_count);
 		if(ret > 0)
 			return 1;
 		burn_drive_adr_debug_msg("link fallback via stat( %s )", path);
@@ -931,5 +942,15 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 	}
 	burn_drive_adr_debug_msg("Nothing found for %s", path);
 	return 0;
+}
+
+/** Try to convert a given existing filesystem address into a persistent drive
+    address.  */
+int burn_drive_convert_fs_adr(char *path, char adr[])
+{
+	int ret, rec_count = 0;
+
+	ret = burn_drive_convert_fs_adr_sub(path, adr, &rec_count);
+	return ret;
 }
 
