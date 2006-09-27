@@ -90,6 +90,8 @@ struct scsi_mode_data
 };
 
 
+#define LIBBURN_SG_MAX_SIBLINGS 16
+
 /** Gets initialized in enumerate_common() and burn_drive_register() */
 struct burn_drive
 {
@@ -99,6 +101,10 @@ struct burn_drive
 	int lun;
 	char *devname;
 	int fd;
+
+	/* ts A60926 : trying to lock against growisofs /dev/srN, /dev/scdN */
+	int sibling_count;
+	int sibling_fds[LIBBURN_SG_MAX_SIBLINGS];
 
 	/* ts A60904 : ticket 62, contribution by elmom */
 	/**

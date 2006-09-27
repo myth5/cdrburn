@@ -1019,7 +1019,7 @@ void burn_version(int *major, int *minor, int *micro);
                           Default: "NEVER". If you queue messages then you
                           must consume them by burn_msgs_obtain().
     @param print_severity Does the same for messages to be printed directly
-                          to stderr.
+                          to stderr. Default: "FATAL".
     @param print_id       A text prefix to be printed before the message.
     @return               >0 for success, <=0 for error
 

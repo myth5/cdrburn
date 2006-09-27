@@ -91,6 +91,7 @@ void burn_finish(void)
                      and try to mark them busy if opened sucessfully. (O_EXCL)
                      There are kernels which simply don't care about O_EXCL.
                      Some have it off, some have it on, some are switchable.
+                     Values: 0=off, 1=on, 2=on,O_EXCL scsi siblings (sr,scd,st)
     @param blocking  Try to wait for drives which do not open immediately but
                      also do not return an error as well. (O_NONBLOCK)
                      This might stall indefinitely with /dev/hdX hard disks.
@@ -104,7 +105,7 @@ void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy)
 {
 	assert(burn_running);
 
-	burn_sg_open_o_excl= !!exclusive;
+	burn_sg_open_o_excl= exclusive;
 	burn_sg_open_o_nonblock= !blocking;
 	burn_sg_open_abort_busy= !!abort_on_busy;
 }

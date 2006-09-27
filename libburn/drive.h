@@ -35,6 +35,7 @@ struct mempage;
 	               SESSION_LEADOUT_ENTRY((d), (d)->toc->sessions-1))
 
 struct burn_drive *burn_drive_register(struct burn_drive *);
+int burn_drive_unregister(struct burn_drive *d);
 
 unsigned int burn_drive_count(void);
 void burn_wait_all(void);
