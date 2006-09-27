@@ -317,12 +317,16 @@ arguments from the following three files:
   /etc/opt/cdrskin/rc
   $HOME/.cdrskinrc
 The files are read in the sequence given above.
-Each readable line is treated as one single argument. No extra blanks,
-no comments, no empty lines are permitted.
+Each readable line is treated as one single argument. No extra blanks.
+A first character '#' marks a comment, empty lines are ignored.
 
 Example content of a startup file:
-dev=1,1,0
-dev_translation=+1,0,0+1,1,0
+# This is the default device
+dev=0,1,0
+# To accomodate to eventual remnant cdrskin-0.2.2 addresses
+dev_translation=+1,0,0+0,1,0
+
+# Some more options
 --fifo_start_empty
 fs=16m
 

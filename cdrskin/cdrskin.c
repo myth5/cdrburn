@@ -471,6 +471,8 @@ int Sfile_multi_read_argv(char *progname, char **filenames, int filename_count,
      while(Sfile_fgets(buf,sizeof(buf)-1,fp)!=NULL) {
        line_no++;
        l= strlen(buf);
+       if(l==0 || buf[0]=='#')
+     continue;
        if(pass==0){
          if(l>maxl) 
            maxl= l;
