@@ -1533,9 +1533,11 @@ return:
  char *value_pt;
 
 #ifndef Cdrskin_extra_leaN
- if(argc>1)
-   if(strcmp(argv[1],"--no_rc")==0)
+ if(argc>1) {
+   if(strcmp(argv[1],"--no_rc")==0 || strcmp(argv[1],"-version")==0 ||
+      strcmp(argv[1],"--help")==0 || strcmp(argv[1],"-help")==0)
      flag|= 2;
+ }
  if(!(flag&2)) {
    ret= Cdrpreskin_read_rc(o,argv[0],0);
    if(ret<0)
