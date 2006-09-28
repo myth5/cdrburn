@@ -1681,6 +1681,9 @@ set_dev:;
    } else if(strcmp(argv[i],"--drive_not_exclusive")==0) {
      o->drive_exclusive= 0;
 
+   } else if(strcmp(argv[i],"--drive_scsi_exclusive")==0) {
+     o->drive_exclusive= 2;
+
    } else if(strcmp(argv[i],"driveropts=help")==0 ||
              strcmp(argv[i],"-driveropts=help")==0) {
 
@@ -1727,6 +1730,9 @@ set_dev:;
      printf("                    (might be stalled by a busy hard disk)\n");
      printf(" --drive_not_exclusive  do not ask kernel to prevent opening\n");
      printf("                    busy drives. Effect is kernel dependend.\n");
+     printf(
+         " --drive_scsi_exclusive  try to exclusively reserve device files\n");
+     printf("                    /dev/srN, /dev/scdM, /dev/stK of drive.\n");
 #ifdef Cdrskin_burn_drive_eject_brokeN
      printf(
           " eject_device=<path>  set the device address for command eject\n");
@@ -4588,7 +4594,7 @@ int Cdrskin_create(struct CdrskiN **o, struct CdrpreskiN **preskin,
  *exit_value= 0;
 
 #ifndef Cdrskin_libburn_no_burn_preset_device_opeN
- burn_preset_device_open((*preskin)->drive_exclusive*1,
+ burn_preset_device_open((*preskin)->drive_exclusive,
                          (*preskin)->drive_blocking,
                          (*preskin)->abort_on_busy_drive);
 #endif
