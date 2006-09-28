@@ -1840,6 +1840,10 @@ see_cdrskin_eng_html:;
         "the total byte count of the source must be announced via tsize=#.\n");
      fprintf(stderr,
         "cdrskin will ensure that the announced tsize= is written even if\n");
+     fprintf(stderr,
+        "the source delivers fewer bytes. But 0 bytes from stdin with fifo\n");
+     fprintf(stderr,
+        "enabled will lead to abort and no burn attempt at all.\n");
 
 #else /* ! Cdrskin_extra_leaN */
 
