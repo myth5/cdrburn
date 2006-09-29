@@ -14,22 +14,42 @@ static PyObject* ErrorObject;
 
 static PyObject* Burn_Initialize(PyObject* self, PyObject* args)
 {
-    
+    if (burn_initialize()) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    return NULL; 
 }
 
 static PyObject* Burn_Finish(PyObject* self, PyObject* args)
 {
-
+    burn_finish();
+    
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyObject* Burn_Set_Verbosity(PyObject* self, PyObject* args)
 {
-
+    int level;
+    
+    if (!PyArg_ParseTuple(args, "i", &level))
+        return NULL;
+    burn_set_verbosity(level);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyObject* Burn_Preset_Device_Open(PyObject* self, PyObject* args)
 {
+    int ex, bl, abort;
 
+    if (!PyArg_ParseTuples(args, "iii", &ex, &bl, &abort))
+        return NULL;
+    burn_preset_device_open(ex, bl, abort);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyObject* Burn_Drive_Scan_And_Grab(PyObject* self, PyObject* args)
@@ -84,27 +104,56 @@ static PyObject* Burn_Drive_Obtain_SCSI_Address(PyObject* self, PyObject* args)
 
 static PyObject* Burn_MSF_To_Sectors(PyObject* self, PyObject* args)
 {
-
+    int sectors, min, sec, frame;
+    
+    if (!PyArg_ParseTuple(args, "(iii)", &min, &sec, &frame))
+        return NULL;
+    sectors = burn_msf_to_sectors(min, sec, frame);
+    return PyInt_FromLong(sectors);
 }
 
 static PyObject* Burn_Sectors_To_MSF(PyObject* self, PyObject* args)
 {
+    int sectors, min, sec, frame;   
 
+    if (!PyArg_ParseTuple(args, "i", &sectors))
+        return NULL;
+    burn_sectors_to_msf(sectors, &min, &sec, &frame);
+    return PyTuple_Pack(3, PyInt_FromLong(min),
+                             PyInt_FromLong(sec), 
+                               PyInt_FromLong(frame));
 }
 
 static PyObject* Burn_MSF_To_LBA(PyObject* self, PyObject* args)
 {
+    int lba, min, sec, frame;
 
+    if (!PyArg_ParseTuple(args, "(iii)", &min, &sec, &frame))
+        return NULL;
+    lba = burn_msf_to_lba(min, sec, frame);
+    return PyInt_FromLong(lba);
 }
 
 static PyObject* Burn_LBA_To_MSF(PyObject* self, PyObject* args)
 {
+    int lba, min, sec, frame;
 
+    if (!PyArg_ParseTuple(args, "i", &lba))
+        return NULL;
+    burn_lba_to_msf(lba, &min, &sec, &frame);
+    return PyTuple_Pack(3, PyInt_FromLong(min),
+                             PyInt_FromLong(sec),
+                               PyInt_FromLong(frame));
 }
 
 static PyObject* Burn_Version(PyObject* self, PyObject* args)
 {
-    
+    int maj, min, mic;
+
+    burn_version(&maj, &min, &mic);
+    return PyTuple_Pack(3, PyInt_FromLong(maj),
+                             PyInt_FromLong(min), 
+                               PyInt_FromLong(mic)); 
 }
 
 
