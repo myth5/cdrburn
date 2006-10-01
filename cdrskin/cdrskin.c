@@ -1408,7 +1408,8 @@ int Cdrpreskin_queue_msgs(struct CdrpreskiN *o, int flag)
     (This call intentionally has no CdrpreskiN argument)
     @param flag Bitfield for control purposes: 
                 bit0= old_pseudo_scsi_adr
-    @return <=0 error, 1 success
+    @return 1 success, 0=no recognizable format, -1=severe error,
+            -2 could not find scsi device
 */
 int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
                                 int *driveno, int flag)
@@ -1443,7 +1444,6 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
  }
  sscanf(adr+k+1,"%d",driveno);
 
- /* look for symbolic bus :  1=/dev/sgN  2=/dev/hdX */
  digit_seen= 0;
  if(k>0) if(adr[k]==',') {
    for(k--;k>=0;k--) {
@@ -1454,6 +1454,7 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
    if(digit_seen) {
      sscanf(adr+k+1,"%d",&busno);
      if(flag&1) {
+       /* look for symbolic bus :  1=/dev/sgN  2=/dev/hdX */
        if(busno==1) {
          sprintf(device_adr,"/dev/sg%d",*driveno);
        } else if(busno==2) {
@@ -1480,8 +1481,18 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
          int ret;
 
          ret= burn_drive_convert_scsi_adr(busno,-1,*driveno,lun_no,device_adr);
-         return(ret);
-#endif
+         if(ret==0) {
+           fprintf(stderr,
+   "cdrskin: FATAL : Cannot find /dev/sgN with Bus,Target,Lun = %d,%d,%d\n",
+                   busno,*driveno,lun_no);
+           fprintf(stderr,
+   "cdrskin: HINT : This drive may be in use by another program currently\n");
+           return(-2);
+         } else if(ret<0)
+           return(-1);
+         return(1);
+
+#endif /* Cdrskin_libburn_has_convert_scsi_adR */
        }
      }
    } 
@@ -1947,12 +1958,11 @@ dev_too_long:;
    } else {
      ret= Cdrpreskin__cdrecord_to_dev(adr,o->device_adr,&driveno,
                                       !!o->old_pseudo_scsi_adr);
-     if(ret<=0) {
-/*
-       fprintf(stderr,
-         "cdrskin: FATAL : dev= expects /dev/xyz, Bus,Target,0 or a number\n");
+     if(ret==-2)
        {ret= 0; goto ex;}
-*/
+     if(ret<0)
+       goto ex;
+     if(ret==0) {
        strcpy(o->device_adr,adr);
        ret= 1;
      }

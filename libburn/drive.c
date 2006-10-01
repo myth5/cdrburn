@@ -889,7 +889,7 @@ int burn_drive_find_scsi_equiv(char *path, char adr[])
 		burn_drive_adr_debug_msg(msg, NULL);
 		return 0;
 	}
-	sprintf(msg, "burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d\n",
+	sprintf(msg, "burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d",
 		path, host_no, channel_no, target_no, lun_no);
 	burn_drive_adr_debug_msg(msg, NULL);
 
