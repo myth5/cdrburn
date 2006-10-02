@@ -391,6 +391,25 @@ int burn_initialize(void);
 */
 void burn_finish(void);
 
+
+/** Abort any running drive operation and finally call burn_finish().
+    @param patience Maximum number of seconds to wait for drives to finish
+    @param pacifier_func If not NULL: a function to produce appeasing messages.
+                         See burn_abort_pacifier() for an example.
+    @return 1  ok, all went well
+            0  had to leave a drive in unclean state
+            <0 severe error, do no use libburn again
+*/
+int burn_abort(int patience, 
+               int (*pacifier_func)(void *handle, int patience, int elapsed),
+               void *handle);
+
+/** A pacifier function suitable for burn_abort.
+    @param handle If not NULL, a pointer to a text suitable for printf("%s")
+*/
+int burn_abort_pacifier(void *handle, int patience, int elapsed);
+
+
 /** Set the verbosity level of the library. The default value is 0, which means
     that nothing is output on stderr. The more you increase this, the more
     debug output should be displayed on stderr for you.

@@ -27,9 +27,6 @@ extern struct libdax_msgs *libdax_messenger;
 static struct burn_drive drive_array[255];
 static int drivetop = -1;
 
-int burn_drive_is_open(struct burn_drive *d);
-int burn_drive_convert_fs_adr_sub(char *path, char adr[], int *rec_count);
-
 
 /* ts A60904 : ticket 62, contribution by elmom */
 /* splitting former burn_drive_free() (which freed all, into two calls) */
@@ -527,13 +524,11 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[])
 	burn_drive_free_all();
 }
 
-/* Experimental API call */
-int burn_drive_info_forget(struct burn_drive_info *info, int force)
+/* ts A61001 : internal call */
+int burn_drive_forget(struct burn_drive *d, int force)
 {
 	int occup;
-	struct burn_drive *d;
 
-	d = info->drive;
 	occup = burn_drive_is_occupied(d);
 /*
 	fprintf(stderr, "libburn: experimental: occup == %d\n",occup);
@@ -554,6 +549,12 @@ int burn_drive_info_forget(struct burn_drive_info *info, int force)
 		burn_drive_release(d,0);
 	burn_drive_free(d);
 	return 1;
+}
+
+/* API call */
+int burn_drive_info_forget(struct burn_drive_info *info, int force)
+{
+  return burn_drive_forget(info->drive, force);
 }
 
 struct burn_disc *burn_drive_get_disc(struct burn_drive *d)
@@ -952,5 +953,76 @@ int burn_drive_convert_fs_adr(char *path, char adr[])
 
 	ret = burn_drive_convert_fs_adr_sub(path, adr, &rec_count);
 	return ret;
+}
+
+
+/** A pacifier function suitable for burn_abort.
+    @param handle If not NULL, a pointer to a text suitable for printf("%s")
+*/
+int burn_abort_pacifier(void *handle, int patience, int elapsed)
+{
+ char *prefix= "libburn : ";
+
+ if(handle!=NULL)
+	prefix= handle;
+ fprintf(stderr,
+         "\r%sABORT : Waiting for drive to finish since %d seconds (%d max)",
+         (char *) prefix, elapsed, patience);
+ return(1);
+}
+
+
+/** Abort any running drive operation and finis libburn.
+    @param patience Maximum number of seconds to wait for drives to finish
+    @param pacifier_func Function to produce appeasing messages. See
+                         burn_abort_pacifier() for an example.
+    @return 1  ok, all went well
+            0  had to leave a drive in unclean state
+            <0 severe error, do no use libburn again
+*/
+int burn_abort(int patience, 
+               int (*pacifier_func)(void *handle, int patience, int elapsed),
+               void *handle)
+{
+	int ret, i, occup, still_not_done= 1, pacifier_off= 0, first_round= 1;
+	unsigned long wait_grain= 100000;
+	time_t start_time, current_time, pacifier_time, end_time;
+
+	current_time = start_time = pacifier_time = time(0);
+	end_time = start_time + patience;
+	while(current_time-end_time < patience) {
+		still_not_done = 0;
+
+		for(i = 0; i < drivetop + 1; i++) {
+			occup = burn_drive_is_occupied(&(drive_array[i]));
+			if(occup == -2)
+		continue;
+			if(occup <= 10) {
+				burn_drive_forget(&(drive_array[i]), 1);
+			} else if(occup <= 100) {
+				if(first_round)
+					burn_drive_cancel(&(drive_array[i]));
+				still_not_done++;
+			} else if(occup <= 1000) {
+				still_not_done++;
+			}
+		}
+		first_round = 0;
+
+		if(still_not_done == 0)
+	break;
+		usleep(wait_grain);
+		current_time = time(0);
+		if(current_time>pacifier_time) {
+			if(pacifier_func != NULL && !pacifier_off) {
+				ret = (*pacifier_func)(handle, patience,
+						current_time-start_time);
+				pacifier_off = (ret <= 0);
+			}
+			pacifier_time = current_time;
+		}
+	}
+	burn_finish();
+	return(still_not_done == 0); 
 }
 

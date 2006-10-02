@@ -224,6 +224,8 @@ int libdax_msgs__text_to_sev(char *severity_name, int *severity,
 {
  if(strncmp(severity_name,"NEVER",5)==0)
    *severity= LIBDAX_MSGS_SEV_NEVER;
+ else if(strncmp(severity_name,"ABORT",5)==0)
+   *severity= LIBDAX_MSGS_SEV_ABORT;
  else if(strncmp(severity_name,"FATAL",5)==0)
    *severity= LIBDAX_MSGS_SEV_FATAL;
  else if(strncmp(severity_name,"SORRY",5)==0)
@@ -253,12 +255,14 @@ int libdax_msgs__sev_to_text(int severity, char **severity_name,
 {
  if(flag&1) {
    *severity_name= 
-                "NEVER\nFATAL\nSORRY\nWARNING\nHINT\nNOTE\nUPDATE\nDEBUG\nALL";
+         "NEVER\nABORT\nFATAL\nSORRY\nWARNING\nHINT\nNOTE\nUPDATE\nDEBUG\nALL";
    return(1);
  }
  *severity_name= "";
  if(severity>=LIBDAX_MSGS_SEV_NEVER)
    *severity_name= "NEVER";
+ else if(severity>=LIBDAX_MSGS_SEV_ABORT)
+   *severity_name= "ABORT";
  else if(severity>=LIBDAX_MSGS_SEV_FATAL)
    *severity_name= "FATAL";
  else if(severity>=LIBDAX_MSGS_SEV_SORRY)

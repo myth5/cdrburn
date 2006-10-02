@@ -167,6 +167,7 @@ or
 #define Cdrskin_libburn_has_convert_fs_adR 1
 #define Cdrskin_libburn_has_convert_scsi_adR 1
 #define Cdrskin_libburn_has_burn_msgS 1
+#define Cdrskin_libburn_has_burn_aborT 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -2633,10 +2634,20 @@ int Cdrskin_release_drive(struct CdrskiN *skin, int flag)
 */
 int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
 {
+
+#ifdef Cdrskin_libburn_has_burn_aborT
+
+ int ret;
+
+#else 
+
  int wait_grain= 100000,first_status= 1;
+ double start_time,last_time,current_time;
+
+#endif /* ! Cdrskin_libburn_has_burn_aborT */
+
  struct burn_progress p;
  enum burn_drive_status drive_status= BURN_DRIVE_GRABBING;
- double start_time,last_time,current_time;
 
  if(getpid()!=skin->control_pid) {
    if(skin->verbosity>=Cdrskin_verbose_debuG)   
@@ -2659,6 +2670,27 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
  if(skin->fifo!=NULL)
    Cdrfifo_close_all(skin->fifo,0);
 #endif
+
+#ifdef Cdrskin_libburn_has_burn_aborT
+
+ /* Only for user info */
+ if(skin->grabbed_drive!=NULL)
+   drive_status= burn_drive_get_status(skin->grabbed_drive,&p);
+ if(drive_status!=BURN_DRIVE_IDLE) {
+   fprintf(stderr,"cdrskin: ABORT : Abort processing depends on CD speed and buffer size\n");
+   fprintf(stderr,"cdrskin: ABORT : Usually it is done with 4x speed after about a MINUTE\n");
+   fprintf(stderr,"cdrskin: URGE  : But wait at least the normal burning time before any kill -9\n");
+ }
+
+ ret= burn_abort(skin->abort_max_wait, burn_abort_pacifier, "cdrskin: ");
+ if(ret<=0) {
+   fprintf(stderr,
+         "\ncdrskin: ABORT : Cannot cancel burn session and release drive.\n");
+   return(0);
+ }
+ fprintf(stderr,"\n");
+
+#else /* Cdrskin_libburn_has_burn_aborT */
 
  if(skin->grabbed_drive!=NULL) {
    drive_status= burn_drive_get_status(skin->grabbed_drive,&p);
@@ -2751,6 +2783,9 @@ try_to_finish_lib:;
    fprintf(stderr,"cdrskin: ABORT : Trying to finish libburn.\n");
    burn_finish();
  }
+
+#endif /* ! Cdrskin_libburn_has_burn_aborT */
+
  fprintf(stderr,
     "cdrskin: ABORT : Drive is released and library is shut down now.\n");
  fprintf(stderr,

@@ -121,6 +121,10 @@ struct libdax_msgs_item;
 */
 #define LIBDAX_MSGS_SEV_FATAL                                        0x70000000
 
+/** A message from an abort handler which will finally finish libburn
+*/
+#define LIBDAX_MSGS_SEV_ABORT                                        0x71000000
+
 /** A severity to exclude resp. discard any possible message.
     Do not use this severity for submitting.
 */

@@ -52,7 +52,9 @@ void burn_disc_erase_sync(struct burn_drive *d, int fast);
 int burn_drive_get_block_types(struct burn_drive *d,
 			       enum burn_write_types write_type);
 
-/* ts A60822 */
 int burn_drive_is_open(struct burn_drive *d);
+int burn_drive_is_occupied(struct burn_drive *d);
+int burn_drive_forget(struct burn_drive *d, int force);
+int burn_drive_convert_fs_adr_sub(char *path, char adr[], int *rec_count);
 
 #endif /* __DRIVE */
