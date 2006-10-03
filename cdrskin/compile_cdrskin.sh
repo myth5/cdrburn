@@ -7,6 +7,7 @@
 debug_opts=
 def_opts=
 libvers="-DCdrskin_libburn_0_2_3"
+cleanup_src_or_obj="cdrskin/cleanup.c"
 libdax_msgs_o="libburn/libdax_msgs.o"
 do_strip=0
 static_opts=
@@ -24,10 +25,12 @@ do
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
     libdax_msgs_o="libburn/message.o"
+    cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-libburn_0_2_2"
   then
     libvers="-DCdrskin_libburn_0_2_2"
     libdax_msgs_o="libburn/message.o"
+    cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-libburn_0_2_3"
   then
     libvers="-DCdrskin_libburn_0_2_3"
@@ -35,9 +38,11 @@ do
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
+    cleanup_src_or_obj="libburn/cleanup.o"
   elif test "$i" = "-oldfashioned"
   then
     def_opts="$def_opts -DCdrskin_oldfashioned_api_usE"
+    cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-do_not_compile_cdrskin"
   then
     compile_cdrskin=0
@@ -85,7 +90,7 @@ echo "Build timestamp   :  $timestamp"
 
 if test "$compile_cdrskin"
 then
-  echo "compiling program cdrskin/cdrskin.c $static_opts $debug_opts $libvers $def_opts"
+  echo "compiling program cdrskin/cdrskin.c $static_opts $debug_opts $libvers $def_opts $cleanup_src_or_obj"
   cc $warn_opts -I. $static_opts $debug_opts $libvers $def_opts \
     -DCdrskin_build_timestamP='"'"$timestamp"'"' \
     \
@@ -93,7 +98,8 @@ then
     \
     cdrskin/cdrskin.c \
     $fifo_source \
-    cdrskin/cleanup.c \
+    \
+    $cleanup_src_or_obj \
     \
     libburn/async.o \
     libburn/debug.o \

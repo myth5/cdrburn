@@ -392,7 +392,14 @@ int burn_initialize(void);
 void burn_finish(void);
 
 
+/* ts A61002 */
 /** Abort any running drive operation and finally call burn_finish().
+    You MUST calm down the busy drive if an aborting event occurs during a
+    burn run. For that you may call this function either from your own signal
+    handling code or indirectly by activating the builtin signal handling:
+      burn_set_signal_handling("my_app_name : ", NULL, 0);
+    Else you may eventually call burn_drive_cancel() on the active drive and
+    wait for it to assume state BURN_DRIVE_IDLE.
     @param patience Maximum number of seconds to wait for drives to finish
     @param pacifier_func If not NULL: a function to produce appeasing messages.
                          See burn_abort_pacifier() for an example.
@@ -406,6 +413,8 @@ int burn_abort(int patience,
 
 /** A pacifier function suitable for burn_abort.
     @param handle If not NULL, a pointer to a text suitable for printf("%s")
+    @param patience Maximum number of seconds to wait
+    @param elapsed  Elapsed number of seconds
 */
 int burn_abort_pacifier(void *handle, int patience, int elapsed);
 
@@ -1070,6 +1079,29 @@ int burn_msgs_obtain(char *minimum_severity,
                      int *error_code, char msg_text[], int *os_errno,
                      char severity[]);
 
+
+/* ts A61002 */
+/* The prototype of a handler function suitable for burn_set_abort_handling().
+   Such a function has to return -2 if it does not want the process to
+   exit with value 1.
+*/
+typedef int (*burn_abort_handler_t)(void *handle, int signum, int flag);
+
+/** Control builtin signal handling. See also burn_abort().
+    @param handle Opaque handle eventually pointing to an application
+                  provided memory object
+    @param handler A function to be called on signals. It will get handle as
+                  argument. It should finally call burn_abort(). See there.
+    @param mode : 0 call handler(handle, signum, 0) on nearly all signals
+                  1 enable system default reaction on all signals
+                  2 try to ignore nearly all signals
+                 10 like mode 2 but handle SIGABRT like with mode 0
+    Arguments (text, NULL, 0) activate the builtin abort handler. It will
+    eventually call burn_abort() and then perform exit(1). If text is not NULL
+    then it is used as prefix for pacifier messages of burn_abort_pacifier().
+*/
+void burn_set_signal_handling(void *handle, burn_abort_handler_t handler, 
+			     int mode);
 
 #ifndef DOXYGEN
 

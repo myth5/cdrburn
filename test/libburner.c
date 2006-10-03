@@ -16,6 +16,8 @@
   
   Before you can do anything, you have to initialize libburn by
      burn_initialize()
+  and provide some signal and abort handling, e.g. by the builtin handler, by
+     burn_set_signal_handling() 
   as it is done in main() at the end of this file. Then you aquire a
   drive in an appropriate way conforming to the API. The two main
   approaches are shown here in application functions:
@@ -248,10 +250,8 @@ int libburner_aquire_by_driveno(int *driveno)
 
     To our knowledge it is hardly possible to abort an ongoing blank operation
     because after start it is entirely handled by the drive.
-    So expect a blank run to survive the end of the blanking process and be
-    patient for the usual timespan of a normal blank run. Only after that
-    time has surely elapsed, only then you should start any rescue attempts
-    with the drive. If necessary at all.
+    So expect signal handling to wait the normal blanking timespan until it
+    can allow the process to end. External kill -9 will not help the drive.
 */
 int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 {
@@ -322,25 +322,11 @@ int libburner_regrab(struct burn_drive *drive) {
 
 
 /** Brings the preformatted image (ISO 9660, afio, ext2, whatever) onto media.
-
     To make sure your image is fully readable on any Linux machine, this
     function adds 300 kB of padding to the track.
 
-    Without a signal handler it is quite dangerous to abort the process
-    while this function is active. See cdrskin/cdrskin.c and its usage
-    of cdrskin/cleanup.[ch] for an example of application provided
-    abort handling. It must cope with 2 of 3 threads reporting for
-    being handled.
-
-    Without signal handler have ready a command line 
-       cdrecord dev=... -reset
-    with a dev= previously inquired by cdrecord [dev=ATA] -scanbus 
-    in order to get your drive out of shock state after raw abort.
-    Thanks to Joerg Schilling for helping out unquestioned. :) 
-
-    In general, libburn is less prone to system problems than cdrecord,
-    i believe. But cdrecord had long years of time to complete itself.
-    We are still practicing. Help us with that. :))
+    In case of external signals expect abort handling of an ongoing burn to
+    last up to a minute. Wait the normal burning timespan before any kill -9.
 */
 int libburner_payload(struct burn_drive *drive, const char *source_adr,
 		     off_t size)
@@ -589,6 +575,10 @@ int main(int argc, char **argv)
 		fprintf(stderr,"\nFATAL: Failed to initialize libburn.\n");
 		exit(33);
 	}
+
+	/* Activate the default signal handler which eventually will try to
+	   properly shutdown drive and library on aborting events. */
+	burn_set_signal_handling("libburner : ", NULL, 0);
 
 	/** Note: driveno might change its value in this call */
 	ret = libburner_aquire_drive(drive_adr, &driveno);

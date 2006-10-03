@@ -186,6 +186,7 @@ or
 #ifdef Cdrskin_new_api_tesT
 
 /* put macros under test caveat here */
+#define Cdrskin_libburn_has_cleanup_handleR 1
 
 #endif
 
@@ -273,7 +274,12 @@ or
 
 #include <libburn/libburn.h>
 
+#ifdef Cdrskin_libburn_has_cleanup_handleR
+#define Cleanup_set_handlers burn_set_signal_handling
+#define Cleanup_app_handler_T burn_abort_handler_t
+#else
 #include "cleanup.h"
+#endif
 
 
 /** The size of a string buffer for pathnames and similar texts */
@@ -2652,11 +2658,10 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
  if(getpid()!=skin->control_pid) {
    if(skin->verbosity>=Cdrskin_verbose_debuG)   
      ClN(fprintf(stderr,
-             "cdrskin_debug: ABORT : Thread rejected: pid=%d, signum=%d\n",
-             getpid(),signum));
-   return(2); /* do only process the control thread */
+          "\ncdrskin_debug: ABORT : [%d] Thread rejected: pid=%d, signum=%d\n",
+          skin->control_pid,getpid(),signum));
+   return(-2); /* do only process the control thread */
  }
-
  if(skin->preskin->abort_handler==3)
    Cleanup_set_handlers(NULL,NULL,2); /* ignore all signals */
  else if(skin->preskin->abort_handler==4)

@@ -12,6 +12,8 @@ libburn_libburn_la_SOURCES = \
 	libburn/async.c \
 	libburn/async.h \
 	libburn/back_hacks.h \
+	libburn/cleanup.c \
+	libburn/cleanup.h \
 	libburn/crc.c \
 	libburn/crc.h \
 	libburn/debug.c \
@@ -119,7 +121,8 @@ test_iso_SOURCES = test/iso.c
 cdrskin_cdrskin_CPPFLAGS = -Ilibburn
 cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_2_3
 cdrskin_cdrskin_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
-cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h cdrskin/cleanup.c cdrskin/cleanup.h cdrskin/cdrskin_timestamp.h
+cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h cdrskin/cdrskin_timestamp.h
+## cdrskin_cdrskin_SOURCES = cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cdrfifo.h cdrskin/cleanup.c cdrskin/cleanup.h cdrskin/cdrskin_timestamp.h
 ##
 ## Open questions: how to compute $timestamp and express -DX="$timestamp"
 ##                 

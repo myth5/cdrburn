@@ -38,6 +38,15 @@ int burn_sg_open_o_nonblock = 1;
 int burn_sg_open_abort_busy = 0;
 
 
+/* ts A61002 */
+
+#include "cleanup.h"
+
+/* Parameters for builtin abort handler */
+static char abort_message_prefix[81] = {"libburn : "};
+static pid_t abort_control_pid= 0;
+
+
 /* ts A60925 : ticket 74 */
 /** Create the messenger object for libburn. */
 int burn_msgs_initialize(void)
@@ -195,5 +204,42 @@ int burn_msgs_obtain(char *minimum_severity,
 ex:
 	libdax_msgs_destroy_item(libdax_messenger, &item, 0);
 	return ret;
+}
+
+int burn_builtin_abort_handler(void *handle, int signum, int flag)
+{
+	if(getpid() != abort_control_pid)
+		return -2;
+	Cleanup_set_handlers(NULL, NULL, 2);
+	fprintf(stderr,"%sABORT : Trying to shut down drive and library\n",
+		abort_message_prefix);
+	fprintf(stderr,
+		"%sABORT : Wait the normal burning time before any kill -9\n",
+		abort_message_prefix);
+	close(0); /* somehow stdin as input blocks abort until EOF */
+	burn_abort(4440, burn_abort_pacifier, abort_message_prefix);
+	fprintf(stderr,
+	"\n%sABORT : Program done. Even if you do not see a shell prompt.\n\n",
+		abort_message_prefix);
+	return(1);
+}
+
+void burn_set_signal_handling(void *handle, burn_abort_handler_t handler,
+			     int mode)
+{
+	if(handler == NULL && mode == 0) {
+		handler = burn_builtin_abort_handler;
+/*
+		fprintf(stderr, "libburn_experimental: activated burn_builtin_abort_handler() with handle '%s'\n",(handle==NULL ? "libburn : " : (char *) handle));
+*/
+
+	}
+	strcpy(abort_message_prefix, "libburn : ");
+	if(handle != NULL)
+		strncpy(abort_message_prefix, (char *) handle,
+			sizeof(abort_message_prefix)-1);
+	abort_message_prefix[sizeof(abort_message_prefix)-1] = 0;
+	abort_control_pid= getpid();
+	Cleanup_set_handlers(handle, (Cleanup_app_handler_T) handler, mode|4);
 }
 
