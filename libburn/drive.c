@@ -371,6 +371,7 @@ void burn_drive_cancel(struct burn_drive *d)
 	pthread_mutex_unlock(&d->access_lock);
 }
 
+#ifdef NIX
 int burn_drive_get_block_types(struct burn_drive *d,
 			       enum burn_write_types write_type)
 {
@@ -379,6 +380,7 @@ int burn_drive_get_block_types(struct burn_drive *d,
 		      (write_type <= BURN_WRITE_RAW));
 	return d->block_types[write_type];
 }
+#endif
 
 static void strip_spaces(char *str)
 {
@@ -966,7 +968,7 @@ int burn_abort_pacifier(void *handle, int patience, int elapsed)
  if(handle!=NULL)
 	prefix= handle;
  fprintf(stderr,
-         "\r%sABORT : Waiting for drive to finish since %d seconds (%d max)",
+         "\r%sABORT : Waiting for drive to finish ( %d s, %d max)",
          (char *) prefix, elapsed, patience);
  return(1);
 }
