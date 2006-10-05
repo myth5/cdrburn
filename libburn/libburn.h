@@ -568,27 +568,27 @@ int burn_drive_is_enumerable_adr(char *adr);
 int burn_drive_convert_fs_adr(char *path, char adr[]);
 
 /* ts A60923 */
-/** Try to convert a given SCSI address of bus, channel, target, lun into
+/** Try to convert a given SCSI address of bus,host,channel,target,lun into
     a persistent drive address. If a SCSI address component parameter is < 0
     then it is not decisive and the first enumerated address which matches
     the >= 0 parameters is taken as result.
+    Note: bus and (host,channel) are supposed to be redundant.
     @param adr  An application provided array of at least BURN_DRIVE_ADR_LEN
                 characters size. The persistent address gets copied to it.
     @return     1 = success , 0 = failure , -1 = severe error
 */
-int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
-                                int lun_no, char adr[]);
+int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
+				 int target_no, int lun_no, char adr[]);
 
-/* ts A60923 */
-/** Try to obtain host,channel,target,lun from path. If there is an SCSI
+/* ts A60923 - A61005 */
+/** Try to obtain bus,host,channel,target,lun from path. If there is an SCSI
     address at all, then this call should succeed with a persistent
     drive address obtained via burn_drive_get_adr(). It is also supposed to
     succeed with any device file of a (possibly emulated) SCSI device.
     @return     1 = success , 0 = failure , -1 = severe error
 */
-int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
-                               int *target_no, int *lun_no);
-
+int burn_drive_obtain_scsi_adr(char *path, int *bus_no, int *host_no,
+				int *channel_no, int *target_no, int *lun_no);
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc).

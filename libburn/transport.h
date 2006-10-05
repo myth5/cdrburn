@@ -95,6 +95,7 @@ struct scsi_mode_data
 /** Gets initialized in enumerate_common() and burn_drive_register() */
 struct burn_drive
 {
+	int bus_no;
 	int host;
 	int id;
 	int channel;

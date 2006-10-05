@@ -15,7 +15,7 @@ int sg_close_drive_fd(char *fname, int driveno, int *fd, int sorry);
 /* ts A60922 ticket 33 */
 int sg_give_next_adr(int *idx, char adr[], int adr_size, int initialize);
 int sg_is_enumerable_adr(char *adr);
-int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+int sg_obtain_scsi_adr(char *path, int *bus_no, int *host_no, int *channel_no,
                        int *target_no, int *lun_no);
 
 /* ts A60926 : ticket 33 ++ */

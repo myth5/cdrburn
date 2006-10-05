@@ -26,8 +26,8 @@
 #include "libdax_msgs.h"
 extern struct libdax_msgs *libdax_messenger;
 
-static void enumerate_common(char *fname, int host_no, int channel_no,
-                             int target_no, int lun_no);
+static void enumerate_common(char *fname, int bus_no, int host_no,
+			     int channel_no, int target_no, int lun_no);
 
 /* ts A51221 */
 int burn_drive_is_banned(char *device_address);
@@ -156,9 +156,6 @@ int sg_is_enumerable_adr(char *adr)
 		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
 		if(ret <= 0)
 	break;
-/* <<<
-		fprintf(stderr,"libburn experimental: idx %d : %s\n",i,fname);
-*/
 		first = 0;
 		if (strcmp(adr, fname) == 0)
 			return 1;
@@ -243,7 +240,7 @@ int sg_open_scsi_siblings(char *path, int driveno,
 			  int sibling_fds[], int *sibling_count,
 			  int host_no, int channel_no, int id_no, int lun_no)
 {
-	int tld, i, ret, fd;
+	int tld, i, ret, fd, i_bus_no = -1;
 	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
 	char msg[161], fname[81];
 
@@ -257,7 +254,7 @@ int sg_open_scsi_siblings(char *path, int driveno,
 	for (tld = 0; tldev[tld][0] != 0; tld++) {
 		for (i = 0; i < 32; i++) {
 			sprintf(fname, tldev[tld], i);
-			ret = sg_obtain_scsi_adr(fname, &i_host_no,
+			ret = sg_obtain_scsi_adr(fname, &i_bus_no, &i_host_no,
 				&i_channel_no, &i_target_no, &i_lun_no);
 			if (ret <= 0)
 		continue;
@@ -340,7 +337,7 @@ void ata_enumerate(void)
 		}
 		if (sg_close_drive_fd(fname, -1, &fd, 1) <= 0)
 	continue;
-		enumerate_common(fname, -1, -1, -1, -1);
+		enumerate_common(fname, -1, -1, -1, -1, -1);
 	}
 }
 
@@ -348,6 +345,7 @@ void sg_enumerate(void)
 {
 	struct sg_scsi_id sid;
 	int i, fd, sibling_fds[LIBBURN_SG_MAX_SIBLINGS], sibling_count= 0, ret;
+	int bus_no = -1;
 	char fname[10];
 
 	for (i = 0; i < 32; i++) {
@@ -362,6 +360,13 @@ void sg_enumerate(void)
 
 		/* found a drive */
 		ioctl(fd, SG_GET_SCSI_ID, &sid);
+
+#ifdef SCSI_IOCTL_GET_BUS_NUMBER
+		/* Hearsay A61005 */
+		if (ioctl(fd, SCSI_IOCTL_GET_BUS_NUMBER, &bus_no) == -1)
+			bus_no = -1;
+#endif
+
 		if (sg_close_drive_fd(fname, -1, &fd, 
 				sid.scsi_type == TYPE_ROM ) <= 0)
 	continue;
@@ -381,20 +386,27 @@ void sg_enumerate(void)
 			/* the final occupation will be done in sg_grab() */
 			sg_release_siblings(sibling_fds, &sibling_count);
 		}
-
-		enumerate_common(fname, sid.host_no, sid.channel, 
-				sid.scsi_id, sid.lun);
+#ifdef SCSI_IOCTL_GET_BUS_NUMBER
+		if(bus_no == -1)
+			bus_no = 1000 * (sid.host_no + 1) + sid.channel;
+#else
+		bus_no = sid.host_no;
+#endif
+		enumerate_common(fname, bus_no, sid.host_no, sid.channel, 
+				 sid.scsi_id, sid.lun);
 	}
 }
-/* ts A60923 : introduced new SCSI parameters */
-static void enumerate_common(char *fname, int host_no, int channel_no, 
-			     int target_no, int lun_no)
+
+/* ts A60923 - A61005 : introduced new SCSI parameters */
+static void enumerate_common(char *fname, int bus_no, int host_no,
+			     int channel_no, int target_no, int lun_no)
 {
 	int i;
 	struct burn_drive *t;
 	struct burn_drive out;
 
 	/* ts A60923 */
+	out.bus_no = bus_no;
 	out.host = host_no;
 	out.id = target_no;
 	out.channel = channel_no;
@@ -731,7 +743,7 @@ enum response scsi_error(struct burn_drive *d, unsigned char *sense,
 /** Try to obtain SCSI address parameters.
     @return  1 is success , 0 is failure
 */
-int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+int sg_obtain_scsi_adr(char *path, int *bus_no, int *host_no, int *channel_no,
                        int *target_no, int *lun_no)
 {
 	int fd, ret;
@@ -749,8 +761,14 @@ int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 	if(fd < 0)
 		return 0;
 
+#ifdef SCSI_IOCTL_GET_BUS_NUMBER
+	/* Hearsay A61005 */
+	if (ioctl(fd, SCSI_IOCTL_GET_BUS_NUMBER, bus_no) == -1)
+		*bus_no = -1;
+#endif
+
 	/* http://www.tldp.org/HOWTO/SCSI-Generic-HOWTO/scsi_g_idlun.html */
-	ret= ioctl(fd, SCSI_IOCTL_GET_IDLUN, &idlun);
+	ret = ioctl(fd, SCSI_IOCTL_GET_IDLUN, &idlun);
 
 	sg_close_drive_fd(path, -1, &fd, 0);
 	if (ret == -1)
@@ -759,5 +777,11 @@ int sg_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 	*channel_no= (idlun.x>>16)&255;
 	*target_no= (idlun.x)&255;
 	*lun_no= (idlun.x>>8)&255;
+#ifdef SCSI_IOCTL_GET_BUS_NUMBER
+	if(*bus_no == -1)
+		*bus_no = 1000 * (*host_no + 1) + *channel_no;
+#else
+	*bus_no= *host_no;
+#endif
 	return 1;
 }

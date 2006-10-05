@@ -806,7 +806,8 @@ int burn_drive_find_devno(dev_t devno, char adr[])
 /** Try to obtain host,channel,target,lun from path.
     @return     1 = success , 0 = failure , -1 = severe error
 */
-int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
+int burn_drive_obtain_scsi_adr(char *path,
+			       int *bus_no, int *host_no, int *channel_no,
 			       int *target_no, int *lun_no)
 {
 	int ret, i;
@@ -824,6 +825,7 @@ int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 			*channel_no = drive_array[i].channel;
 			*target_no = drive_array[i].id;
 			*lun_no = drive_array[i].lun;
+			*bus_no = drive_array[i].bus_no;
 			if (*host_no < 0 || *channel_no < 0 ||
 			    *target_no < 0 || *lun_no < 0)
 				return 0;
@@ -831,21 +833,22 @@ int burn_drive_obtain_scsi_adr(char *path, int *host_no, int *channel_no,
 		}
 	}
 
-	ret = sg_obtain_scsi_adr(path, host_no, channel_no, target_no, lun_no);
+	ret = sg_obtain_scsi_adr(path, bus_no, host_no, channel_no,
+				 target_no, lun_no);
 	return ret;
 }
 
 /* ts A60923 */
-int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
-				int lun_no, char adr[])
+int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
+				int target_no, int lun_no, char adr[])
 {
 	char fname[4096],msg[4096+100];
-	int i, ret = 0, first = 1;
+	int i, ret = 0, first = 1, i_bus_no = -1;
 	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
 
 
-	sprintf(msg,"burn_drive_convert_scsi_adr( %d,%d,%d,%d )",
-		 host_no, channel_no, target_no, lun_no);
+	sprintf(msg,"burn_drive_convert_scsi_adr( %d,%d,%d,%d,%d )",
+		bus_no, host_no, channel_no, target_no, lun_no);
 	burn_drive_adr_debug_msg(msg, NULL);
 
 	while (1) {
@@ -853,9 +856,11 @@ int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
 		if(ret <= 0)
 	break;
 		first = 0;
-		ret = burn_drive_obtain_scsi_adr(fname, &i_host_no,
+		ret = burn_drive_obtain_scsi_adr(fname, &i_bus_no, &i_host_no,
 				 &i_channel_no, &i_target_no, &i_lun_no);
 		if(ret <= 0)
+	continue;
+		if(bus_no >=0 && i_bus_no != bus_no)
 	continue;
 		if(host_no >=0 && i_host_no != host_no)
 	continue;
@@ -881,23 +886,23 @@ int burn_drive_convert_scsi_adr(int host_no, int channel_no, int target_no,
 int burn_drive_find_scsi_equiv(char *path, char adr[])
 {
 	int ret = 0;
-	int host_no, channel_no, target_no, lun_no;
+	int bus_no, host_no, channel_no, target_no, lun_no;
 	char msg[4096];
 
-	ret = burn_drive_obtain_scsi_adr(path, &host_no, &channel_no,
-				 &target_no, &lun_no);
+	ret = burn_drive_obtain_scsi_adr(path, &bus_no, &host_no, &channel_no,
+					 &target_no, &lun_no);
 	if(ret <= 0) {
 		sprintf(msg,"burn_drive_obtain_scsi_adr( %s ) returns %d\n",
 			path, ret);
 		burn_drive_adr_debug_msg(msg, NULL);
 		return 0;
 	}
-	sprintf(msg, "burn_drive_find_scsi_equiv( %s ) : %d,%d,%d,%d",
-		path, host_no, channel_no, target_no, lun_no);
+	sprintf(msg, "burn_drive_find_scsi_equiv( %s ) : (%d),%d,%d,%d,%d",
+		path, bus_no, host_no, channel_no, target_no, lun_no);
 	burn_drive_adr_debug_msg(msg, NULL);
 
-	ret= burn_drive_convert_scsi_adr(host_no, channel_no, target_no,
-		lun_no, adr);
+	ret= burn_drive_convert_scsi_adr(-1, host_no, channel_no, target_no,
+					 lun_no, adr);
 	return ret;
 }
 
