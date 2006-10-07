@@ -172,7 +172,11 @@ enum burn_disc_status
 	/** There is an incomplete disc in the drive */
 	BURN_DISC_APPENDABLE,
 	/** There is a disc with data on it in the drive */
-	BURN_DISC_FULL
+	BURN_DISC_FULL,
+
+	/* ts A61007 */
+	/** The drive was not grabbed when the status was inquired */
+	BURN_DISC_UNGRABBED
 };
 
 
@@ -419,7 +423,8 @@ int burn_abort(int patience,
 int burn_abort_pacifier(void *handle, int patience, int elapsed);
 
 
-/** Set the verbosity level of the library. The default value is 0, which means
+/** ts A61006 : This is for development only. Not suitable for applications.
+    Set the verbosity level of the library. The default value is 0, which means
     that nothing is output on stderr. The more you increase this, the more
     debug output should be displayed on stderr for you.
     @param level The verbosity level desired. 0 for nothing, higher positive
@@ -510,7 +515,9 @@ void burn_drive_clear_whitelist(void);
                   before burn_finish(), and also before calling this function
                   burn_drive_scan() again.
     @param n_drives Returns the number of drive items in drive_infos.
-    @return Zero while scanning is not complete; non-zero when it is finished.
+    @return 0 while scanning is not complete
+            >0 when it is finished sucessfully,
+            <0 when finished but failed.
 */
 int burn_drive_scan(struct burn_drive_info *drive_infos[],
 		    unsigned int *n_drives);
@@ -545,6 +552,7 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[]);
     @param drive_info The drive to inquire. Usually some &(drive_infos[driveno])
     @param adr   An application provided array of at least BURN_DRIVE_ADR_LEN
                  characters size. The persistent address gets copied to it.
+    @return >0 success , <=0 error (due to libburn internal problem)
 */
 int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[]);
 
@@ -615,6 +623,7 @@ void burn_drive_release(struct burn_drive *drive, int eject);
     for details.
     @param drive The drive to query for a disc.
     @return The status of the drive, or what kind of disc is in it.
+            Note: BURN_DISC_UNGRABBED indicates wrong API usage
 */
 enum burn_disc_status burn_disc_get_status(struct burn_drive *drive);
 
@@ -643,7 +652,7 @@ struct burn_write_opts *burn_write_opts_new(struct burn_drive *drive);
 */
 void burn_write_opts_free(struct burn_write_opts *opts);
 
-/** Creates a write_opts struct for reading from the specified drive
+/** Creates a read_opts struct for reading from the specified drive
     must be freed with burn_write_opts_free
     @param drive The drive to read from
     @return The read_opts

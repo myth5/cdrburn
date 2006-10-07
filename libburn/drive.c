@@ -5,7 +5,10 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
-#include <assert.h>
+
+/* ts A61007 */
+/* #include <a ssert.h> */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -261,11 +264,26 @@ int burn_drive_unregister(struct burn_drive *d)
 
 void burn_drive_release(struct burn_drive *d, int le)
 {
-	if (d->released)
-		burn_print(1, "second release on drive!\n");
+	if (d->released) {
+		/* ts A61007 */
+		/* burn_print(1, "second release on drive!\n"); */
+		libdax_msgs_submit(libdax_messenger,
+				d->global_index, 0x00020105,
+				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+				"Drive is already released", 0, 0);
+		return;
+	}
 
+	/* ts A61007 */
 	/* ts A60906: one should not assume BURN_DRIVE_IDLE == 0 */
-	assert(d->busy == BURN_DRIVE_IDLE);
+	/* a ssert(d->busy == BURN_DRIVE_IDLE); */
+	if (d->busy != BURN_DRIVE_IDLE) {
+		libdax_msgs_submit(libdax_messenger,
+				d->global_index, 0x00020106,
+				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+				"Drive is busy on attempt to close", 0, 0);
+		return;
+	}
 
 	d->unlock(d);
 	if (le)
@@ -285,6 +303,26 @@ void burn_drive_release(struct burn_drive *d, int le)
 	}
 }
 
+
+
+/* ts A61007 : former void burn_wait_all() */
+int burn_drives_are_clear(void)
+{
+	int i;
+
+	for (i = burn_drive_count() - 1; i >= 0; --i) {
+		/* ts A60904 : ticket 62, contribution by elmom */
+		if (drive_array[i].global_index == -1)
+	continue;
+		if (drive_array[i].released)
+	continue;
+		return 0;
+	}
+	return 1;
+}
+
+
+#if 0
 void burn_wait_all(void)
 {
 	unsigned int i;
@@ -300,12 +338,14 @@ void burn_wait_all(void)
 			if (d->global_index==-1)
 				continue;
 
-			assert(d->released);
+			a ssert(d->released); 
 		}
 		if (!finished)
 			sleep(1);
 	}
 }
+#endif
+
 
 void burn_disc_erase_sync(struct burn_drive *d, int fast)
 {
@@ -346,7 +386,17 @@ void burn_disc_erase_sync(struct burn_drive *d, int fast)
 
 enum burn_disc_status burn_disc_get_status(struct burn_drive *d)
 {
-	assert(!d->released);
+	/* ts A61007 */
+	/* a ssert(!d->released); */
+	if (d->released) {
+		libdax_msgs_submit(libdax_messenger,
+				d->global_index, 0x00020108,
+				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+				"Drive is not grabbed on disc status inquiry",
+				0, 0);
+		return BURN_DISC_UNGRABBED;
+	}
+
 	return d->status;
 }
 
@@ -371,12 +421,13 @@ void burn_drive_cancel(struct burn_drive *d)
 	pthread_mutex_unlock(&d->access_lock);
 }
 
-#ifdef NIX
+/* ts A61007 : defunct because unused */
+#if 0
 int burn_drive_get_block_types(struct burn_drive *d,
 			       enum burn_write_types write_type)
 {
 	burn_print(12, "write type: %d\n", write_type);
-	assert(			/* (write_type >= BURN_WRITE_PACKET) && */
+	a ssert(			/* (write_type >= BURN_WRITE_PACKET) && */
 		      (write_type <= BURN_WRITE_RAW));
 	return d->block_types[write_type];
 }
@@ -407,8 +458,12 @@ static int drive_getcaps(struct burn_drive *d, struct burn_drive_info *out)
 {
 	struct scsi_inquiry_data *id;
 
-	assert(d->idata);
-	assert(d->mdata);
+	/* ts A61007 : now prevented in enumerate_common() */
+#if 0
+	a ssert(d->idata);
+	a ssert(d->mdata);
+#endif
+
 	if (!d->idata->valid || !d->mdata->valid)
 		return 0;
 
@@ -454,27 +509,21 @@ int burn_drive_scan_sync(struct burn_drive_info *drives[],
 	static int scanning = 0, scanned = 0, found = 0;
 	static unsigned num_scanned = 0, count = 0;
 	unsigned int i;
-#ifdef Libburn_ticket_62_enable_redundant_asserT
-	struct burn_drive *d;
-#endif
 
-	assert(burn_running);
+	/* ts A61007 : moved up to burn_drive_scan() */
+	/* a ssert(burn_running); */
 
 	if (!scanning) {
 		scanning = 1;
+
+		/* ts A61007 : test moved up to burn_drive_scan()
+		               burn_wait_all() is obsoleted */
+#if 0
 		/* make sure the drives aren't in use */
 		burn_wait_all();	/* make sure the queue cleans up
 					   before checking for the released
 					   state */
-
-		/* ts A60904 : ticket 62, contribution by elmom */
-		/* this is redundant with what is done in burn_wait_all() */
-#ifdef Libburn_ticket_62_enable_redundant_asserT
-		d = drive_array;
-		count = burn_drive_count();
-		for (i = 0; i < count; ++i, ++d)
-			assert(d->released == 1);
-#endif /* Libburn_ticket_62_enable_redundant_asserT */
+#endif /* 0 */
 
 		/* refresh the lib's drives */
 		sg_enumerate();
@@ -520,7 +569,7 @@ void burn_drive_info_free(struct burn_drive_info drive_infos[])
 	   burn_drive_info is not the manager of burn_drive but only its
 	   spokesperson. To my knowlege drive_infos from burn_drive_scan()
 	   are not memorized globally. */
-	if(drive_infos != NULL) /* and this NULL test is deadly necessary */
+	if(drive_infos != NULL)
 		free((void *) drive_infos);
 
 	burn_drive_free_all();
@@ -650,26 +699,19 @@ int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[], char* adr,
 	fprintf(stderr,"libburn: experimental: burn_drive_scan_and_grab(%s)\n",
 		adr);
 */
-	while (!burn_drive_scan(drive_infos, &n_drives))
+	while (1) {
+		ret = burn_drive_scan(drive_infos, &n_drives);
+		if (ret < 0)
+			return -1;
+		if (ret > 0)
+	break;
 		usleep(1002);
+	}
 	if (n_drives <= 0)
 		return 0;
 /*
 	fprintf(stderr, "libburn: experimental: n_drives == %d\n",n_drives);
 */
-
-/* ts A60908 : seems we get rid of this :) */
-#ifdef Libburn_grab_release_and_grab_agaiN
-	if (load) {
-		/* RIP-14.5 + LITE-ON 48125S produce a false status
-		   if tray was unloaded */
- 		/* Therefore the first grab is just for loading */
-		ret= burn_drive_grab(drive_infos[0]->drive, 1);
-		if (ret != 1) 
-			return -1;
-		burn_drive_release(drive_infos[0]->drive,0);
-	}
-#endif /* Libburn_grab_release_and_grab_agaiN */
 
 	ret = burn_drive_grab(drive_infos[0]->drive, load);
 	if (ret != 1)
@@ -704,7 +746,13 @@ int burn_drive_adr_debug_msg(char *fmt, char *arg)
 /** Inquire the persistent address of the given drive. */
 int burn_drive_raw_get_adr(struct burn_drive *d, char adr[])
 {
-	assert(strlen(d->devname) < BURN_DRIVE_ADR_LEN);
+	if (strlen(d->devname) >= BURN_DRIVE_ADR_LEN) {
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+				0x00020110,
+				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				"Persistent drive address too long", 0, 0);
+		return -1;
+	}
 	strcpy(adr,d->devname);
 	return 1;
 }
@@ -715,7 +763,6 @@ int burn_drive_get_adr(struct burn_drive_info *drive_info, char adr[])
 {
 	int ret;
 
-	assert(drive_info->drive!=NULL);
 	ret = burn_drive_raw_get_adr(drive_info->drive, adr);
 	return ret;
 }
@@ -818,7 +865,9 @@ int burn_drive_obtain_scsi_adr(char *path,
 		if (drive_array[i].global_index < 0)
 	continue;
 		ret = burn_drive_raw_get_adr(&(drive_array[i]),adr);
-		if (ret <= 0)
+		if (ret < 0)
+			return -1;
+		if (ret == 0)
 	continue;
 		if (strcmp(adr, path) == 0) {
 			*host_no = drive_array[i].host;

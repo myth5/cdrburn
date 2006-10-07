@@ -38,7 +38,11 @@ struct burn_drive *burn_drive_register(struct burn_drive *);
 int burn_drive_unregister(struct burn_drive *d);
 
 unsigned int burn_drive_count(void);
-void burn_wait_all(void);
+
+/* ts A61007 */
+/* void burn_wait_all(void); */
+int burn_drives_are_clear(void);
+
 int burn_sector_length_write(struct burn_drive *d);
 int burn_track_control(struct burn_drive *d, int);
 void burn_write_empty_sector(int fd);

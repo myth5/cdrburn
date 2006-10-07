@@ -6,6 +6,7 @@
 #include "write.h"
 #include "options.h"
 #include "async.h"
+#include "init.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -126,21 +127,41 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 	struct scan_opts o;
 	int ret = 0;
 
+	/* ts A61006 : moved up from burn_drive_scan_sync , former assert */
+	if (!burn_running) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020109,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Library not running", 0, 0);
+		*drives = NULL;
+		*n_drives = 0;
+		return -1;
+	}
+
 	/* cant be anything working! */
 
 	/* ts A61006 */
 	/* a ssert(!(workers && workers->drive)); */
 	if (workers != NULL && workers->drive != NULL) {
-		libdax_msgs_submit(libdax_messenger,
-			workers->drive->global_index, 0x00020102,
+drive_is_active:;
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020102,
 			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
 			"A drive operation is still going on (want to scan)",
 			0, 0);
+		*drives = NULL;
+		*n_drives = 0;
 		return -1;
 	}
 
 	if (!workers) {
 		/* start it */
+
+		/* ts A61007 : test moved up from burn_drive_scan_sync()
+				was burn_wait_all() */
+		if (!burn_drives_are_clear())
+			goto drive_is_active;
+		*drives = NULL;
+		*n_drives = 0;
+
 		o.drives = drives;
 		o.n_drives = n_drives;
 		o.done = 0;
@@ -152,12 +173,13 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 
 		/* ts A61006 */
 		/* a ssert(workers == NULL); */
-		if (workers != NULL)
+		if (workers != NULL) {
 			libdax_msgs_submit(libdax_messenger, -1, 0x00020101,
 				LIBDAX_MSGS_SEV_WARNING, LIBDAX_MSGS_PRIO_HIGH,
 			     "After scan a  drive operation is still going on",
 				0, 0);
-		return -1;
+			return -1;
+		}
 
 	} else {
 		/* still going */

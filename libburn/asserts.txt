@@ -87,16 +87,18 @@ ts A61006
 
 ---------------------------------------------------------------------
 
-   6) libburn/drive.c:	assert(d->busy == BURN_DRIVE_IDLE);
+++ 6) libburn/drive.c:	assert(d->busy == BURN_DRIVE_IDLE);
 API burn_drive_release():
 A drive is not idle on release.
 
 : Severe Application Error
 => Same as 4)
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   7) libburn/drive.c:			assert(d->released);
+++ 7) libburn/drive.c:			assert(d->released);
 burn_wait_all()
 A drive is found grabbed.
 
@@ -104,12 +106,16 @@ Called by burn_drive_scan_sync(), thread under API burn_drive_scan()
 Called by API burn_finish
 
 : Severe Application Error
+=> rename and redefine burn_wait_all() : now burn_drives_are_clear()
+=> change all use of burn_wait_all()
 => Move tests up to burn_drive_scan()
-=> There: return -1; redefine @return in API , issue LIBDAX_MSGS_SEV_SORRY
+=> There: return -1; issue LIBDAX_MSGS_SEV_SORRY
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   8) libburn/drive.c:	assert(!d->released);
+++ 8) libburn/drive.c:	assert(!d->released);
 API burn_disc_get_status()
 Attempt to read status of non-grabbed drive.
 
@@ -117,20 +123,24 @@ Attempt to read status of non-grabbed drive.
 => extend enum burn_disc_status by BURN_DISC_UNGRABBED
 => return BURN_DISC_UNGRABBED, issue LIBDAX_MSGS_SEV_SORRY
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   9) libburn/drive.c:	assert(			/* (write_type >= BURN_WRITE_PACKET) && */
+++ 9) libburn/drive.c:	assert(			/* (write_type >= BURN_WRITE_PACKET) && */
 burn_drive_get_block_types():
-Will not work on BURN_WRITE_RAW.
+Will not work on BURN_WRITE below BURN_WRITE_RAW.
 
 Called by -nobody- ?
 
 : Severe Application Error
 => inactivate unused function
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   10) libburn/drive.c:	assert(d->idata);
+++ 10) libburn/drive.c:	assert(d->idata);
        libburn/drive.c:	assert(d->mdata);
 static drive_getcaps():
 sg.c:enumerate_common() did not succeed in creating a proper struct burn_drive
@@ -139,11 +149,14 @@ Called by burn_drive_scan_sync()
 : Severe System Error
 => This could possibly really stay an abort() because the reason is
    a plain failure of the system's memory management.
-=> ? Detect this failure already in enumerate_common() ?
+=> Detect this failure already in enumerate_common(),
+   issue LIBDAX_MSGS_SEV_FATAL, return
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   11) libburn/drive.c:	assert(burn_running);
+++ 11) libburn/drive.c:	assert(burn_running);
 burn_drive_scan_sync():
 The library was not initialized.
 
@@ -151,20 +164,24 @@ Called as thread by API burn_drive_scan()
 
 : Severe Application Error
 => Move this test up to burn_drive_scan()
-=> There: return -1; redefine @return in API , issue LIBDAX_MSGS_SEV_SORRY
+=> There: return -1; redefine @return in API , issue LIBDAX_MSGS_SEV_FATAL
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   12) libburn/drive.c:			assert(d->released == 1);
+++ 12) libburn/drive.c:			assert(d->released == 1);
 burn_drive_scan_sync():
 Inactivated
 
 : (Severe Application Error)
-=> Same as 7)
+=> throw out inactivated code
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   13) libburn/drive.c:	assert(strlen(d->devname) < BURN_DRIVE_ADR_LEN);
+++ 13) libburn/drive.c:	assert(strlen(d->devname) < BURN_DRIVE_ADR_LEN);
 burn_drive_raw_get_adr():
 An enumerated device address is longer than the API's maximum length
 
@@ -172,18 +189,21 @@ Called by API burn_drive_get_adr()
 Called by API burn_drive_obtain_scsi_adr()
 
 : Severe Libburn Error
-=> return -1; in all three functions, enhance API @return docs
+=> return -1; in all three functions, enhance burn_drive_get_adr @return docs
 => issue LIBDAX_MSGS_SEV_SORRY
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-  14) libburn/drive.c:	assert(drive_info->drive!=NULL);
+++ 14) libburn/drive.c:	assert(drive_info->drive!=NULL);
 API burn_drive_get_adr():
 Drive info has no drive attached.
 
-: Severe Libburn Error
-=> return -1; enhance API @return docs
-=> issue LIBDAX_MSGS_SEV_SORRY
+: Severe Libburn Error (unlikely, will eventually SIGSEGV on NULL)
+=> delete assert
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
