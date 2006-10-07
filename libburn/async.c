@@ -250,6 +250,15 @@ void burn_disc_write(struct burn_write_opts *opts, struct burn_disc *disc)
 			0, 0);
 		return;
 	}
+	/* ts A61007 : obsolete Assert in spc_select_write_params() */
+	if (!opts->drive->mdata->valid) {
+		libdax_msgs_submit(libdax_messenger,
+				opts->drive->global_index, 0x00020113,
+				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+				"Drive capabilities not inquired yet", 0, 0);
+		return;
+	}
+
 	o.drive = opts->drive;
 	o.opts = opts;
 	o.disc = disc;

@@ -318,6 +318,8 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020110 (FATAL,HIGH)   = Persistent drive address too long
  0x00020111 (FATAL,HIGH)   = Could not allocate new auxiliary object
  0x00020112 (SORRY,HIGH)   = Bad combination of write_type and block_type
+ 0x00020113 (FATAL,HIGH)   = Drive capabilities not inquired yet
+
 
 ------------------------------------------------------------------------------
 

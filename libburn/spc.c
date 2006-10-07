@@ -202,7 +202,10 @@ void spc_select_error_params(struct burn_drive *d,
 	c.page = &buf;
 	c.page->bytes = 0;
 	c.page->sectors = 0;
-	assert(d->mdata->valid);
+
+	/* ts A61007 : moved up to only caller burn_disc_read() */
+	/* a ssert(d->mdata->valid); */
+
 	memset(c.page->data, 0, 8 + 2 + d->mdata->retry_page_length);
 	c.page->bytes = 8 + 2 + d->mdata->retry_page_length;
 	c.page->data[8] = 1;
@@ -227,8 +230,9 @@ void spc_sense_write_params(struct burn_drive *d)
 	unsigned char *page;
 	struct command c;
 
-	assert(d->mdata->cdr_write || d->mdata->cdrw_write ||
-	       d->mdata->dvdr_write || d->mdata->dvdram_write);
+	/* ts A61007 : Done in soft at only caller burn_drive_grab() */
+	/* a ssert(d->mdata->cdr_write || d->mdata->cdrw_write ||
+	       d->mdata->dvdr_write || d->mdata->dvdram_write); */
 
 	memcpy(c.opcode, SPC_MODE_SENSE, sizeof(SPC_MODE_SENSE));
 	c.retry = 1;
@@ -256,7 +260,9 @@ void spc_select_write_params(struct burn_drive *d,
 	struct command c;
 	int bufe, sim;
 
-	assert(o->drive == d);
+	/* ts A61007 : All current callers are safe. */
+	/* a ssert(o->drive == d); */
+
 	memcpy(c.opcode, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
 	c.retry = 1;
 	c.oplen = sizeof(SPC_MODE_SELECT);
@@ -264,7 +270,10 @@ void spc_select_write_params(struct burn_drive *d,
 	c.page = &buf;
 	c.page->bytes = 0;
 	c.page->sectors = 0;
-	assert(d->mdata->valid);
+
+	/* ts A61007 : moved up to burn_disc_write() */
+	/* a ssert(d->mdata->valid); */
+
 	memset(c.page->data, 0, 8 + 2 + d->mdata->write_page_length);
 	c.page->bytes = 8 + 2 + d->mdata->write_page_length;
 	c.page->data[8] = 5;
