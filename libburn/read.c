@@ -3,7 +3,10 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
-#include <assert.h>
+
+/* ts A61007 */
+/* #include <a ssert.h> */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -37,11 +40,13 @@ void burn_disc_read(struct burn_drive *d, const struct burn_read_opts *o)
 	struct buffer page;
 	int speed;
 
-	assert((o->version & 0xfffff000) == (OPTIONS_VERSION & 0xfffff000));
+	/* ts A61007 : if this function gets revived, then these
+			tests have to be done more graceful */
+	a ssert((o->version & 0xfffff000) == (OPTIONS_VERSION & 0xfffff000));
+	a ssert(!d->busy);
+	a ssert(d->toc->valid);
+	a ssert(o->datafd != -1);
 
-	assert(!d->busy);
-	assert(d->toc->valid);
-	assert(o->datafd != -1);
 /* XXX not sure this is a good idea.  copy it? */
 /* XXX also, we have duplicated data now, do we remove the fds from struct 
 drive, or only store a subset of the _opts structs in drives */
