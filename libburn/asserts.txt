@@ -4,7 +4,8 @@ Format:
 
 ------------------------------------------------------------------------------
 
-  Number) grep'ed line
+   Number) grep'ed line
+   (++ before number means: is fully done, + means is done so far )
 function():
 Description of abort condition.
 
@@ -13,9 +14,11 @@ Possible callers and their relation to the abort condition.
 : Error Evaluation
 => Consequences
 
+Eventual implementation timestamp
+
 ------------------------------------------------------------------------------
 
-  1) libburn/async.c:	assert(a != NULL);	/* wasn't found.. this should not be possible */
+++ 1) libburn/async.c:	assert(a != NULL);	/* wasn't found.. this should not be possible */
 static remove_worker():
 A thread describing structure (struct w_list) could not be found in
 order to be released.
@@ -26,12 +29,13 @@ Called by static write_disc_worker_func(), thread under API burn_disc_write()
 All three want to clean up after they are done.
 
 : Severe Libburn Error
-=> Plain burn_finish() is admissible.
-=> But a mere LIBDAX_MSGS_SEV_WARNING could be justified, too.
+=> issue LIBDAX_MSGS_SEV_WARNING
+
+ts A61006
 
 ------------------------------------------------------------------------------
 
-   2) libburn/async.c:	assert(!(workers && workers->drive));
+++ 2) libburn/async.c:	assert(!(workers && workers->drive));
 API burn_drive_scan():
 Before spawning a thread, the function refuses work because another
 drive activity is going on.
@@ -39,9 +43,11 @@ drive activity is going on.
 : Severe Application Error
 => return -1; redefine @return in API , issue LIBDAX_MSGS_SEV_SORRY
 
+ts A61006
+
 ------------------------------------------------------------------------------
 
-   3) libburn/async.c:		assert(workers == NULL);
++  3) libburn/async.c:		assert(workers == NULL);
 API burn_drive_scan():
 After thread is done and remover_worker() succeeded, there is still a
 worker registered. Shall probably detect roguely appeared burn or
@@ -50,9 +56,11 @@ erase runs. (I consider to install a mutex shielded function for that.)
 : Severe Libburn Error
 => Same as 1)
 
+ts A61006
+
 ------------------------------------------------------------------------------
 
-   4) libburn/async.c:	assert(drive);
+++ 4) libburn/async.c:	assert(drive);
       libburn/async.c:	assert(!SCAN_GOING());
       libburn/async.c:	assert(!find_worker(drive));
 API burn_disc_erase():
@@ -63,15 +71,19 @@ a parallel activity on another drive.
 : Severe Application Error
 => (no return value), issue LIBDAX_MSGS_SEV_SORRY
 
+ts A61006
+
 ------------------------------------------------------------------------------
 
-   5) libburn/async.c:	assert(!SCAN_GOING());
+++ 5) libburn/async.c:	assert(!SCAN_GOING());
       libburn/async.c:	assert(!find_worker(opts->drive));
 API burn_disc_write():
 Same as 4)
 
 : Severe Application Error
 => Same as 4)
+
+ts A61006
 
 ---------------------------------------------------------------------
 

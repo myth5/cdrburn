@@ -8,8 +8,13 @@
 #include "async.h"
 
 #include <pthread.h>
-#include <assert.h>
 #include <stdlib.h>
+
+/*
+#include <a ssert.h>
+*/
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
 
 #define SCAN_GOING() (workers && !workers->drive)
 
@@ -100,7 +105,13 @@ static void remove_worker(pthread_t th)
 			free(a);
 			break;
 		}
-	assert(a != NULL);	/* wasn't found.. this should not be possible */
+
+	/* ts A61006 */
+	/* a ssert(a != NULL);/ * wasn't found.. this should not be possible */
+	if (a == NULL)
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020101,
+			LIBDAX_MSGS_SEV_WARNING, LIBDAX_MSGS_PRIO_HIGH,
+			"remove_worker() cannot find given worker item", 0, 0);
 }
 
 static void *scan_worker_func(struct w_list *w)
@@ -116,7 +127,17 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 	int ret = 0;
 
 	/* cant be anything working! */
-	assert(!(workers && workers->drive));
+
+	/* ts A61006 */
+	/* a ssert(!(workers && workers->drive)); */
+	if (workers != NULL && workers->drive != NULL) {
+		libdax_msgs_submit(libdax_messenger,
+			workers->drive->global_index, 0x00020102,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"A drive operation is still going on (want to scan)",
+			0, 0);
+		return -1;
+	}
 
 	if (!workers) {
 		/* start it */
@@ -128,7 +149,16 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 		/* its done */
 		ret = workers->u.scan.done;
 		remove_worker(workers->thread);
-		assert(workers == NULL);
+
+		/* ts A61006 */
+		/* a ssert(workers == NULL); */
+		if (workers != NULL)
+			libdax_msgs_submit(libdax_messenger, -1, 0x00020101,
+				LIBDAX_MSGS_SEV_WARNING, LIBDAX_MSGS_PRIO_HIGH,
+			     "After scan a  drive operation is still going on",
+				0, 0);
+		return -1;
+
 	} else {
 		/* still going */
 	}
@@ -146,9 +176,25 @@ void burn_disc_erase(struct burn_drive *drive, int fast)
 {
 	struct erase_opts o;
 
-	assert(drive);
-	assert(!SCAN_GOING());
-	assert(!find_worker(drive));
+	/* ts A61006 */
+	/* a ssert(drive); */
+	/* a ssert(!SCAN_GOING()); */
+	/* a ssert(!find_worker(drive)); */
+	if((drive == NULL)) {
+		libdax_msgs_submit(libdax_messenger, drive->global_index,
+			0x00020104,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"NULL pointer caught in burn_disc_erase", 0, 0);
+		return;
+	}
+	if ((SCAN_GOING()) || find_worker(drive)) {
+		libdax_msgs_submit(libdax_messenger, drive->global_index,
+			0x00020102,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"A drive operation is still going on (want to erase)",
+			0, 0);
+		return;
+	}
 
 	o.drive = drive;
 	o.fast = fast;
@@ -171,8 +217,17 @@ void burn_disc_write(struct burn_write_opts *opts, struct burn_disc *disc)
 {
 	struct write_opts o;
 
-	assert(!SCAN_GOING());
-	assert(!find_worker(opts->drive));
+	/* ts A61006 */
+	/* a ssert(!SCAN_GOING()); */
+	/* a ssert(!find_worker(opts->drive)); */
+	if ((SCAN_GOING()) || find_worker(opts->drive)) {
+		libdax_msgs_submit(libdax_messenger, opts->drive->global_index,
+			0x00020102,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"A drive operation is still going on (want to write)",
+			0, 0);
+		return;
+	}
 	o.drive = opts->drive;
 	o.opts = opts;
 	o.disc = disc;

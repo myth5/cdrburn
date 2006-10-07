@@ -293,6 +293,8 @@ Range "elmom"              :  0x00010000 to 0x0001ffff
 ------------------------------------------------------------------------------
 Range "scdbackup"          :  0x00020000 to 0x0002ffff
 
+ Acessing and defending drives:
+
  0x00020001 (SORRY,LOW)    = Cannot open busy device
  0x00020002 (SORRY,HIGH)   = Encountered error when closing drive
  0x00020003 (FATAL,HIGH)   = Could not grab drive
@@ -301,6 +303,12 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020006 (FATAL,HIGH)   = Too many scsi siblings
  0x00020007 (NOTE,HIGH)    = Closed O_EXCL scsi siblings
            
+ From the hunt on assert:
+
+ 0x00020101 (WARNING,HIGH) = Cannot find given worker item
+ 0x00020102 (SORRY,HIGH)   = A drive operation is still going on
+ 0x00020103 (WARNING,HIGH) = After scan a drive operation is still going on
+ 0x00020104 (SORRY,HIGH)   = NULL pointer caught
 
 ------------------------------------------------------------------------------
 
