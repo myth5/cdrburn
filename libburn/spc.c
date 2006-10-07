@@ -375,6 +375,7 @@ void spc_probe_write_modes(struct burn_drive *d)
 	}
 }
 
+/** @return -1 = error */
 int spc_block_type(enum burn_block_types b)
 {
 	switch (b) {
@@ -400,6 +401,9 @@ int spc_block_type(enum burn_block_types b)
 		return 12;
 	case BURN_BLOCK_MODE2_OK:
 		return 13;
+	default:
+		return -1;
 	}
-	assert(0);
+	/* ts A61007 : already prevented in burn_write_opts_set_write_type() */
+	/* a ssert(0); */;
 }

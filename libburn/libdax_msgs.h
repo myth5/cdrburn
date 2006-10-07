@@ -303,7 +303,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020006 (FATAL,HIGH)   = Too many scsi siblings
  0x00020007 (NOTE,HIGH)    = Closed O_EXCL scsi siblings
            
- From the hunt on assert:
+ From the hunt on Assert:
 
  0x00020101 (WARNING,HIGH) = Cannot find given worker item
  0x00020102 (SORRY,HIGH)   = A drive operation is still going on
@@ -316,6 +316,8 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020108 (FATAL,HIGH)   = Could not allocate new drive object
  0x00020109 (FATAL,HIGH)   = Library not running
  0x00020110 (FATAL,HIGH)   = Persistent drive address too long
+ 0x00020111 (FATAL,HIGH)   = Could not allocate new auxiliary object
+ 0x00020112 (SORRY,HIGH)   = Bad combination of write_type and block_type
 
 ------------------------------------------------------------------------------
 

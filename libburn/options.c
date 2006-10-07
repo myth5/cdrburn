@@ -2,14 +2,27 @@
 #include "options.h"
 #include "transport.h"
 
-#include <assert.h>
+/* ts A61007 */
+/* #include <a ssert.h> */
+
 #include <stdlib.h>
 #include <string.h>
+
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
+
 struct burn_write_opts *burn_write_opts_new(struct burn_drive *drive)
 {
 	struct burn_write_opts *opts;
 
 	opts = malloc(sizeof(struct burn_write_opts));
+	if (opts == NULL) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020111,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Could not allocate new auxiliary object", 0, 0);
+		return NULL;
+	}
 	opts->drive = drive;
 	opts->refcount = 1;
 	opts->write_type = BURN_WRITE_TAO;
@@ -61,14 +74,32 @@ int burn_write_opts_set_write_type(struct burn_write_opts *opts,
 				   enum burn_write_types write_type,
 				   int block_type)
 {
-	if ((write_type == BURN_WRITE_SAO && block_type == BURN_BLOCK_SAO) ||
-	    (opts->drive->block_types[write_type] & block_type)) {
-		opts->write_type = write_type;
-		opts->block_type = block_type;
-		return 1;
+	int sector_get_outmode(enum burn_write_types write_type,
+				enum burn_block_types block_type);
+	int spc_block_type(enum burn_block_types b);
+	
+	/* ts A61007 */
+	if (! ( (write_type == BURN_WRITE_SAO && block_type == BURN_BLOCK_SAO)
+		 || (opts->drive->block_types[write_type] & block_type) ) ) {
+bad_combination:;
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020112,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"Bad combination of write_type and block_type", 0, 0);
+		return 0;
 	}
-	assert(0);
-	return 0;
+	/*  ts A61007 : obsoleting Assert in sector.c:get_outmode() */
+	if (sector_get_outmode(write_type, (enum burn_block_types) block_type)
+		 == -1)
+		goto bad_combination;
+	/*  ts A61007 : obsoleting Assert in spc.c:spc_block_type() */
+	if (spc_block_type((enum burn_block_types) block_type) == -1)
+		goto bad_combination;
+
+	opts->write_type = write_type;
+	opts->block_type = block_type;
+	return 1;
+
+	/* a ssert(0); */
 }
 
 void burn_write_opts_set_toc_entries(struct burn_write_opts *opts, int count,

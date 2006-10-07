@@ -37,13 +37,14 @@ static void uncook_subs(unsigned char *dest, unsigned char *source)
 	}
 }
 
-/* 0 means "same as inmode" */
-static int get_outmode(struct burn_write_opts *o)
+/* @return >=0 : valid , <0 invalid */
+int sector_get_outmode(enum burn_write_types write_type,
+		    enum burn_block_types block_type)
 {
-	if (o->write_type == BURN_WRITE_SAO)
+	if (write_type == BURN_WRITE_SAO)
 		return 0;
 	else
-		switch (o->block_type) {
+		switch (block_type) {
 		case BURN_BLOCK_RAW0:
 			return BURN_MODE_RAW;
 		case BURN_BLOCK_RAW16:
@@ -54,9 +55,24 @@ static int get_outmode(struct burn_write_opts *o)
 			return BURN_MODE_RAW | BURN_SUBCODE_R96;
 		case BURN_BLOCK_MODE1:
 			return BURN_MODE1;
+		default:
+			return -1;
 		}
-	assert(0);		/* return BURN_MODE_UNIMPLEMENTED :) */
+
+	/* ts A61007 : now handled in burn_write_opts_set_write_type() */
+	/* a ssert(0); */	/* return BURN_MODE_UNIMPLEMENTED :) */
 }
+
+/* 0 means "same as inmode" */
+static int get_outmode(struct burn_write_opts *o)
+{
+	/* ts A61007 */
+	return sector_get_outmode(o->write_type, o->block_type);
+
+	/* -1 is prevented by check in burn_write_opts_set_write_type() */
+	/* a ssert(0); */		/* return BURN_MODE_UNIMPLEMENTED :) */
+}
+
 
 static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 {

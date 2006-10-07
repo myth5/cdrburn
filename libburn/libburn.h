@@ -502,7 +502,7 @@ void burn_drive_clear_whitelist(void);
 
 
 /** Scan for drives. This function MUST be called until it returns nonzero.
-    No drives can be in use when this is called or it will assert.
+    No drives may be in use when this is called.
     All drive pointers are invalidated by using this function. Do NOT store
     drive pointers across calls to this function or death AND pain will ensue.
     After this call all drives depicted by the returned array are subject
@@ -643,7 +643,7 @@ enum burn_drive_status burn_drive_get_status(struct burn_drive *drive,
 /** Creates a write_opts struct for burning to the specified drive
     must be freed with burn_write_opts_free
     @param drive The drive to write with
-    @return The write_opts
+    @return The write_opts, NULL on error
 */
 struct burn_write_opts *burn_write_opts_new(struct burn_drive *drive);
 

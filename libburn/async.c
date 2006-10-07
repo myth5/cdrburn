@@ -127,7 +127,7 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 	struct scan_opts o;
 	int ret = 0;
 
-	/* ts A61006 : moved up from burn_drive_scan_sync , former assert */
+	/* ts A61006 : moved up from burn_drive_scan_sync , former Assert */
 	if (!burn_running) {
 		libdax_msgs_submit(libdax_messenger, -1, 0x00020109,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
