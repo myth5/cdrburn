@@ -131,7 +131,7 @@ int burn_drive_scan(struct burn_drive_info *drives[], unsigned int *n_drives)
 	if (!burn_running) {
 		libdax_msgs_submit(libdax_messenger, -1, 0x00020109,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
-			"Library not running", 0, 0);
+			"Library not running (on attempt to scan)", 0, 0);
 		*drives = NULL;
 		*n_drives = 0;
 		return -1;

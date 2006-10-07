@@ -1,7 +1,10 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
 #include <unistd.h>
-#include <assert.h>
+
+/* ts A61007 */
+/* #include <a ssert.h> */
+
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
@@ -79,15 +82,17 @@ int burn_initialize(void)
 
 void burn_finish(void)
 {
-	assert(burn_running);
+	/* ts A61007 : assume no messageing system */
+	/* a ssert(burn_running); */
+	if (!burn_running)
+		return;
 
 	/* ts A61007 */
 	/* burn_wait_all(); */
 	if (!burn_drives_are_clear()) {
 		libdax_msgs_submit(libdax_messenger, -1, 0x00020107,
 			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
-			"Drive is busy on attempt to shut down library",
-			0, 0);
+			"Drive is busy on attempt to shut down library", 0, 0);
 		return;
 	}
 
@@ -102,25 +107,13 @@ void burn_finish(void)
 
 
 /* ts A60813 */
-/** Set parameters for behavior on opening device files. To be called early
-    after burn_initialize() and before any bus scan. But not mandatory at all.
-    @param exclusive Try to open only devices which are not marked as busy
-                     and try to mark them busy if opened sucessfully. (O_EXCL)
-                     There are kernels which simply don't care about O_EXCL.
-                     Some have it off, some have it on, some are switchable.
-                     Values: 0=off, 1=on, 2=on,O_EXCL scsi siblings (sr,scd,st)
-    @param blocking  Try to wait for drives which do not open immediately but
-                     also do not return an error as well. (O_NONBLOCK)
-                     This might stall indefinitely with /dev/hdX hard disks.
-    @param abort_on_busy  Unconditionally abort process when a non blocking
-                          exclusive opening attempt indicates a busy drive.
-                          Use this only after thorough tests with your app.
-    Parameter value 1 enables a feature, 0 disables.
-    Default is (1,0,0). Have a good reason before you change it.
-*/
+/** API function. See libburn.h */
 void burn_preset_device_open(int exclusive, int blocking, int abort_on_busy)
 {
-	assert(burn_running);
+	/* ts A61007 */
+	/* a ssert(burn_running); */
+	if (!burn_running)
+		return;	
 
 	burn_sg_open_o_excl= exclusive;
 	burn_sg_open_o_nonblock= !blocking;
