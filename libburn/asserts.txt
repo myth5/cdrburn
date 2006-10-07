@@ -207,21 +207,25 @@ ts A61007
 
 ------------------------------------------------------------------------------
 
-   15) libburn/init.c:	assert(burn_running);
+++ 15) libburn/init.c:	assert(burn_running);
 API burn_finish():
 The library is not initialized
 
 : Severe Application Error
 => return (assume no msg system)
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   16) libburn/init.c:	assert(burn_running);
+++ 16) libburn/init.c:	assert(burn_running);
 API burn_preset_device_open():
 The library is not initialized
 
 : Severe Application Error
-=> return -1; (assume no msg system)
+=> return (assume no msg system)
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
@@ -305,7 +309,7 @@ Called by toc_find_modes(), does the same assert. To be solved there.
 
 ------------------------------------------------------------------------------
 
-   24) libburn/options.c:	assert(0);
+++ 24) libburn/options.c:	assert(0);
 API burn_write_opts_set_write_type():
 Detects unsuitable enum burn_write_types write_type and int block_type.
 API promises return 0 on failure
@@ -313,12 +317,16 @@ API promises return 0 on failure
 : Severe Application Error
 => issue LIBDAX_MSGS_SEV_SORRY
 => should also detect problem of 26) : wrong write_type,block_type combination
+   by calling sector_get_outmode() and checking for -1
 => should also detect problem of 41) : unknown block_type
+   by spc_block_type() and checking for -1
 => delete assert(0)
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   25) libburn/read.c:	assert((o->version & 0xfffff000) == (OPTIONS_VERSION & 0xfffff000));
+++ 25) libburn/read.c:	assert((o->version & 0xfffff000) == (OPTIONS_VERSION & 0xfffff000));
        libburn/read.c:	assert(!d->busy);
        libburn/read.c:	assert(d->toc->valid);
        libburn/read.c:	assert(o->datafd != -1);
@@ -333,15 +341,20 @@ OPTIONS_VERSION does not occur outside this line
 ( 37) => catch ! d->mdata->valid )
 => :)
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   26) libburn/sector.c:	assert(0);		/* return BURN_MODE_UNIMPLEMENTED :) */
+++ 26) libburn/sector.c:	assert(0);		/* return BURN_MODE_UNIMPLEMENTED :) */
 static get_outmode():
 burn_write_opts is wrongly programmed with .write_type and .block_type
 
 : Severe Application Error
-=> This should be handled by burn_write_opts_set_write_type()
+=> This gets handled by burn_write_opts_set_write_type()
+   ts A61007 by new semi-public sector_get_outmode()
 => delete assert()
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
@@ -402,25 +415,28 @@ process_q()
 
 ------------------------------------------------------------------------------
 
-   32) libburn/sg.c:		assert("drive busy" == "non fatal");
+++ 32) libburn/sg.c:		assert("drive busy" == "non fatal");
 sg_handle_busy_device():
 Intentional abort preset by the app
 
 => change to abort()
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   33) libburn/sg.c:	assert(fd != -1337);
+++ 33) libburn/sg.c:	assert(fd != -1337);
 sg_grab():
 The drive device file could not be opened
 
 :Severe External Problem
-=> issue LIBDAX_MSGS_SEV_FATAL
-=> return 0
+=> obsolete by normal drive open failure handling
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   34) libburn/sg.c:		assert(!c->page);
+++ 34) libburn/sg.c:		assert(!c->page);
 sg_issue_command():
 An SCSI command of direction NO_TRANSFER may not have a .page != NULL.
 
@@ -429,6 +445,8 @@ it is sufficient to just not use it.
 
 : Libburn Error
 => enhance internal logics of sg_issue_command()
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
@@ -508,7 +526,7 @@ Called by (see 39)
 
 ------------------------------------------------------------------------------
 
-   41) libburn/spc.c:	assert(0);
+++ 41) libburn/spc.c:	assert(0);
 spc_block_type():
 Unknown value with enum burn_block_types
 
@@ -517,7 +535,10 @@ Called by spc_select_write_params, uses burn_write_opts.block_type,
 
 : Severe Application Error
 => catch in API burn_write_opts_set_write_type
+   by calling spc_block_type()
 => delete assert
+
+ts A61007
 
 ------------------------------------------------------------------------------
 

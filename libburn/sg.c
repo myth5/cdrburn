@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/poll.h>
 #include <linux/hdreg.h>
+#include <stdlib.h>
 
 #include "transport.h"
 #include "drive.h"
@@ -99,7 +100,10 @@ int sg_handle_busy_device(char *fname, int os_errno)
 		fprintf(stderr,
 	"\nlibburn: FATAL : Application triggered abort on busy device '%s'\n",
 			fname);
-		assert("drive busy" == "non fatal");
+
+		/* ts A61007 */
+		abort();
+		/* a ssert("drive busy" == "non fatal"); */
 	}
 
 	/* ts A60924 : now reporting to libdax_msgs */
@@ -451,7 +455,7 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	out.mdata = malloc(sizeof(struct scsi_mode_data));
 	out.mdata->valid = 0;
 
-	/* ts A61007 : obsolete assert() in drive_getcaps() */
+	/* ts A61007 : obsolete Assert in drive_getcaps() */
 	if(out.idata == NULL || out.mdata == NULL) {
 		libdax_msgs_submit(libdax_messenger, -1, 0x00020108,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
@@ -544,8 +548,10 @@ int sg_grab(struct burn_drive *d)
 	} else
 		fd= d->fd;
 
-	assert(fd != -1337);
-	if (-1 != fd) {
+	/* ts A61007 : this is redundant */
+	/* a ssert(fd != -1337); */
+	
+	if (fd >= 0) {
 
 		/* ts A60814:
 		   according to my experiments this test would work now ! */
@@ -606,7 +612,7 @@ int sg_release(struct burn_drive *d)
 
 int sg_issue_command(struct burn_drive *d, struct command *c)
 {
-	int done = 0;
+	int done = 0, no_c_page = 0;
 	int err;
 	sg_io_hdr_t s;
 
@@ -639,7 +645,10 @@ this is valid during the mode probe in scan
 		s.dxfer_direction = SG_DXFER_FROM_DEV;
 	else if (c->dir == NO_TRANSFER) {
 		s.dxfer_direction = SG_DXFER_NONE;
-		assert(!c->page);
+
+		/* ts A61007 */
+		/* a ssert(!c->page); */
+		no_c_page = 1;
 	}
 	s.cmd_len = c->oplen;
 	s.cmdp = c->opcode;
@@ -647,7 +656,7 @@ this is valid during the mode probe in scan
 	s.sbp = c->sense;
 	memset(c->sense, 0, sizeof(c->sense));
 	s.timeout = 200000;
-	if (c->page) {
+	if (c->page && !no_c_page) {
 		s.dxferp = c->page->data;
 		if (c->dir == FROM_DRIVE) {
 			s.dxfer_len = BUFFER_SIZE;
