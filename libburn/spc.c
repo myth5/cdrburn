@@ -9,7 +9,10 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <string.h>
-#include <assert.h>
+
+/* ts A61008 */
+/* #include <a ssert.h> */
+
 #include <stdlib.h>
 
 #include "transport.h"

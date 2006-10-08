@@ -373,7 +373,7 @@ Called by sector_toc() sector_pregap() sector_postgap() sector_lout()
 
 ------------------------------------------------------------------------------
 
-   28) libburn/sector.c:	assert(0);
+++ 28) libburn/sector.c:	assert(0);
 static char_to_isrc():
 Called by subcode_user() with data set by API burn_track_set_isrc()
 Some character conversion fails on wrong input
@@ -382,6 +382,8 @@ Some character conversion fails on wrong input
 => burn_track_set_isrc() has to make sure that only good data are set
 => char_to_isrc() returns 0 as default
 => delete assert()
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
@@ -472,7 +474,7 @@ The transfer of the command via ioctl() failed
 
 ------------------------------------------------------------------------------
 
-   37) libburn/spc.c:	assert(d->mdata->valid);
+++ 37) libburn/spc.c:	assert(d->mdata->valid);
 spc_select_error_params():
 Drive was not properly programmed
 
@@ -480,12 +482,13 @@ alias struct burn_drive.send_parameters()
 Called by burn_disc_read, - defunct -
 
 : Severe Application Error
-(=> catch ! d->mdata->valid in burn_disc_read() )
-=> :)
+=> moved up as mangled assert to burn_disc_read()
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
-   38) libburn/spc.c:	assert(d->mdata->cdr_write || d->mdata->cdrw_write ||
+++ 38) libburn/spc.c:	assert(d->mdata->cdr_write || d->mdata->cdrw_write ||
 spc_sense_write_params():
 Drive does not offer write of any known media type
 
@@ -495,9 +498,11 @@ Called by API burn_drive_grab (assert test made there in soft)
 : Severe Command Level Problem
 => remove assert()
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   39) libburn/spc.c:	assert(o->drive == d);
+++ 39) libburn/spc.c:	assert(o->drive == d);
 spc_select_write_params():
 Drive does not match struct burn_write_opts
 
@@ -509,9 +514,11 @@ Called by mmc_close_disc() (-defunct- ?), mmc_close_session() (-defunct- ?),
 : Severe Libburn Error
 => remove assert()
 
+ts A61007
+
 ------------------------------------------------------------------------------
 
-   40) libburn/spc.c:	assert(d->mdata->valid);
+++ 40) libburn/spc.c:	assert(d->mdata->valid);
 spc_select_write_params():
 Drive was not properly programmed
 
@@ -520,9 +527,9 @@ Called by (see 39)
   burn_disc_write_sync() indirectly by API burn_disc_write()
 
 : Severe Libburn Error
-=> catch in burn_disc_write()
-=> ? ignore command and issue LIBDAX_MSGS_SEV_SORRY ?
-=> ? issue LIBDAX_MSGS_SEV_FATAL and shutdown libburn ?
+=> caught in burn_disc_write() now
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
@@ -542,7 +549,7 @@ ts A61007
 
 ------------------------------------------------------------------------------
 
-   42) libburn/structure.c:	assert(!(pos > BURN_POS_END));\
+++ 42) libburn/structure.c:	assert(!(pos > BURN_POS_END));\
 macro RESIZE
 An illegal list index is given by the app.
 
@@ -550,9 +557,9 @@ An illegal list index is given by the app.
 Used by API burn_session_add_track() and API burn_disc_add_session()
 
 : Severe Application Error
-=> catch in API burn_session_add_track() , API burn_disc_add_session()
-=> issue LIBDAX_MSGS_SEV_SORRY and return 0
-=> delete assert
+=> replace assert by if-and-return-0
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
@@ -561,21 +568,26 @@ API burn_session_remove_track()
 An application supplied pointer is NULL
 
 : Severe Application Error
-=> issue LIBDAX_MSGS_SEV_SORRY and return 0
-=> delete assert
+=> replace by if-and-return-0
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
-   44) libburn/structure.c:		assert((country[i] >= '0' || country[i] < '9') &&
+++ 44) libburn/structure.c:		assert((country[i] >= '0' || country[i] < '9') &&
         libburn/structure.c:		assert((owner[i] >= '0' || owner[i] < '9') &&
         libburn/structure.c:	assert(year <= 99);
         libburn/structure.c:	assert(serial <= 99999);
 API burn_track_set_isrc():
-Illegal texts supplied by application
+Illegal texts supplied by application.
+The logical expression is always true !
 
 : Severe Application Error
 => issue LIBDAX_MSGS_SEV_SORRY and return
 => delete assert
+=> delete assert 28) in char_to_isrc()
+
+ts A61008
 
 ------------------------------------------------------------------------------
 

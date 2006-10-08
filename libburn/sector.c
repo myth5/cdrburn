@@ -378,7 +378,9 @@ static char char_to_isrc(char c)
 		return 0x11 + (c - 'A');
 	if (c >= 'a' && c <= 'z')
 		return 0x11 + (c - 'a');
-	assert(0);
+
+	/* ts A61008 : obsoleted by test in burn_track_set_isrc() */
+	/* a ssert(0); */
 	return 0;
 }
 

@@ -1,4 +1,7 @@
-#include <assert.h>
+
+/* ts A61008 */
+/* #include <a ssert.h> */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,10 +10,18 @@
 #include "write.h"
 #include "debug.h"
 
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
+
+/* ts A61008 : replaced Assert by if and return 0 */
+/* 	a ssert(!(pos > BURN_POS_END)); */
+
 #define RESIZE(TO, NEW, pos) {\
 	void *tmp;\
 \
-	assert(!(pos > BURN_POS_END));\
+	if (pos > BURN_POS_END)\
+		return 0;\
 	if (pos == BURN_POS_END)\
 		pos = TO->NEW##s;\
 	if (pos > TO->NEW##s)\
@@ -138,7 +149,10 @@ int burn_session_remove_track(struct burn_session *s, struct burn_track *t)
 	struct burn_track **tmp;
 	int i, pos = -1;
 
-	assert(s->track != NULL);
+	/* ts A61008 */
+	/* a ssert(s->track != NULL); */
+	if (s->track == NULL)
+		return 0;
 
 	burn_track_free(t);
 
@@ -203,23 +217,57 @@ void burn_track_set_isrc(struct burn_track *t, char *country, char *owner,
 {
 	int i;
 
-	t->isrc.has_isrc = 1;
 	for (i = 0; i < 2; ++i) {
-		assert((country[i] >= '0' || country[i] < '9') &&
+
+		/* ts A61008 : This is always true */
+		/* a ssert((country[i] >= '0' || country[i] < '9') &&
 		       (country[i] >= 'a' || country[i] < 'z') &&
-		       (country[i] >= 'A' || country[i] < 'Z'));
+		       (country[i] >= 'A' || country[i] < 'Z')); */
+		/* ts A61008 : now coordinated with sector.c: char_to_isrc() */
+		if (! ((country[i] >= '0' && country[i] <= '9') ||
+		       (country[i] >= 'a' && country[i] <= 'z') ||
+		       (country[i] >= 'A' && country[i] <= 'Z')   ) )
+			goto is_not_allowed;
+
 		t->isrc.country[i] = country[i];
 	}
 	for (i = 0; i < 3; ++i) {
-		assert((owner[i] >= '0' || owner[i] < '9') &&
+
+		/* ts A61008 : This is always true */
+		/* a ssert((owner[i] >= '0' || owner[i] < '9') &&
 		       (owner[i] >= 'a' || owner[i] < 'z') &&
-		       (owner[i] >= 'A' || owner[i] < 'Z'));
+		       (owner[i] >= 'A' || owner[i] < 'Z')); */
+		/* ts A61008 : now coordinated with sector.c: char_to_isrc() */
+		if (! ((owner[i] >= '0' && owner[i] <= '9') ||
+		       (owner[i] >= 'a' && owner[i] <= 'z') ||
+		       (owner[i] >= 'A' && owner[i] <= 'Z')   ) )
+			goto is_not_allowed;
+
 		t->isrc.owner[i] = owner[i];
 	}
-	assert(year <= 99);
+
+	/* ts A61008 */
+	/* a ssert(year <= 99); */
+	if (year > 99)
+		goto is_not_allowed;
+
 	t->isrc.year = year;
-	assert(serial <= 99999);
+
+	/* ts A61008 */
+	/* a ssert(serial <= 99999); */
+	if (serial > 99999)
+		goto is_not_allowed;
+
 	t->isrc.serial = serial;
+
+	/* ts A61008 */
+	t->isrc.has_isrc = 1;
+	return;
+is_not_allowed:;
+	libdax_msgs_submit(libdax_messenger, -1, 0x00020114,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			"Attempt to set ISRC with bad data", 0, 0);
+	return;
 }
 
 void burn_track_clear_isrc(struct burn_track *t)
