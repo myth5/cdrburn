@@ -1,5 +1,8 @@
 #include <string.h>
-#include <assert.h>
+
+/* ts A61008 */
+/* #include <a ssert.h> */
+
 #include <stdlib.h>
 #include "../version.h"
 #include "util.h"
@@ -10,7 +13,10 @@ char *burn_strdup(char *s)
 	char *ret;
 	int l;
 
-	assert(s);
+	/* ts A61008 */
+	/* a ssert(s); */
+	if (s == NULL)
+		return NULL;
 
 	l = strlen(s) + 1;
 	ret = malloc(l);
@@ -24,8 +30,11 @@ char *burn_strndup(char *s, int n)
 	char *ret;
 	int l;
 
-	assert(s);
-	assert(n > 0);
+	/* ts A61008 */
+	/* a ssert(s); */
+	/* a ssert(n > 0); */
+	if (s == NULL || n <= 0)
+		return NULL;
 
 	l = strlen(s);
 	ret = malloc(l < n ? l : n);
