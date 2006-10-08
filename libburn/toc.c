@@ -1,6 +1,8 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
-#include <assert.h>
+/* ts A61008 */
+/* #include <a ssert.h> */
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +53,10 @@ static void write_clonecd2(volatile struct toc *toc, int f)
 			case BURN_MODE2_FORM1:
 			case BURN_MODE2_FORM2:
 			case BURN_MODE_UNINITIALIZED:
-				assert(0);	/* unhandled! find out ccd's
+
+				/* ts A61008 : do this softly without Assert */
+
+				a ssert(0);	/* unhandled! find out ccd's
 						   value for these modes! */
 			}
 			dprintf(f, "PreGapMode=%d\r\n", m);
@@ -95,7 +100,8 @@ void toc_find_modes(struct burn_drive *d)
 	struct buffer mem;
 	struct burn_toc_entry *e;
 
-	assert(d->busy);
+	/* ts A61008 : to be prevented on the higher levels */
+	/* a ssert(d->busy); */
 
 	mem.bytes = 0;
 	mem.sectors = 1;
