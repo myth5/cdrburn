@@ -12,8 +12,13 @@ struct cue_sheet;
 /* MMC commands */
 
 void mmc_read(struct burn_drive *);
-void mmc_close_session(struct burn_drive *, struct burn_write_opts *);
-void mmc_close_disc(struct burn_drive *, struct burn_write_opts *);
+
+/* ts A61009 : removed redundant parameter d in favor of o->drive */
+/* void mmc_close_session(struct burn_drive *, struct burn_write_opts *); */
+/* void mmc_close_disc(struct burn_drive *, struct burn_write_opts *); */
+void mmc_close_session(struct burn_write_opts *o);
+void mmc_close_disc(struct burn_write_opts *o);
+
 void mmc_close(struct burn_drive *, int session, int track);
 void mmc_get_event(struct burn_drive *);
 int mmc_write(struct burn_drive *, int start, struct buffer *buf);

@@ -1,6 +1,8 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
-#include <assert.h>
+/* ts A61009 */
+/* #include <a ssert.h> */
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -17,6 +19,12 @@
 #include "toc.h"
 #include "structure.h"
 #include "options.h"
+
+/* ts A61005 */
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
+
 
 static unsigned char MMC_GET_TOC[] = { 0x43, 2, 2, 0, 0, 0, 0, 16, 0, 0 };
 static unsigned char MMC_GET_ATIP[] = { 0x43, 2, 4, 0, 0, 0, 0, 16, 0, 0 };
@@ -99,19 +107,43 @@ int mmc_get_nwa(struct burn_drive *d)
 		+ (data[14] << 8) + data[15];
 }
 
-void mmc_close_disc(struct burn_drive *d, struct burn_write_opts *o)
+/* ts A61009 : function is obviously unused. */
+/* void mmc_close_disc(struct burn_drive *d, struct burn_write_opts *o) */
+void mmc_close_disc(struct burn_write_opts *o)
 {
+	struct burn_drive *d;
+
 	mmc_function_spy("mmc_close_disc");
-	assert(o->drive == d);
+
+	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			   "HOW THAT ? mmc_close_disc() was called", 0, 0);
+
+	/* ts A61009 : made impossible by removing redundant parameter d */
+	/* a ssert(o->drive == d); */
+	d = o->drive;
+
 	o->multi = 0;
 	spc_select_write_params(d, o);
 	mmc_close(d, 1, 0);
 }
 
-void mmc_close_session(struct burn_drive *d, struct burn_write_opts *o)
+/* ts A61009 : function is obviously unused. */
+/* void mmc_close_session(struct burn_drive *d, struct burn_write_opts *o) */
+void mmc_close_session(struct burn_write_opts *o)
 {
+	struct burn_drive *d;
+
 	mmc_function_spy("mmc_close_session");
-	assert(o->drive == d);
+
+	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			   "HOW THAT ? mmc_close_session() was called", 0, 0);
+
+	/* ts A61009 : made impossible by removing redundant parameter d */
+	/* a ssert(o->drive == d); */
+	d = o->drive;
+
 	o->multi = 3;
 	spc_select_write_params(d, o);
 	mmc_close(d, 1, 0);
@@ -121,7 +153,12 @@ void mmc_close(struct burn_drive *d, int session, int track)
 {
 	struct command c;
 
-	mmc_function_spy("mmc_close_session");
+	mmc_function_spy("mmc_close");
+
+	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			   "HOW THAT ? mmc_close() was called", 0, 0);
+
 	c.retry = 1;
 	c.oplen = sizeof(MMC_CLOSE);
 	memcpy(c.opcode, MMC_CLOSE, sizeof(MMC_CLOSE));
@@ -154,6 +191,7 @@ void mmc_get_event(struct burn_drive *d)
 		   c.page->data[5], c.page->data[6], c.page->data[7]);
 }
 
+
 void mmc_write_12(struct burn_drive *d, int start, struct buffer *buf)
 {
 	struct command c;
@@ -161,7 +199,10 @@ void mmc_write_12(struct burn_drive *d, int start, struct buffer *buf)
 
 	mmc_function_spy("mmc_write_12");
 	len = buf->sectors;
-	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
+
+	/* ts A61009 */
+	/* a ssert(buf->bytes >= buf->sectors);*/	/* can be == at 0... */
+
 	burn_print(100, "trying to write %d at %d\n", len, start);
 	memcpy(c.opcode, MMC_WRITE_12, sizeof(MMC_WRITE_12));
 	c.retry = 1;
@@ -195,7 +236,10 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 		return BE_CANCELLED;
 
 	len = buf->sectors;
-	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
+
+	/* ts A61009 : buffer fill problems are to be handled by caller */
+	/* a ssert(buf->bytes >= buf->sectors);*/	/* can be == at 0... */
+
 	burn_print(100, "trying to write %d at %d\n", len, start);
 	memcpy(c.opcode, MMC_WRITE_10, sizeof(MMC_WRITE_10));
 	c.retry = 1;
@@ -251,7 +295,8 @@ void mmc_read_toc(struct burn_drive *d)
 /*
 	some drives fail this check.
 
-	assert(((dlen - 2) % 11) == 0);
+	ts A61007 : if re-enabled then not via Assert.
+	a ssert(((dlen - 2) % 11) == 0);
 */
 	d->toc_entry = malloc(d->toc_entries * sizeof(struct burn_toc_entry));
 	tdata = c.page->data + 4;
@@ -382,9 +427,14 @@ void mmc_read_sectors(struct burn_drive *d,
 	struct command c;
 
 	mmc_function_spy("mmc_read_sectors");
-	assert(len >= 0);
-/* if the drive isn't busy, why the hell are we here? */
-	assert(d->busy);
+
+	/* ts A61009 : to be ensured by callers */
+	/* a ssert(len >= 0); */
+
+/* if the drive isn't busy, why the hell are we here? */ 
+	/* ts A61006 : i second that question */
+	/* a ssert(d->busy); */
+
 	burn_print(12, "reading %d from %d\n", len, start);
 	memcpy(c.opcode, MMC_READ_CD, sizeof(MMC_READ_CD));
 	c.retry = 1;

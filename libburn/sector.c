@@ -148,6 +148,9 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 		return;
 	memset(data + curr, 0, shortage);
 }
+
+/* ts A61009 : seems to hand out sector start pointer in opts->drive->buffer
+		and to count hand outs as well as reserved bytes */
 static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
 {
 	struct burn_drive *d = opts->drive;
@@ -160,7 +163,13 @@ static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
 	if (outmode == 0)
 		outmode = inmode;
 
-	seclen = burn_sector_length(outmode) + burn_subcode_length(outmode);
+	/* ts A61009 : react on eventual failure of burn_sector_length()
+			(should not happen if API tested properly).
+			Ensures out->bytes >= out->sectors  */
+	seclen = burn_sector_length(outmode);
+	if (seclen <= 0)
+		return NULL;
+	seclen += burn_subcode_length(outmode);
 
 	if (out->bytes + (seclen) >= BUFFER_SIZE) {
 		int err;

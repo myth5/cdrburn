@@ -161,9 +161,16 @@ struct burn_drive
 	void (*sync_cache) (struct burn_drive *);
 	int (*get_erase_progress) (struct burn_drive *);
 	int (*get_nwa) (struct burn_drive *);
-	void (*close_disc) (struct burn_drive * d, struct burn_write_opts * o);
-	void (*close_session) (struct burn_drive * d,
+
+	/* ts A61009 : removed d in favor of o->drive */
+	/* void (*close_disc) (struct burn_drive * d,
+				 struct burn_write_opts * o);
+	   void (*close_session) (struct burn_drive * d,
 			       struct burn_write_opts * o);
+	*/
+	void (*close_disc) (struct burn_write_opts * o);
+	void (*close_session) ( struct burn_write_opts * o);
+
 	int (*test_unit_ready) (struct burn_drive * d);
 	void (*probe_write_modes) (struct burn_drive * d);
 	struct params params;

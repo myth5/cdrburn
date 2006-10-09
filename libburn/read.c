@@ -47,6 +47,9 @@ void burn_disc_read(struct burn_drive *d, const struct burn_read_opts *o)
 	a ssert(d->toc->valid);
 	a ssert(o->datafd != -1);
 
+	/* moved up from spc_select_error_params alias d->send_parameters() */
+	a ssert(d->mdata->valid);
+
 /* XXX not sure this is a good idea.  copy it? */
 /* XXX also, we have duplicated data now, do we remove the fds from struct 
 drive, or only store a subset of the _opts structs in drives */
@@ -56,6 +59,7 @@ drive, or only store a subset of the _opts structs in drives */
 	d->set_speed(d, speed, 0);
 
 	d->params.retries = o->hardware_error_retries;
+
 	d->send_parameters(d, o);
 
 	d->cancel = 0;
@@ -133,7 +137,10 @@ drive, or only store a subset of the _opts structs in drives */
 		page.sectors = (finish < maxsects) ? finish : maxsects;
 		printf("reading %d sectors from %d\n", page.sectors,
 		       drive_lba);
-		d->read_sectors(d, drive_lba, page.sectors, o, &page);
+
+		/* >>> ts A61009 : ensure page.sectors >= 0 before calling */
+		d->r ead_sectors(d, drive_lba, page.sectors, o, &page);
+
 		printf("Read %d\n", page.sectors);
 	}
 #endif

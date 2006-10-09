@@ -229,60 +229,107 @@ ts A61007
 
 ------------------------------------------------------------------------------
 
-   17) libburn/mmc.c:	assert(o->drive == d);
+++ 17) libburn/mmc.c:	assert(o->drive == d);
 mmc_close_disc():
 alias: struct burn_drive.close_disc()
 Parameters struct burn_drive and struct burn_write_opts do not match
 
 Called by -nobody- ?
 
-=> Disable unused function ?
+( => Disable unused function ? )
+=> removed redundant parameter struct burn_drive
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   18) libburn/mmc.c:	assert(o->drive == d);
+++ 18) libburn/mmc.c:	assert(o->drive == d);
 mmc_close_session():
 Same as 17)
 alias: struct burn_drive.close_session()
 
 Called by -nobody- ?
 
-=> Disable unused function ?
+( => Disable unused function ? )
+=> removed redundant parameter struct burn_drive
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   19) libburn/mmc.c:	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
+++ 19) libburn/mmc.c:	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
 mmc_write_12():
 - Unclear what .bytes and .sectors mean in struct buffer -
 
 Called by -nobody- ?
 
-=> Disable unused function ?
+=> problems with filling the write buffer have to be handled by callers
+=> delete assert 
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   20) libburn/mmc.c:	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
+++ 20) libburn/mmc.c:	assert(buf->bytes >= buf->sectors);	/* can be == at 0... */
 mmc_write():
 - Unclear what .bytes and .sectors mean in struct buffer -
-alias: struct burn_drive.write()
 
+libburn/mmc.c:          c.page->sectors = errorblock - start + 1;
+mmc_read_sectors() by toc_find_modes() by mmc_read_toc() alias drive.read_toc()
+by burn_drive_grab()
+This seems to be unrelated to mmc_write().
+
+libburn/sector.c:       out->sectors++;
+get_sector()
+Seems to hand out sector start pointer in opts->drive->buffer
+and to count reservation transactions as well as reserved bytes.
+Ensures out->bytes >= out->sectors
+
+
+libburn/mmc.c:  c.page->bytes = s->count * 8;
+mmc_send_cue_sheet()
+Does not use mmc_write() but directly (sg_)issue_command()
+
+libburn/sector.c:       out->bytes += seclen;
+get_sector()
+See above
+Ensures out->bytes >= out->sectors
+
+libburn/spc.c:  c.page->bytes = 8 + 2 + d->mdata->retry_page_length;
+spc_select_error_params()
+Does not use mmc_write() but directly (sg_)issue_command()
+
+libburn/spc.c:  c.page->bytes = 8 + 2 + d->mdata->write_page_length;
+spc_select_error_params()
+Does not use mmc_write() but directly (sg_)issue_command()
+
+libburn/spc.c:          c.page->bytes = 8 + 2 + 0x32;
+spc_probe_write_modes()
+Does not use mmc_write() but directly (sg_)issue_command()
+
+alias struct burn_drive.write()
 Called by static get_sector, by many
 Called by burn_write_flush
 Called by burn_write_track
 
-=> ???
+=> problems with filling the write buffer have to be handled by callers
+=> delete assert 
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   21) libburn/mmc.c:	assert(((dlen - 2) % 11) == 0);
+++ 21) libburn/mmc.c:	assert(((dlen - 2) % 11) == 0);
 mmc_read_toc():
 - Is defunct -
 
 => :)
 
+ts A61009
+
 ------------------------------------------------------------------------------
 
-   22) libburn/mmc.c:	assert(len >= 0);
+++ 22) libburn/mmc.c:	assert(len >= 0);
 mmc_read_sectors():
 Catches a bad parameter
 
@@ -294,9 +341,11 @@ Called by toc_find_modes(), problem cannot occur: mem.sectors = 1;
 (=> in burn_disc_read() check page.sectors before d->read_sectors() )
 => :)
 
+ts A61009
+
 ------------------------------------------------------------------------------
 
-   23) libburn/mmc.c:	assert(d->busy);
+++ 23) libburn/mmc.c:	assert(d->busy);
 mmc_read_sectors():
 Catches use of a drive that is not marked as busy
 
@@ -306,6 +355,8 @@ Called by toc_find_modes(), does the same assert. To be solved there.
 
 : Severe Libburn Error
 => :)
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
@@ -563,7 +614,7 @@ ts A61008
 
 ------------------------------------------------------------------------------
 
-   43) libburn/structure.c:	assert(s->track != NULL);
+++ 43) libburn/structure.c:	assert(s->track != NULL);
 API burn_session_remove_track()
 An application supplied pointer is NULL
 
