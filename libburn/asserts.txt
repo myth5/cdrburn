@@ -591,16 +591,18 @@ ts A61008
 
 ------------------------------------------------------------------------------
 
-   45) libburn/toc.c:				assert(0);	/* unhandled! find out ccd's
+++ 45) libburn/toc.c:				assert(0);	/* unhandled! find out ccd's
 static write_clonecd2():
 
  - defunct -, - unused -
 
-=> ? mangle assert ?
+=> mangle assert
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
-   46) libburn/toc.c:	assert(d->busy);
+++ 46) libburn/toc.c:	assert(d->busy);
 toc_find_modes():
 The drive to work on is not marked busy
 
@@ -608,22 +610,26 @@ Called by mmc_read_toc() alias read_toc() by ... burn_drive_grab()
 
 : Severe Libburn Error
 => to be prevented on the higher levels
-=> issue LIBDAX_MSGS_SEV_WARNING
+=> delete assert
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
-   47) libburn/util.c:	assert(s);
+++ 47) libburn/util.c:	assert(s);
 burn_strdup()
-Abort on NULL string which would elsewise cuase a SIGSEGV
+Abort on NULL string which would elsewise cause a SIGSEGV
 
 Used once in enumerate_common() with a string that worked with open(2) before
 
 : Severe Libburn Error
 => delete assert
 
+ts A61008
+
 ------------------------------------------------------------------------------
 
-   48) libburn/util.c:	assert(s);
+++ 48) libburn/util.c:	assert(s);
 burn_strndup(): - unused -
 Same as 47
 
@@ -631,9 +637,11 @@ Same as 47
 => return NULL
 => delete assert
 
+ts A61008
+
 ------------------------------------------------------------------------------
 
-   49) libburn/util.c:	assert(n > 0);
+++ 49) libburn/util.c:	assert(n > 0);
 burn_strndup(): - unused -
 Prevent problems by negative copy length
 
@@ -641,21 +649,24 @@ Prevent problems by negative copy length
 => return NULL
 => delete assert
 
+ts A61008
+
 ------------------------------------------------------------------------------
 
-   50) libburn/write.c:		assert(0);
+++ 50) libburn/write.c:		assert(0);
 static type_to_ctrl():
 Unsuitable mode to be converted into "ctrl"
 Called by static type_to_form() finally burn_create_toc_entries()
 
 : Severe Application Error
-=> to be caught at higher levels
-=> issue LIBDAX_MSGS_SEV_WARNING
-=> fall back to data mode
+=> to be caught in burn_track_define_data by calling for test type_to_form()
+=> return -1;
+
+ts A61008
 
 ------------------------------------------------------------------------------
 
-   51) libburn/write.c:		assert(0);
+++ 51) libburn/write.c:		assert(0);
        libburn/write.c:		assert(0);	/* XXX someone's gonna want this sometime */
 static type_to_form():
 Does not like BURN_MODE0 or BURN_MODE2 but tolerates unknown modes
@@ -663,23 +674,33 @@ Does not like BURN_MODE0 or BURN_MODE2 but tolerates unknown modes
 Called by static burn_create_toc_entries() by burn_disc_write_sync()
 
 : Undocumented Libburn Restriction
-=> Disallow BURN_MODE0 and BURN_MODE2 with API burn_track_define_data()
-=> issue LIBDAX_MSGS_SEV_WARNING
-=> default to BURN_MODE1
+=> set *form = -1 , *ctladr = 0xff , return
+=> make function non-static
+=> call for test in API  burn_track_define_data()
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   52) libburn/write.c:	assert(ptr);
+++ 52) libburn/write.c:	assert(ptr);
 static add_cue():
 realloc() failed
 
+Called by burn_create_toc_entries() by burn_disc_write_sync()
+(burn_create_toc_entries is ignorant towards own potential memory problems)
+(This could possibly really stay an abort() because the reason is
+ a plain failure of the system's memory management.)
+
 : Severe System Error
-=> This could possibly really stay an abort() because the reason is
-   a plain failure of the system's memory management.
+=> change return type of add_cue to int
+=> react on return -1 in burn_create_toc_entries, return NULL on failure
+=> abort burn_disc_write_sync() on NULL return
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   53) libburn/write.c:	assert(d->toc_entry == NULL);
+++ 53) libburn/write.c:	assert(d->toc_entry == NULL);
 burn_create_toc_entries():
 Multiple usage of struct burn_drive.toc_entry
 
@@ -688,19 +709,23 @@ This will probably trigger an abort with disc->sessions > 1
 (disc->sessions is incremented in macro RESIZE() as "NEW##s")
 
 : Design Problem
-=> ? disallow multiple sessions ?
-=> ? leave assert in and wait what happens ?
+( => ? disallow multiple sessions ? )
+=> replace assert by soft means and wait what happens
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   54) libburn/write.c:	assert(0);
+++ 54) libburn/write.c:	assert(0);
 burn_sector_length():
 Only BURN_AUDIO, BURN_MODE_RAW, BURN_MODE1 are allowed
 
 Called by get_sector(), convert_data(), ...
 
-=> Only allow BURN_AUDIO, BURN_MODE_RAW, BURN_MODE1 with API burn_track_define_data()
-=> delete assert
+=> call burn_sector_length() for test in API  burn_track_define_data()
+=> replace assert by -1
+
+ts A61009
 
 ------------------------------------------------------------------------------
 

@@ -2,7 +2,11 @@
 
 #include <unistd.h>
 #include <signal.h>
-#include <assert.h>
+
+/* ts A61009 */
+/* #include <a ssert.h> */
+
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -22,6 +26,10 @@
 #include "write.h"
 #include "options.h"
 
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
+
 static int type_to_ctrl(int mode)
 {
 	int ctrl = 0;
@@ -36,7 +44,9 @@ static int type_to_ctrl(int mode)
 		if (mode & BURN_PREEMPHASIS)
 			ctrl |= 1;
 	} else
-		assert(0);
+		/* ts A61008 */
+		/* a ssert(0); */
+		return -1;
 
 	if (mode & BURN_COPY)
 		ctrl |= 2;
@@ -45,18 +55,40 @@ static int type_to_ctrl(int mode)
 }
 
 /* only the ctrl nibble is set here (not adr) */
-static void type_to_form(int mode, unsigned char *ctladr, int *form)
+/* ts A61009 : removed "static" , reacted on type_to_ctrl() == -1
+               preserved ignorance towards unknown modes (for now) */
+void type_to_form(int mode, unsigned char *ctladr, int *form)
 {
-	*ctladr = type_to_ctrl(mode) << 4;
+	int ret;
+
+	ret = type_to_ctrl(mode) << 4;
+	if (ret == -1) {
+		*ctladr = 0xff;
+		*form = -1;
+		return;
+	}
+	*ctladr = ret;
 
 	if (mode & BURN_AUDIO)
 		*form = 0;
-	if (mode & BURN_MODE0)
-		assert(0);
+	if (mode & BURN_MODE0) {
+
+		/* ts A61009 */
+		/* a ssert(0); */
+		*form = -1;
+		return;
+	}
+
 	if (mode & BURN_MODE1)
 		*form = 0x10;
-	if (mode & BURN_MODE2)
-		assert(0);	/* XXX someone's gonna want this sometime */
+	if (mode & BURN_MODE2) {
+
+		/* ts A61009 */
+		/* a ssert(0); */ /* XXX someone's gonna want this sometime */
+		*form = -1;
+		return;
+	}
+
 	if (mode & BURN_MODE_RAW)
 		*form = 0;
 	if (mode & BURN_SUBCODE_P16)	/* must be expanded to R96 */
@@ -109,7 +141,9 @@ static void print_cue(struct cue_sheet *sheet)
 #endif /* Libburn_write_with_print_cuE */
 
 
-static void add_cue(struct cue_sheet *sheet, unsigned char ctladr,
+/* ts A61009 : changed type from void to int */
+/** @return 1 = success , <=0 failure */
+static int add_cue(struct cue_sheet *sheet, unsigned char ctladr,
 		    unsigned char tno, unsigned char indx,
 		    unsigned char form, unsigned char scms, int lba)
 {
@@ -121,7 +155,17 @@ static void add_cue(struct cue_sheet *sheet, unsigned char ctladr,
 
 	sheet->count++;
 	ptr = realloc(sheet->data, sheet->count * 8);
-	assert(ptr);
+
+	/* ts A61009 */
+	/* a ssert(ptr); */
+	if (ptr == NULL) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020111,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+		"Could not allocate new auxiliary object (cue_sheet->data)",
+			0, 0);
+		return -1;
+	}
+
 	sheet->data = ptr;
 	unit = sheet->data + (sheet->count - 1) * 8;
 	unit[0] = ctladr;
@@ -132,12 +176,13 @@ static void add_cue(struct cue_sheet *sheet, unsigned char ctladr,
 	unit[5] = m;
 	unit[6] = s;
 	unit[7] = f;
+	return 1;
 }
 
 struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 					  struct burn_session *session)
 {
-	int i, m, s, f, form, pform, runtime = -150;
+	int i, m, s, f, form, pform, runtime = -150, ret;
 	unsigned char ctladr;
 	struct burn_drive *d;
 	struct burn_toc_entry *e;
@@ -149,17 +194,47 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 	d = o->drive;
 
 	sheet = malloc(sizeof(struct cue_sheet));
+
+	/* ts A61009 : react on failures of malloc(), add_cue_sheet()
+	               type_to_form() */
+	if (sheet == NULL) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020111,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Could not allocate new auxiliary object (cue_sheet)",
+			0, 0);
+		return NULL;
+	}
+
 	sheet->data = NULL;
 	sheet->count = 0;
-
 	type_to_form(tar[0]->mode, &ctladr, &form);
-	add_cue(sheet, ctladr | 1, 0, 0, 1, 0, runtime);
-	add_cue(sheet, ctladr | 1, 1, 0, form, 0, runtime);
+	if (form == -1) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020116,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Track mode has unusable value", 0, 0);
+		goto failed;
+	}
+	ret = add_cue(sheet, ctladr | 1, 0, 0, 1, 0, runtime);
+	if (ret <= 0)
+		goto failed;
+	ret = add_cue(sheet, ctladr | 1, 1, 0, form, 0, runtime);
+	if (ret <= 0)
+		goto failed;
 	runtime += 150;
 
 	burn_print(1, "toc for %d tracks:\n", ntr);
 	d->toc_entries = ntr + 3;
-	assert(d->toc_entry == NULL);
+
+	/* ts A61009 */
+	/* a ssert(d->toc_entry == NULL); */
+	if (d->toc_entry != NULL) {
+		libdax_msgs_submit(libdax_messenger,
+			d->global_index, 0x00020117,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"toc_entry of drive is already in use", 0, 0);
+		goto failed;
+	}
+
 	d->toc_entry = malloc(d->toc_entries * sizeof(struct burn_toc_entry));
 	e = d->toc_entry;
 	memset((void *)e, 0, d->toc_entries * sizeof(struct burn_toc_entry));
@@ -187,7 +262,12 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 	for (i = 0; i < ntr; i++) {
 		type_to_form(tar[i]->mode, &ctladr, &form);
 		if (pform != form) {
-			add_cue(sheet, ctladr | 1, i + 1, 0, form, 0, runtime);
+
+			ret = add_cue(sheet, ctladr | 1, i + 1, 0, form, 0,
+					 runtime);
+			if (ret <= 0)
+				goto failed;
+
 			runtime += 150;
 /* XXX fix pregap interval 1 for data tracks */
 /* ts A60813 silence righteous compiler warning about C++ style comments
@@ -210,7 +290,11 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 		e[3 + i].control = type_to_ctrl(tar[i]->mode);
 		burn_print(1, "track %d control %d\n", tar[i]->mode,
 			   e[3 + i].control);
-		add_cue(sheet, ctladr | 1, i + 1, 1, form, 0, runtime);
+
+		ret = add_cue(sheet, ctladr | 1, i + 1, 1, form, 0, runtime);
+		if (ret <= 0)
+			goto failed;
+
 		runtime += burn_track_get_sectors(tar[i]);
 /* if we're padding, we'll clear any current shortage.
    if we're not, we'll slip toc entries by a sector every time our
@@ -240,8 +324,15 @@ XXX this is untested :)
 		burn_print(1, "point %d (%02d:%02d:%02d)\n",
 			   d->toc_entry[i].point, d->toc_entry[i].pmin,
 			   d->toc_entry[i].psec, d->toc_entry[i].pframe);
-	add_cue(sheet, ctladr | 1, 0xAA, 1, 1, 0, runtime);
+	ret = add_cue(sheet, ctladr | 1, 0xAA, 1, 1, 0, runtime);
+	if (ret <= 0)
+		goto failed;
 	return sheet;
+
+failed:;
+	if (sheet != NULL)
+		free((char *) sheet);
+	return NULL;
 }
 
 int burn_sector_length(int tracktype)
@@ -252,8 +343,9 @@ int burn_sector_length(int tracktype)
 		return 2352;
 	if (tracktype & BURN_MODE1)
 		return 2048;
-	assert(0);
-	return 12345;
+	/* ts A61009 */
+	/* a ssert(0); */
+	return -1;
 }
 
 int burn_subcode_length(int tracktype)
@@ -493,6 +585,11 @@ return crap.  so we send the command, then ignore the result.
 		d->progress.tracks = disc->session[i]->tracks;
 
 		sheet = burn_create_toc_entries(o, disc->session[i]);
+
+		/* ts A61009 */
+		if (sheet == NULL)
+			goto fail;
+
 /*		print_cue(sheet);*/
 		if (o->write_type == BURN_WRITE_SAO)
 			d->send_cue_sheet(d, sheet);

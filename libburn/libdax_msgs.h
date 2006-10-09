@@ -320,6 +320,9 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020112 (SORRY,HIGH)   = Bad combination of write_type and block_type
  0x00020113 (FATAL,HIGH)   = Drive capabilities not inquired yet
  0x00020114 (SORRY,HIGH)   = Attempt to set ISRC with bad data
+ 0x00020115 (SORRY,HIGH)   = Attempt to set track mode to unusable value
+ 0x00020116 (FATAL,HIGH)   = Track mode has unusable value
+ 0x00020117 (FATAL,HIGH)   = toc_entry of drive is already in use
 
 
 ------------------------------------------------------------------------------

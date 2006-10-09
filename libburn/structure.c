@@ -206,6 +206,23 @@ void burn_structure_print_track(struct burn_track *t)
 void burn_track_define_data(struct burn_track *t, int offset, int tail,
 			    int pad, int mode)
 {
+	int type_to_form(int mode, unsigned char *ctladr, int *form);
+	int burn_sector_length(int tracktype);
+	unsigned char ctladr;
+	int form = -1; /* unchanged form will be considered an error too */
+
+	type_to_form(mode, &ctladr, &form);
+	if (form == -1 || burn_sector_length(mode) <= 0) {
+		char msg[160];
+
+		sprintf(msg, "Attempt to set track mode to unusable value %d",
+			mode);
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020115,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+			msg, 0, 0);
+		return;
+	}
+
 	t->offset = offset;
 	t->pad = pad;
 	t->mode = mode;
