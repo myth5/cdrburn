@@ -1,7 +1,10 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
 #include <stdio.h>
-#include <assert.h>
+
+/* ts A61010 */
+/* #include <a ssert.h> */
+
 #include <unistd.h>
 #include <string.h>
 #include "error.h"
@@ -189,7 +192,9 @@ static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
 }
 
 /* either inmode == outmode, or outmode == raw.  anything else is bad news */
-static void convert_data(struct burn_write_opts *o, struct burn_track *track,
+/* ts A61010 : changed type to int in order to propagate said bad news */
+/** @return 1 is ok, <= 0 is failure */
+static int convert_data(struct burn_write_opts *o, struct burn_track *track,
 			 int inmode, unsigned char *data)
 {
 	int outlen, inlen;
@@ -202,14 +207,21 @@ static void convert_data(struct burn_write_opts *o, struct burn_track *track,
 
 	outlen = burn_sector_length(outmode);
 	inlen = burn_sector_length(inmode);
-	assert(outlen >= inlen);
+
+	/* ts A61010 */
+	/* a ssert(outlen >= inlen); */
+	if (outlen < inlen)
+		return 0;
 
 	if ((outmode & BURN_MODE_BITS) == (inmode & BURN_MODE_BITS)) {
 		get_bytes(track, inlen, data);
-		return;
+		return 1;
 	}
 
-	assert(outmode & BURN_MODE_RAW);
+	/* ts A61010 */
+	/* a ssert(outmode & BURN_MODE_RAW); */
+	if (!(outmode & BURN_MODE_RAW))
+		return 0;
 
 	if (inmode & BURN_MODE1)
 		offset = 16;
@@ -217,9 +229,16 @@ static void convert_data(struct burn_write_opts *o, struct burn_track *track,
 		offset = 0;
 	if (inmode & BURN_AUDIO)
 		offset = 0;
-	assert(offset != -1);
+
+	/* ts A61010 */
+	/* a ssert(offset != -1); */
+	if (offset == -1)
+		return 0;
+
 	get_bytes(track, inlen, data + offset);
+	return 1;
 }
+
 static void convert_subs(struct burn_write_opts *o, int inmode,
 			 unsigned char *subs, unsigned char *sector)
 {
@@ -300,9 +319,11 @@ int sector_toc(struct burn_write_opts *o, int mode)
 	unsigned char subs[96];
 
 	data = get_sector(o, mode);
-	if (!data)
+	if (data == NULL)
 		return 0;
-	convert_data(o, NULL, mode, data);
+	/* ts A61010 */
+	if (convert_data(o, NULL, mode, data) <= 0)
+		return 0;
 	subcode_toc(d, mode, subs);
 	convert_subs(o, mode, subs, data);
 	sector_headers(o, data, mode, 1);
@@ -318,9 +339,11 @@ int sector_pregap(struct burn_write_opts *o,
 	unsigned char subs[96];
 
 	data = get_sector(o, mode);
-	if (!data)
+	if (data == NULL)
 		return 0;
-	convert_data(o, NULL, mode, data);
+	/* ts A61010 */
+	if (convert_data(o, NULL, mode, data) <= 0)
+		return 0;
 	subcode_user(o, subs, tno, control, 0, NULL, 1);
 	convert_subs(o, mode, subs, data);
 	sector_headers(o, data, mode, 0);
@@ -336,9 +359,11 @@ int sector_postgap(struct burn_write_opts *o,
 	unsigned char *data;
 
 	data = get_sector(o, mode);
-	if (!data)
+	if (data == NULL)
 		return 0;
-	convert_data(o, NULL, mode, data);
+	/* ts A61010 */
+	if (convert_data(o, NULL, mode, data) <= 0)
+		return 0;;
 /* use last index in track */
 	subcode_user(o, subs, tno, control, 1, NULL, 1);
 	convert_subs(o, mode, subs, data);
@@ -425,7 +450,8 @@ void subcode_user(struct burn_write_opts *o, unsigned char *subcodes,
 		}
 	}
 
-	assert(qmode == 1 || qmode == 2 || qmode == 3);
+	/* ts A61010 : this cannot happen. Assert for fun ? */
+	/* a ssert(qmode == 1 || qmode == 2 || qmode == 3); */
 
 	switch (qmode) {
 	case 1:
@@ -507,7 +533,9 @@ int sector_lout(struct burn_write_opts *o, unsigned char control, int mode)
 	data = get_sector(o, mode);
 	if (!data)
 		return 0;
-	convert_data(o, NULL, mode, data);
+	/* ts A61010 */
+	if (convert_data(o, NULL, mode, data) <= 0)
+		return 0;
 	subcode_lout(o, control, subs);
 	convert_subs(o, mode, subs, data);
 	sector_headers(o, data, mode, 0);
@@ -524,7 +552,9 @@ int sector_data(struct burn_write_opts *o, struct burn_track *t, int psub)
 	data = get_sector(o, t->mode);
 	if (!data)
 		return 0;
-	convert_data(o, t, t->mode, data);
+	/* ts A61010 */
+	if (convert_data(o, t, t->mode, data) <= 0)
+		return 0;
 
 	if (!t->source->read_sub)
 		subcode_user(o, subs, t->entry->point,
@@ -569,6 +599,17 @@ int dec_to_bcd(int d)
 	return (top << 4) + bottom;
 }
 
+int sector_headers_is_ok(struct burn_write_opts *o, int mode)
+{
+	if (mode & BURN_AUDIO)	/* no headers for "audio" */
+		return 1;
+	if (o->write_type == BURN_WRITE_SAO)
+		return 1;
+	if (mode & BURN_MODE1)
+		return 2;
+	return 0;
+}
+
 void sector_headers(struct burn_write_opts *o, unsigned char *out,
 		    int mode, int leadin)
 {
@@ -577,6 +618,17 @@ void sector_headers(struct burn_write_opts *o, unsigned char *out,
 	int min, sec, frame;
 	int modebyte = -1;
 
+	/* ts A61009 */
+#if 1
+	int ret;
+
+	ret = sector_headers_is_ok(o, mode);
+	if (ret != 2)
+		return;
+	modebyte = 1;
+
+#else
+
 	if (mode & BURN_AUDIO)	/* no headers for "audio" */
 		return;
 	if (o->write_type == BURN_WRITE_SAO)
@@ -584,7 +636,10 @@ void sector_headers(struct burn_write_opts *o, unsigned char *out,
 	if (mode & BURN_MODE1)
 		modebyte = 1;
 
-	assert(modebyte == 1);
+#endif
+
+	/* ts A61009 : now ensured by burn_disc_write_is_ok() */
+	/* a ssert(modebyte == 1); */
 
 	out[0] = 0;
 	memset(out + 1, 0xFF, 10);	/* sync */
@@ -656,7 +711,9 @@ void process_q(struct burn_drive *d, unsigned char *q)
 */
 		break;
 	default:
-		assert(0);
+
+		/* ts A61009 : if reactivated then witout Assert */
+		a ssert(0);
 	}
 }
 #endif

@@ -530,6 +530,27 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	return 1;
 }
 
+/* ts A61009 */
+int burn_disc_write_is_ok(struct burn_write_opts *o, struct burn_disc *disc)
+{
+	int i, t;
+	char msg[80];
+
+	for (i = 0; i < disc->sessions; i++)
+		for (t = 0; t < disc->session[i]->tracks; t++)
+			if (!sector_headers_is_ok(
+					o, disc->session[i]->track[t]->mode))
+				goto bad_track_mode_found;
+	return 1;
+bad_track_mode_found:;
+	sprintf(msg, "Unsuitable track mode 0x%x in track %d of session %d",
+		disc->session[i]->track[t]->mode, i+1, t+1);
+	libdax_msgs_submit(libdax_messenger, -1, 0x0002010a,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			msg, 0, 0);
+	return 0;
+}
+
 void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 {
 	struct cue_sheet *sheet;
@@ -640,5 +661,8 @@ return crap.  so we send the command, then ignore the result.
 fail:
 	d->sync_cache(d);
 	burn_print(1, "done - failed\n");
+	libdax_msgs_submit(libdax_messenger, d->global_index, 0x0002010b,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Burn run failed", 0, 0);
 	d->busy = BURN_DRIVE_IDLE;
 }

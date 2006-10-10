@@ -409,7 +409,7 @@ ts A61007
 
 ------------------------------------------------------------------------------
 
-   27) libburn/sector.c:	assert(outlen >= inlen);
+++ 27) libburn/sector.c:	assert(outlen >= inlen);
        libburn/sector.c:	assert(outmode & BURN_MODE_RAW);
        libburn/sector.c:	assert(offset != -1);
 static convert_data():
@@ -421,6 +421,8 @@ Called by sector_toc() sector_pregap() sector_postgap() sector_lout()
 : Severe Application Error
 => change return type of convert_data()
 => all callers interpret return value and eventually return failure
+
+ts A61007
 
 ------------------------------------------------------------------------------
 
@@ -438,33 +440,40 @@ ts A61008
 
 ------------------------------------------------------------------------------
 
-   29) libburn/sector.c:	assert(qmode == 1 || qmode == 2 || qmode == 3);
+++ 29) libburn/sector.c:	assert(qmode == 1 || qmode == 2 || qmode == 3);
 subcode_user():
 - can not happen -
 
 : Unknown reason of assert()
 => remove assert()
 
+ts A61010
+
 ------------------------------------------------------------------------------
 
-   30) libburn/sector.c:	assert(modebyte == 1);
+++ 30) libburn/sector.c:	assert(modebyte == 1);
 sector_headers():
-Several unacceptable settings within struct burn_write_opts and mode parameter
+Does only accept modes BURN_AUDIO, BURN_MODE1 or write_type BURN_WRITE_SAO
 
 Called by sector_toc() sector_pregap() sector_postgap() sector_lout()
           sector_data()
 
-: Severe Application Error
-=> change return type of convert_data()
-=> all callers interpret return value and eventually return failure
+: Severe Libburn Error
+=> new functions sector_headers_is_ok(), burn_disc_write_is_ok() 
+   help to catch problem in API burn_disc_write()
+=> issue LIBDAX_MSGS_SEV_FATAL
+
+ts A61009
 
 ------------------------------------------------------------------------------
 
-   31) libburn/sector.c:		assert(0);
+++ 31) libburn/sector.c:		assert(0);
 process_q()
 - defunct -
 
 => :)
+
+ts A61009
 
 ------------------------------------------------------------------------------
 

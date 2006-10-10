@@ -315,6 +315,12 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020108 (SORRY,HIGH)   = Drive is not grabbed on disc status inquiry
  0x00020108 (FATAL,HIGH)   = Could not allocate new drive object
  0x00020109 (FATAL,HIGH)   = Library not running
+ 0x0002010a (FATAL,HIGH)   = Unsuitable track mode
+ 0x0002010b (FATAL,HIGH)   = Burn run failed
+ 0x0002010c
+ 0x0002010d
+ 0x0002010e
+ 0x0002010f
  0x00020110 (FATAL,HIGH)   = Persistent drive address too long
  0x00020111 (FATAL,HIGH)   = Could not allocate new auxiliary object
  0x00020112 (SORRY,HIGH)   = Bad combination of write_type and block_type

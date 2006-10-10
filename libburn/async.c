@@ -258,6 +258,9 @@ void burn_disc_write(struct burn_write_opts *opts, struct burn_disc *disc)
 				"Drive capabilities not inquired yet", 0, 0);
 		return;
 	}
+	/* ts A61009 : obsolete Assert in sector_headers() */
+	if (! burn_disc_write_is_ok(opts, disc)) /* issues own msgs */
+		return;
 
 	o.drive = opts->drive;
 	o.opts = opts;
