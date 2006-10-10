@@ -1,6 +1,8 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
-#include <assert.h>
+/* ts A61010 */
+/* #include <a ssert.h> */
+
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -616,7 +618,6 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 	int err;
 	sg_io_hdr_t s;
 
-	
 /* ts A60821
    <<< debug: for tracing calls which might use open drive fds */
 	char buf[161];
@@ -624,17 +625,13 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 		d->fd,d->released);
 	mmc_function_spy(buf);
 
+	/* ts A61010 : with no fd there is no chance to send an ioctl */
+	if (d->fd < 0) {
+		c->error = 1;
+		return 0;
+	}
 
 	c->error = 0;
-/*
-this is valid during the mode probe in scan
-	if (d->fd < 1 || d->released) {
-		burn_print(1,
-			      "command issued on ungrabbed drive, chaos.\n");
-		burn_print(1, "fd = %d, released = %d\n", d->fd,
-			      d->released);
-	}
-*/
 	memset(&s, 0, sizeof(sg_io_hdr_t));
 
 	s.interface_id = 'S';
@@ -663,7 +660,14 @@ this is valid during the mode probe in scan
 /* touch page so we can use valgrind */
 			memset(c->page->data, 0, BUFFER_SIZE);
 		} else {
-			assert(c->page->bytes > 0);
+
+			/* ts A61010 */
+			/* a ssert(c->page->bytes > 0); */
+			if (c->page->bytes <= 0) {
+				c->error = 1;
+				return 0;
+			}
+
 			s.dxfer_len = c->page->bytes;
 		}
 	} else {
@@ -674,7 +678,22 @@ this is valid during the mode probe in scan
 
 	do {
 		err = ioctl(d->fd, SG_IO, &s);
-		assert(err != -1);
+
+		/* ts A61010 */
+		/* a ssert(err != -1); */
+		if (err == -1) {
+			libdax_msgs_submit(libdax_messenger,
+				 d->global_index, 0x0002010c,
+				 LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				 "Failed to transfer command to drive",
+				 errno, 0);
+			sg_close_drive(d);
+			d->released = 1;
+			d->busy = BURN_DRIVE_IDLE;
+			c->error = 1;
+			return -1;
+		}
+
 		if (s.sb_len_wr) {
 			if (!c->retry) {
 				c->error = 1;
