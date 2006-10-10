@@ -512,25 +512,26 @@ ts A61007
 
 ------------------------------------------------------------------------------
 
-   35) libburn/sg.c:			assert(c->page->bytes > 0);
+++ 35) libburn/sg.c:			assert(c->page->bytes > 0);
 sg_issue_command():
 An SCSI command of direction TO_DRIVE wants to transfer 0 bytes.
 
 : Severe Libburn Error
-=> ? leave assert ?
-=> ? ignore command and issue LIBDAX_MSGS_SEV_WARNING ?
-=> ? issue LIBDAX_MSGS_SEV_FATAL and shutdown libburn ?
+=> set command.error = 1 and return 0
+
+ts A61010
 
 ------------------------------------------------------------------------------
 
-   36) libburn/sg.c:		assert(err != -1);
+++ 36) libburn/sg.c:		assert(err != -1);
 sg_issue_command():
 The transfer of the command via ioctl() failed 
 
 : Severe Transport Level Problem
-=> ? leave assert ?
-=> ? ignore command and issue LIBDAX_MSGS_SEV_WARNING ?
-=> ? issue LIBDAX_MSGS_SEV_FATAL and shutdown libburn ?
+=> close drive fd, set idle and released
+=> set command.error = 1 and return -1
+
+ts A61010
 
 ------------------------------------------------------------------------------
 
