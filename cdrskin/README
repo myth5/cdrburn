@@ -238,17 +238,19 @@ I have the hope that Joerg feels more flattered than annoyed by cdrskin.
 
                              Pseudo-SCSI Adresses
 
-cdrecord and cdrskin share only some syntax of addresses but not necessarily
+cdrecord and cdrskin share the syntax of addresses but not necessarily
 the meaning of the components. A cdrecord-style address for cdrskin
   [prefix:]scsibus,target,lun
 can be interpreted in two different modes.
 
-Standard mode uses scsibus,target,lun as given by the operating system. On
-(old) real SCSI burners and on emulated SCSI it is compatible to cdrecord.
+Standard mode tries to be compatible to original cdrecord. This should be true
+with (emulated) SCSI where the /dev/sgN with is looked up with matching
+scsibus,target,lun as given by the operating system.
+With dev=ATA: or dev=ATAPI: the translation to /dev/hdX is purely literal
+but matches the cdrecord addresses on all systems tested so far:
+  X = 'a' + 2 * scsibus + target
+where target only may have the values 0 or 1.
 
-On plain IDE this mode offers no compatible scsibus,target,lun addressing,
-but the cdrecord-ly advised methods ATA:scsibus,target,lun and ATAPI:...
-are supported by cdrskin via an own incompatible address enumeration.
 In this mode, option -scanbus will list only SCSI devices unless option
 dev=ATA or dev=ATAPI are given, which will suppress SCSI devices and only
 show IDE drives (i.e. /dev/hdX without ide-scsi emulation).
@@ -276,10 +278,7 @@ a meaning. To stay upward compatible, use addresses as printed by -scanbus.
 Some programs or users have their own ideas about the address of their burner.
 K3b 0.10 for example derives cdrecord addresses by own examination of the
 devices and not by calling cdrecord -scanbus.
-On systems where the burners are attached via (emulated) SCSI, standard mode
-will hopefully be fully compatible. If IDE devices are used, then hope that
-the frontend uses directly /dev/hdX or asks its "cdrecord:" via 
-dev=ATA -scanbus for drive addresses and drive descriptions.
+Standard mode will hopefully be fully compatible with their ideas.
 
 Old frontends which do not know dev=ATA or dev=ATAPI and which do ask their
 "cdrecord" via -scanbus may be well served with option  --old_pseudo_scsi_adr .

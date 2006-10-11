@@ -1416,7 +1416,7 @@ int Cdrpreskin_queue_msgs(struct CdrpreskiN *o, int flag)
     @param flag Bitfield for control purposes: 
                 bit0= old_pseudo_scsi_adr
     @return 1 success, 0=no recognizable format, -1=severe error,
-            -2 could not find scsi device
+            -2 could not find scsi device, -3 address format error
 */
 int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
                                 int *driveno, int flag)
@@ -1469,19 +1469,23 @@ int Cdrpreskin__cdrecord_to_dev(char *adr, char device_adr[Cdrskin_adrleN],
        } else if(busno!=0) {
          fprintf(stderr,
   "cdrskin: FATAL : dev=[Prefix:]Bus,Target,Lun expects Bus out of {0,1,2}\n");
-         return(0);
+         return(-3);
        }
      } else {
        if(busno<0) {
          fprintf(stderr,
      "cdrskin: FATAL : dev=[Prefix:]Bus,Target,Lun expects Bus number >= 0\n");
-         return(0);
+         return(-3);
        }
        if((strncmp(adr,"ATA",3)==0 && (adr[3]==0 || adr[3]==':')) ||
           (strncmp(adr,"ATAPI",5)==0 && (adr[5]==0 || adr[5]==':'))) {
 
-         /* >>> in future expect busno to have a meaning */
-         sprintf(device_adr,"/dev/hd%c",'a'+(*driveno));
+         if(busno>12 || (*driveno)<0 || (*driveno)>1) {
+           fprintf(stderr,
+"cdrskin: FATAL : dev=ATA:Bus,Target,Lun expects Bus {0..12}, Target {0,1}\n");
+           return(-3);
+         }
+         sprintf(device_adr,"/dev/hd%c",'a'+(2*busno)+(*driveno));
 
 #ifdef Cdrskin_libburn_has_convert_scsi_adR
        } else {
@@ -1966,7 +1970,7 @@ dev_too_long:;
    } else {
      ret= Cdrpreskin__cdrecord_to_dev(adr,o->device_adr,&driveno,
                                       !!o->old_pseudo_scsi_adr);
-     if(ret==-2)
+     if(ret==-2 || ret==-3)
        {ret= 0; goto ex;}
      if(ret<0)
        goto ex;
@@ -2945,11 +2949,9 @@ int Cdrskin_driveno_to_btldev(struct CdrskiN *skin, int driveno,
      if(strncmp(loc,"/dev/hd",7)==0)
        if(loc[7]>='a' && loc[7]<='z')
          if(loc[8]==0) {
-
-           /* >>> implement new ATA enumeration here */
-
-           sprintf(btldev,"2,%d,0",loc[7]-'a');
-           {ret= 2000002; goto adr_translation;}
+           bus_no= (loc[7]-'a')/2;
+           sprintf(btldev,"%d,%d,0",bus_no,(loc[7]-'a')%2);
+           {ret= 2000000 + bus_no; goto adr_translation;}
          }
      goto fallback;
    } else {
@@ -3037,6 +3039,7 @@ int Cdrskin_report_disc_status(struct CdrskiN *skin, enum burn_disc_status s,
 int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
 {
  int ret,i,busno,first_on_bus,pseudo_transport_group= 0,skipped_devices= 0;
+ int busmax= 16;
  char shellsafe[5*Cdrskin_strleN+2],perms[40],btldev[Cdrskin_adrleN];
  char adr[Cdrskin_adrleN],*raw_dev,*drives_shown= NULL;
  struct stat stbuf;
@@ -3097,14 +3100,14 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
    /* >>> fprintf(stderr,"Linux sg driver version: 3.1.25\n"); */
    printf("Using libburn version '%s'.\n", Cdrskin_libburn_versioN);
    if(pseudo_transport_group!=1000000)
-     printf(
-      "cdrskin: NOTE : The printed addresses are not cdrecord compatible !\n");
+   if(skin->preskin->old_pseudo_scsi_adr)
+     printf("cdrskin: NOTE : The printed addresses are not cdrecord compatible !\n");
 
-   for(busno= 0;busno<=16;busno++) {
+   for(busno= 0;busno<=busmax;busno++) {
      first_on_bus= 1;
      for(i=0;i<skin->n_drives;i++) {
        ret= Cdrskin_driveno_to_btldev(skin,i,btldev,1);
-       if(busno==16 && drives_shown[i]==0) {
+       if(busno==busmax && drives_shown[i]==0) {
          if(ret/1000000 != pseudo_transport_group) {
            skipped_devices++;
            if(skin->verbosity>=Cdrskin_verbose_debuG)
@@ -3128,7 +3131,7 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
      printf("cdrskin: NOTE : There were %d drives not shown.\n",
             skipped_devices);
    else
-     printf("cdrskin: NOTE : There was 1 drives not shown.\n");
+     printf("cdrskin: NOTE : There was 1 drive not shown.\n");
    printf("cdrskin: HINT : To surely see all drives try option: --devices\n");
    if(pseudo_transport_group!=2000000)
      printf("cdrskin: HINT : or try options:               dev=ATA -scanbus\n");
@@ -3683,7 +3686,11 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
 
  disc= burn_disc_create();
  session= burn_session_create();
- burn_disc_add_session(disc,session,BURN_POS_END);
+ ret= burn_disc_add_session(disc,session,BURN_POS_END);
+ if(ret==0) {
+   fprintf(stderr,"cdrskin: FATAL : cannot add session to disc object.\n");
+   return(0);
+ }
 
  skin->fixed_size= 0.0;
  for(i=0;i<skin->track_counter;i++) {
@@ -4594,25 +4601,26 @@ ignore_unknown:;
  if(strlen(skin->preskin->raw_device_adr)>0 ||
     strlen(skin->preskin->device_adr)>0) {
    if(strlen(skin->preskin->device_adr)>0)
-     ret= Cdrskin_dev_to_driveno(skin,skin->preskin->device_adr,
-                                 &(skin->driveno),0);
+     cpt= skin->preskin->device_adr;
    else
-     ret= Cdrskin_dev_to_driveno(skin,skin->preskin->raw_device_adr,
-                                 &(skin->driveno),0);
-   if(ret<=0)
-     return(ret);
-   if(skin->verbosity>=Cdrskin_verbose_cmD) {
+     cpt= skin->preskin->raw_device_adr;
+   if(strcmp(cpt,"ATA")!=0 && strcmp(cpt,"ATAPI")!=0 && strcmp(cpt,"SCSI")!=0){
+     ret= Cdrskin_dev_to_driveno(skin,cpt,&(skin->driveno),0);
+     if(ret<=0)
+       return(ret);
+     if(skin->verbosity>=Cdrskin_verbose_cmD) {
 
 #ifdef Cdrskin_libburn_has_drive_get_adR
-     ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
-     if(ret<=0)
-       adr[0]= 0;
+       ret= burn_drive_get_adr(&(skin->drives[skin->driveno]), adr);
+       if(ret<=0)
+         adr[0]= 0;
 #else
-     strcpy(adr,skin->drives[skin->driveno].location);
+       strcpy(adr,skin->drives[skin->driveno].location);
 #endif
 
-     printf("cdrskin: active drive number : %d  '%s'\n",
-            skin->driveno,adr);
+       printf("cdrskin: active drive number : %d  '%s'\n",
+              skin->driveno,adr);
+     }
    }
  }
  if(grab_and_wait_value>0) {
