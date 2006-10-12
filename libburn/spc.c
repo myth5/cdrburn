@@ -75,7 +75,7 @@ int spc_get_erase_progress(struct burn_drive *d)
 void spc_inquiry(struct burn_drive *d)
 {
 	struct buffer buf;
-	struct scsi_inquiry_data *id;
+	struct burn_scsi_inquiry_data *id;
 	struct command c;
 
 	memcpy(c.opcode, SPC_INQUIRY, sizeof(SPC_INQUIRY));
@@ -87,7 +87,7 @@ void spc_inquiry(struct burn_drive *d)
 	c.dir = FROM_DRIVE;
 	d->issue_command(d, &c);
 
-	id = (struct scsi_inquiry_data *)d->idata;
+	id = (struct burn_scsi_inquiry_data *)d->idata;
 	id->vendor[8] = 0;
 	id->product[16] = 0;
 	id->revision[4] = 0;

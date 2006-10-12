@@ -1,6 +1,10 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
+#ifdef __Linux__
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <unistd.h>
 #include <signal.h>
 

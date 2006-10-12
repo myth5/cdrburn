@@ -29,7 +29,11 @@ static int signal_list[]= {
  SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
  SIGUSR1, SIGUSR2, SIGXCPU, SIGTSTP, SIGTTIN,
  SIGTTOU,
- SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP,
+ SIGBUS,
+#ifdef __Linux__
+ SIGPOLL,
+#endif
+ SIGPROF, SIGSYS, SIGTRAP,
  SIGVTALRM, SIGXCPU, SIGXFSZ, -1
 };
 static char *signal_name_list[]= { 
@@ -37,7 +41,11 @@ static char *signal_name_list[]= {
  "SIGFPE", "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM",
  "SIGUSR1", "SIGUSR2", "SIGXCPU", "SIGTSTP", "SIGTTIN",
  "SIGTTOU",
- "SIGBUS", "SIGPOLL", "SIGPROF", "SIGSYS", "SIGTRAP",
+ "SIGBUS",
+#ifdef __Linux__
+ "SIGPOLL",
+#endif
+ "SIGPROF", "SIGSYS", "SIGTRAP",
  "SIGVTALRM", "SIGXCPU", "SIGXFSZ", "@"
 };
 static int signal_list_count= 24;

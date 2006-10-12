@@ -2,7 +2,11 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef __Linux__
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <unistd.h>
 #include <signal.h>
 
@@ -61,11 +65,16 @@ void burn_drive_free_all(void)
 /* ts A60822 */
 int burn_drive_is_open(struct burn_drive *d)
 {
+#if defined(__Linux__)
 	/* a bit more detailed case distinction than needed */
 	if (d->fd == -1337)
 		return 0;
 	if (d->fd < 0)
 		return 0;
+#elif defined(__FreeBSD__)
+	if (d->cam == NULL)
+		return 0;
+#endif
 	return 1;
 }
 
@@ -456,7 +465,7 @@ static void strip_spaces(char *str)
 
 static int drive_getcaps(struct burn_drive *d, struct burn_drive_info *out)
 {
-	struct scsi_inquiry_data *id;
+	struct burn_scsi_inquiry_data *id;
 
 	/* ts A61007 : now prevented in enumerate_common() */
 #if 0
@@ -467,7 +476,7 @@ static int drive_getcaps(struct burn_drive *d, struct burn_drive_info *out)
 	if (!d->idata->valid || !d->mdata->valid)
 		return 0;
 
-	id = (struct scsi_inquiry_data *)d->idata;
+	id = (struct burn_scsi_inquiry_data *)d->idata;
 
 	memcpy(out->vendor, id->vendor, sizeof(id->vendor));
 	strip_spaces(out->vendor);

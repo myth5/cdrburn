@@ -8,15 +8,18 @@
 #include <pthread.h>
 /* sg data structures */
 #include <sys/types.h>
+#ifdef __Linux__
+/* XXX Why do we need this here? */
 #include <scsi/sg.h>
 #include <scsi/scsi.h>
+#endif
 
 /* kludge! glibc headers don't define all the SCSI shit that we use! */
 #ifndef SG_GET_ACCESS_COUNT
 #  define SG_GET_ACCESS_COUNT 0x2289
 #endif
 
-#define BUFFER_SIZE 65536
+#define BUFFER_SIZE 65536/2
 
 enum transfer_direction
 { TO_DRIVE, FROM_DRIVE, NO_TRANSFER };
@@ -55,7 +58,7 @@ struct command
 	struct buffer *page;
 };
 
-struct scsi_inquiry_data
+struct burn_scsi_inquiry_data
 {
 	char vendor[9];
 	char product[17];
@@ -101,7 +104,11 @@ struct burn_drive
 	int channel;
 	int lun;
 	char *devname;
+#if defined(__Linux__)
 	int fd;
+#elif defined(__FreeBSD__)
+	struct cam_device* cam;
+#endif
 
 	/* ts A60926 : trying to lock against growisofs /dev/srN, /dev/scdN */
 	int sibling_count;
@@ -174,7 +181,7 @@ struct burn_drive
 	int (*test_unit_ready) (struct burn_drive * d);
 	void (*probe_write_modes) (struct burn_drive * d);
 	struct params params;
-	struct scsi_inquiry_data *idata;
+	struct burn_scsi_inquiry_data *idata;
 	struct scsi_mode_data *mdata;
 	int toc_entries;
 	struct burn_toc_entry *toc_entry;
