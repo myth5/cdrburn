@@ -73,6 +73,8 @@ THREAD_LIBS=-lpthread
 AC_SUBST(THREAD_LIBS)
 
 TARGET_SHIZZLE
+AC_SUBST(ARCH)
+AC_SUBST(LIBBURN_ARCH_LIBS)
 
 dnl Add compiler-specific flags
 

@@ -8,6 +8,7 @@ lib_LTLIBRARIES = libburn/libburn.la libisofs/libisofs.la
 # Build libraries
 libburn_libburn_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+libburn_libburn_la_LIBADD = $(LIBBURN_ARCH_LIBS) $(THREAD_LIBS)
 libburn_libburn_la_SOURCES = \
 	libburn/async.c \
 	libburn/async.h \
@@ -42,7 +43,7 @@ libburn_libburn_la_SOURCES = \
 	libburn/sbc.h \
 	libburn/sector.c \
 	libburn/sector.h \
-	libburn/sg.c \
+	libburn/sg-@ARCH@.c \
 	libburn/sg.h \
 	libburn/source.h \
 	libburn/source.c \
