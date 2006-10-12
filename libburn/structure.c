@@ -158,24 +158,25 @@ int burn_session_remove_track(struct burn_session *s, struct burn_track *t)
 
 	/* Find the position */
 	for (i = 0; i < s->tracks; i++) {
-		if (t == s->track[i])
+		if (t == s->track[i]) {
 			pos = i;
+			break;
+		}
 	}
 
 	if (pos == -1)
 		return 0;
 
 	/* Is it the last track? */
-	if (pos != s->tracks) {
-		memmove(s->track[pos], s->track[pos + 1],
+	if (pos != s->tracks - 1) {
+		memmove(&s->track[pos], &s->track[pos + 1],
 			sizeof(struct burn_track *) * (s->tracks - (pos + 1)));
 	}
 
 	s->tracks--;
 	tmp = realloc(s->track, sizeof(struct burn_track *) * s->tracks);
-	if (!tmp)
-		return 0;
-	s->track = tmp;
+	if (tmp)
+		s->track = tmp;
 	return 1;
 }
 
