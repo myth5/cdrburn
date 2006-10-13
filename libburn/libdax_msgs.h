@@ -297,7 +297,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
 
  0x00020001 (SORRY,LOW)    = Cannot open busy device
  0x00020002 (SORRY,HIGH)   = Encountered error when closing drive
- 0x00020003 (FATAL,HIGH)   = Could not grab drive
+ 0x00020003 (SORRY,HIGH)   = Could not grab drive
  0x00020004 (NOTE,HIGH)    = Opened O_EXCL scsi sibling
  0x00020005 (FATAL,HIGH)   = Failed to open device
  0x00020006 (FATAL,HIGH)   = Too many scsi siblings

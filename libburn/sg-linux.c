@@ -578,14 +578,14 @@ int sg_grab(struct burn_drive *d)
 drive_is_in_use:;
 		libdax_msgs_submit(libdax_messenger, d->global_index,
 			0x00020003,
-			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
 			"Could not grab drive - already in use", 0, 0);
 		sg_close_drive(d);
 		d->fd = -1337;
 		return 0;
 	}
 	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00020003,
-			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
 			"Could not grab drive", os_errno, 0);
 	return 0;
 }

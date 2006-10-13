@@ -3984,6 +3984,8 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
  if(skin->n_drives<=skin->driveno || skin->driveno < 0)
    return(2);
 
+ /* <<< A61012 : retry loop might now be obsolete 
+                (a matching bug in burn_disc_write_sync() was removed ) */
  for(i= 0;i<max_try;i++) {
    ret= Cdrskin_grab_drive(skin,2|((i<max_try-1)<<2));
    if(ret>0 || i>=max_try-1)

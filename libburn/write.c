@@ -658,6 +658,10 @@ return crap.  so we send the command, then ignore the result.
 	burn_print(1, "done\n");
 	d->busy = BURN_DRIVE_IDLE;
 
+	/* ts A61012 : This return was traditionally missing, a suspect this
+			to have caused Cdrskin_eject() failures */
+	return;
+
 fail:
 	d->sync_cache(d);
 	burn_print(1, "done - failed\n");
