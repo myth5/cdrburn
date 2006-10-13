@@ -8,18 +8,26 @@
 #include <pthread.h>
 /* sg data structures */
 #include <sys/types.h>
-#ifdef __Linux__
+
+#ifdef __FreeBSD__
+
+#define BUFFER_SIZE 65536/2
+
+#else /* __FreeBSD__ */
+
 /* XXX Why do we need this here? */
+/* ts A61013: because Linux wants to see them */ 
 #include <scsi/sg.h>
 #include <scsi/scsi.h>
-#endif
+#define BUFFER_SIZE 65536
+
+#endif /* ! __FreeBSD__ */
 
 /* kludge! glibc headers don't define all the SCSI shit that we use! */
 #ifndef SG_GET_ACCESS_COUNT
 #  define SG_GET_ACCESS_COUNT 0x2289
 #endif
 
-#define BUFFER_SIZE 65536/2
 
 enum transfer_direction
 { TO_DRIVE, FROM_DRIVE, NO_TRANSFER };
@@ -104,10 +112,11 @@ struct burn_drive
 	int channel;
 	int lun;
 	char *devname;
-#if defined(__Linux__)
-	int fd;
-#elif defined(__FreeBSD__)
+
+#if defined(__FreeBSD__)
 	struct cam_device* cam;
+#else
+	int fd;
 #endif
 
 	/* ts A60926 : trying to lock against growisofs /dev/srN, /dev/scdN */

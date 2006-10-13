@@ -2,11 +2,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef __Linux__
-#include <malloc.h>
-#else
+
+/* #include <m alloc.h>  ts A61013 : not in Linux man 3 malloc */
+
 #include <stdlib.h>
-#endif
 #include <unistd.h>
 #include <signal.h>
 
@@ -65,16 +64,20 @@ void burn_drive_free_all(void)
 /* ts A60822 */
 int burn_drive_is_open(struct burn_drive *d)
 {
-#if defined(__Linux__)
+#if defined(__FreeBSD__)
+
+	if (d->cam == NULL)
+		return 0;
+
+#else /* __FreeBSD__ */
+
 	/* a bit more detailed case distinction than needed */
 	if (d->fd == -1337)
 		return 0;
 	if (d->fd < 0)
 		return 0;
-#elif defined(__FreeBSD__)
-	if (d->cam == NULL)
-		return 0;
-#endif
+
+#endif /* ! __FreeBSD__ */
 	return 1;
 }
 

@@ -2,11 +2,6 @@
 
 /* scsi block commands */
 
-#ifdef __Linux__
-/* XXX Why do we need this here? */
-#include <scsi/scsi.h>
-#include <scsi/sg.h>
-#endif
 #include <string.h>
 
 #include "transport.h"

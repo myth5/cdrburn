@@ -10,7 +10,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <malloc.h>
+
+/* #include <m alloc.h>  ts A61013 : not in Linux man 3 malloc */
+
 #include <string.h>
 #include <sys/poll.h>
 #include <linux/hdreg.h>
@@ -452,7 +454,7 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	out.get_nwa = mmc_get_nwa;
 	out.close_disc = mmc_close_disc;
 	out.close_session = mmc_close_session;
-	out.idata = malloc(sizeof(struct scsi_inquiry_data));
+	out.idata = malloc(sizeof(struct burn_scsi_inquiry_data));
 	out.idata->valid = 0;
 	out.mdata = malloc(sizeof(struct scsi_mode_data));
 	out.mdata->valid = 0;

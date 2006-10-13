@@ -43,7 +43,7 @@ libburn_libburn_la_SOURCES = \
 	libburn/sbc.h \
 	libburn/sector.c \
 	libburn/sector.h \
-	libburn/sg-@ARCH@.c \
+	libburn/sg.c \
 	libburn/sg.h \
 	libburn/source.h \
 	libburn/source.c \
@@ -60,6 +60,7 @@ libburn_libburn_la_SOURCES = \
 	libburn/write.h \
 	version.h
 
+##	libburn/sg-@ARCH@.c \
 
 libisofs_libisofs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

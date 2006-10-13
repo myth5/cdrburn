@@ -23,17 +23,15 @@ typedef void (*sighandler_t)(int);
 
 #include "cleanup.h"
 
+#ifdef __FreeBSD__
+
 /* Signals to be caught */
 static int signal_list[]= { 
  SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT,
  SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
  SIGUSR1, SIGUSR2, SIGXCPU, SIGTSTP, SIGTTIN,
  SIGTTOU,
- SIGBUS,
-#ifdef __Linux__
- SIGPOLL,
-#endif
- SIGPROF, SIGSYS, SIGTRAP,
+ SIGBUS, SIGPROF, SIGSYS, SIGTRAP,
  SIGVTALRM, SIGXCPU, SIGXFSZ, -1
 };
 static char *signal_name_list[]= { 
@@ -41,14 +39,33 @@ static char *signal_name_list[]= {
  "SIGFPE", "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM",
  "SIGUSR1", "SIGUSR2", "SIGXCPU", "SIGTSTP", "SIGTTIN",
  "SIGTTOU",
- "SIGBUS",
-#ifdef __Linux__
- "SIGPOLL",
-#endif
- "SIGPROF", "SIGSYS", "SIGTRAP",
+ "SIGBUS", "SIGPROF", "SIGSYS", "SIGTRAP",
+ "SIGVTALRM", "SIGXCPU", "SIGXFSZ", "@"
+};
+static int signal_list_count= 23;
+
+#else /* __FreeBSD__ */
+
+/* Signals to be caught */
+static int signal_list[]= { 
+ SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT,
+ SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
+ SIGUSR1, SIGUSR2, SIGXCPU, SIGTSTP, SIGTTIN,
+ SIGTTOU,
+ SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP,
+ SIGVTALRM, SIGXCPU, SIGXFSZ, -1
+};
+static char *signal_name_list[]= { 
+ "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGABRT",
+ "SIGFPE", "SIGSEGV", "SIGPIPE", "SIGALRM", "SIGTERM",
+ "SIGUSR1", "SIGUSR2", "SIGXCPU", "SIGTSTP", "SIGTTIN",
+ "SIGTTOU",
+ "SIGBUS", "SIGPOLL", "SIGPROF", "SIGSYS", "SIGTRAP",
  "SIGVTALRM", "SIGXCPU", "SIGXFSZ", "@"
 };
 static int signal_list_count= 24;
+
+#endif /* ! __FreeBSD__ */
 
 /* Signals not to be caught */
 static int non_signal_list[]= {
