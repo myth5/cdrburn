@@ -831,16 +831,17 @@ int burn_drive_resolve_link(char *path, char adr[], int *recursion_count)
 	return ret;
 }
 
-/* ts A60922 ticket 33 */
+/* ts A60922 - A61014 ticket 33 */
 /* Try to find an enumerated address with the given stat.st_rdev number */
 int burn_drive_find_devno(dev_t devno, char adr[])
 {
 	char fname[4096], msg[4096+100];
-	int i, ret = 0, first = 1;
+	int ret = 0, first = 1;
 	struct stat stbuf;
+	burn_drive_enumerator_t enm;
 
 	while (1) {
-		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		ret = sg_give_next_adr(&enm, fname, sizeof(fname), first);
 		if(ret <= 0)
 	break;
 		first = 0;
@@ -856,9 +857,13 @@ int burn_drive_find_devno(dev_t devno, char adr[])
 			 (long) devno, fname);
 		burn_drive_adr_debug_msg(msg, NULL);
 		strcpy(adr, fname);
-		return 1;
+		{ ret = 1; goto ex;}
 	}
-	return 0;
+	ret = 0;
+ex:;
+	if (first == 0)
+		sg_give_next_adr(&enm, fname, sizeof(fname), -1);
+	return ret;
 }
 
 /* ts A60923 */
@@ -904,16 +909,16 @@ int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
 				int target_no, int lun_no, char adr[])
 {
 	char fname[4096],msg[4096+100];
-	int i, ret = 0, first = 1, i_bus_no = -1;
+	int ret = 0, first = 1, i_bus_no = -1;
 	int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
-
+	burn_drive_enumerator_t enm;
 
 	sprintf(msg,"burn_drive_convert_scsi_adr( %d,%d,%d,%d,%d )",
 		bus_no, host_no, channel_no, target_no, lun_no);
 	burn_drive_adr_debug_msg(msg, NULL);
 
 	while (1) {
-		ret= sg_give_next_adr(&i, fname, sizeof(fname), first);
+		ret= sg_give_next_adr(&enm, fname, sizeof(fname), first);
 		if(ret <= 0)
 	break;
 		first = 0;
@@ -932,13 +937,17 @@ int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
 		if(lun_no >= 0 && i_lun_no != lun_no)
 	continue;
 		if(strlen(fname) >= BURN_DRIVE_ADR_LEN)
-			return -1;
+			{ ret = -1; goto ex;}
 		burn_drive_adr_debug_msg(
 			"burn_drive_convert_scsi_adr() found %s", fname);
 		strcpy(adr, fname);
-		return 1;
+		{ ret = 1; goto ex;}
 	}
-	return 0;
+	ret = 0;
+ex:;
+	if (first == 0)
+		sg_give_next_adr(&enm, fname, sizeof(fname), -1);
+	return ret;
 }
 
 /* ts A60922 ticket 33 */

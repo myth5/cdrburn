@@ -47,7 +47,18 @@ extern int burn_sg_open_abort_busy;
    <<< debug: for tracing calls which might use open drive fds */
 int mmc_function_spy(char * text);
 
-int sg_give_next_adr(int *idx, char adr[], int adr_size, int initialize)
+/** Returns the next index number and the next enumerated drive address.
+    @param idx An opaque handle. Make no own theories about it.
+    @param adr Takes the reply
+    @param adr_size Gives maximum size of reply including final 0
+    @param initialize  1 = start new,
+                       0 = continue, use no other values for now
+                      -1 = finish
+    @return 1 = reply is a valid address , 0 = no further address available
+           -1 = severe error (e.g. adr_size too small)
+*/
+int sg_give_next_adr(burn_drive_enumerator_t *idx,
+		     char adr[], int adr_size, int initialize)
 {
 
 	return (0);
