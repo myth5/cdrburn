@@ -29,6 +29,8 @@ libburn_libburn_la_SOURCES = \
 	libburn/lec.c \
 	libburn/lec.h \
 	libburn/libburn.h \
+	libburn/libdax_audioxtr.h \
+	libburn/libdax_audioxtr.c \
 	libburn/libdax_msgs.h \
 	libburn/libdax_msgs.c \
 	libburn/mmc.c \
@@ -95,6 +97,7 @@ libinclude_HEADERS = \
 ## Build test applications
 noinst_PROGRAMS = \
 	test/libburner \
+	test/dewav \
 	test/iso \
 	test/poll \
 	test/toc \
@@ -106,6 +109,9 @@ bin_PROGRAMS = \
 test_libburner_CPPFLAGS = -Ilibburn
 test_libburner_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_libburner_SOURCES = test/libburner.c
+test_dewav_CPPFLAGS = -Ilibburn
+test_dewav_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
+test_dewav_SOURCES = test/dewav.c
 test_poll_CPPFLAGS = -Ilibburn
 test_poll_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_poll_SOURCES = test/poll.c

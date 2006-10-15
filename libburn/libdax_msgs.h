@@ -330,6 +330,11 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020116 (FATAL,HIGH)   = Track mode has unusable value
  0x00020117 (FATAL,HIGH)   = toc_entry of drive is already in use
 
+ libdax_audioxtr:
+ 0x00020200 (SORRY,HIGH)   = Cannot open audio source file
+ 0x00020201 (SORRY,HIGH)   = Audio source file has unsuitable format
+ 0x00020202 (SORRY,HIGH)   = Failed to prepare reading of audio data
+ 
 
 ------------------------------------------------------------------------------
 
