@@ -68,7 +68,7 @@ int main(int argc, char **argv)
      be_strict= 1;
    } else if(strcmp(argv[i],"--help")==0) {
 help:;
-     printf(
+     fprintf(stderr,
      "usage: %s [-o output_path|\"-\"] [--lax|--strict] [source_path|\"-\"]\n",
             argv[0]);
      exit(0);
