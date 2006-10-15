@@ -272,7 +272,9 @@ or
 #include <errno.h>
 #include <sys/time.h>
 
-#include <libburn/libburn.h>
+/* #include <libburn/libburn.h> */
+#include "../libburn/libburn.h"
+
 
 #ifdef Cdrskin_libburn_has_cleanup_handleR
 #define Cleanup_set_handlers burn_set_signal_handling
