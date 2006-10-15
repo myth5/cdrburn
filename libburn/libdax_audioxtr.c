@@ -158,6 +158,9 @@ static int libdax_audioxtr_init_reading(struct libdax_audioxtr *o, int flag)
  int ret;
 
  /* currently this only works for MS WAVE files .wav */;
+ if(o->fd==0) /* stdin: hope no read came after libdax_audioxtr_identify() */
+   return(1);
+
  ret= lseek(o->fd,44,SEEK_SET);
  if(ret==-1)
    return(0);
