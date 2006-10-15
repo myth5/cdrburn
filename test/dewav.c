@@ -15,9 +15,18 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifdef Dewav_without_libburN
+
+#include "../libburn/libdax_msgs.h"
+struct libdax_msgs *libdax_messenger= NULL;
+
+#else /* Dewav_without_libburN */
 
 /* The API of libburn */
 #include "../libburn/libburn.h"
+
+#endif /* ! Dewav_without_libburN */
+
 
 /* The API extension for .wav extraction */
 #include "../libburn/libdax_audioxtr.h"
@@ -75,6 +84,19 @@ help:;
    in_path= "-";
 
 
+#ifdef Dewav_without_libburN
+
+ ret= libdax_msgs_new(&libdax_messenger,0);
+ if(ret<=0) {
+   fprintf(stderr,"Failed to create libdax_messenger object.\n");
+   exit(3);
+ }
+ libdax_msgs_set_severities(libdax_messenger, LIBDAX_MSGS_SEV_NEVER,
+                            LIBDAX_MSGS_SEV_NOTE, "", 0);
+ fprintf(stderr, "dewav on libdax\n");
+
+#else /* Dewav_without_libburN */
+
  /* Initialize libburn and set up messaging system */
  if(burn_initialize() == 0) {
    fprintf(stderr,"Failed to initialize libburn.\n");
@@ -82,6 +104,9 @@ help:;
  }
  /* Print messages of severity NOTE or more directly to stderr */
  burn_msgs_set_severities("NEVER", "NOTE", "");
+ fprintf(stderr, "dewav on libburn\n");
+
+#endif /* ! Dewav_without_libburN */
 
 
  /* Open audio source and create extractor object */
@@ -134,6 +159,16 @@ help:;
  if(out_fd>2)
    close(out_fd);
  libdax_audioxtr_destroy(&xtr, 0);
+
+#ifdef Dewav_without_libburN
+
+ libdax_msgs_destroy(&libdax_messenger,0);
+
+#else /* Dewav_without_libburN */
+
  burn_finish();
+
+#endif /* ! Dewav_without_libburN */
+
  exit(0);
 } 

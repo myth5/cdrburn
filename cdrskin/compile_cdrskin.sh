@@ -15,12 +15,16 @@ warn_opts="-Wall"
 fifo_source="cdrskin/cdrfifo.c"
 compile_cdrskin=1
 compile_cdrfifo=0
+compile_dewav=0
 
 for i in "$@"
 do
   if test "$i" = "-compile_cdrfifo"
   then
     compile_cdrfifo=1
+  elif test "$i" = "-compile_dewav"
+  then
+    compile_dewav=1
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
@@ -65,6 +69,7 @@ do
     echo "cdrskin/compile_cdrskin.sh : to be executed within  ./cdrskin-0.1.3.0.2.ts"
     echo "Options:"
     echo "  -compile_cdrfifo  compile program cdrskin/cdrfifo."
+    echo "  -compile_dewav    compile program test/dewav without libburn."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
     echo "  -libburn_0_2_2    set macro to match libburn-0.2.2"
     echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
@@ -158,6 +163,30 @@ then
       exit 2
     fi
 fi
+
+if test "$compile_dewav" = 1
+then
+  echo "compiling program test/dewav.c -DDewav_without_libburN $static_opts $debug_opts"
+  cc $static_opts $debug_opts \
+     -DDewav_without_libburN \
+     -o test/dewav \
+     test/dewav.c \
+     libburn/libdax_audioxtr.o \
+     libburn/libdax_msgs.o \
+     \
+    -lpthread
+
+    ret=$?
+    if test "$ret" = 0
+    then
+      dummy=dummy
+    else
+      echo >&2
+      echo "+++ FATAL : Compilation of test/dewav failed" >&2
+      echo >&2
+      exit 2
+    fi
+fi     
 
 if test "$do_strip" = 1
 then
