@@ -15,19 +15,9 @@
 
 #else /* __FreeBSD__ */
 
-/* XXX Why do we need this here? */
-/* ts A61013: because Linux wants to see them */ 
-#include <scsi/sg.h>
-#include <scsi/scsi.h>
 #define BUFFER_SIZE 65536
 
 #endif /* ! __FreeBSD__ */
-
-/* kludge! glibc headers don't define all the SCSI shit that we use! */
-#ifndef SG_GET_ACCESS_COUNT
-#  define SG_GET_ACCESS_COUNT 0x2289
-#endif
-
 
 enum transfer_direction
 { TO_DRIVE, FROM_DRIVE, NO_TRANSFER };

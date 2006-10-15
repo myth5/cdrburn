@@ -17,6 +17,8 @@
 #include <sys/poll.h>
 #include <linux/hdreg.h>
 #include <stdlib.h>
+#include <scsi/sg.h>
+#include <scsi/scsi.h>
 
 #include "transport.h"
 #include "drive.h"
@@ -27,6 +29,11 @@
 #include "debug.h"
 #include "toc.h"
 #include "util.h"
+
+/* kludge! glibc headers don't define all the SCSI stuff that we use! */
+#ifndef SG_GET_ACCESS_COUNT
+#  define SG_GET_ACCESS_COUNT 0x2289
+#endif
 
 #include "libdax_msgs.h"
 extern struct libdax_msgs *libdax_messenger;
