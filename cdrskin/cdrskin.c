@@ -111,10 +111,11 @@ or
   cc -g -I. -DCdrskin_build_timestamP='...' \
      -o cdrskin/cdrskin cdrskin/cdrskin.c cdrskin/cdrfifo.c cdrskin/cleanup.c \
      libburn/async.o libburn/crc.o libburn/debug.o libburn/drive.o \
-     libburn/file.o libburn/init.o libburn/lec.o libburn/message.o \
+     libburn/file.o libburn/init.o libburn/lec.o \
      libburn/mmc.o libburn/options.o libburn/sbc.o libburn/sector.o \
      libburn/sg.o libburn/spc.o libburn/source.o libburn/structure.o \
      libburn/toc.o libburn/util.o libburn/write.o \
+     libburn/libdax_audioxtr.o libburn/libdax_msgs.o \
      -lpthread
 
 */
@@ -168,6 +169,7 @@ or
 #define Cdrskin_libburn_has_convert_scsi_adR 1
 #define Cdrskin_libburn_has_burn_msgS 1
 #define Cdrskin_libburn_has_burn_aborT 1
+#define Cdrskin_libburn_has_audioxtR 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -275,6 +277,7 @@ or
 /* #include <libburn/libburn.h> */
 #include "../libburn/libburn.h"
 
+#include "../libburn/libdax_audioxtr.h"
 
 #ifdef Cdrskin_libburn_has_cleanup_handleR
 #define Cleanup_set_handlers burn_set_signal_handling
@@ -764,6 +767,8 @@ struct CdrtracK {
  int set_by_padsize;
  int sector_pad_up; /* enforce single sector padding */
  int track_type;
+ double sector_size;
+ int track_type_by_default;
 
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
      data to libburn. 
@@ -781,6 +786,7 @@ struct CdrtracK {
 };
 
 int Cdrtrack_destroy(struct CdrtracK **o, int flag);
+int Cdrtrack_set_track_type(struct CdrtracK *o, int track_type, int flag);
 
 
 /** Create a track resp. data source object.
@@ -795,10 +801,11 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
                  int trackno, int flag)
 {
  struct CdrtracK *o;
- int ret;
+ int ret,skin_track_type;
  int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                         double *fixed_size, double *padding,
-                        int *set_by_padsize, int *track_type, int flag);
+                        int *set_by_padsize, int *track_type,
+                        int *track_type_by_default, int flag);
  int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
                           int *fifo_size, int *fifo_start_empty, int flag);
 
@@ -815,6 +822,8 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->set_by_padsize= 0;
  o->sector_pad_up= Cdrskin_all_tracks_with_sector_paD;
  o->track_type= BURN_MODE1;
+ o->sector_size= 2048.0;
+ o->track_type_by_default= 1;
  o->fifo_enabled= 0;
  o->fifo= NULL;
  o->fifo_outlet_fd= -1;
@@ -822,9 +831,11 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->fifo_start_empty= 0;
  o->libburn_track= NULL;
  ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),
-                         &(o->set_by_padsize),&(o->track_type),0);
+                         &(o->set_by_padsize),&(skin_track_type),
+                         &(o->track_type_by_default),0);
  if(ret<=0)
    goto failed;
+ Cdrtrack_set_track_type(o,skin_track_type,0);
 
 #ifndef Cdrskin_extra_leaN
  ret= Cdrskin_get_fifo_par(boss, &(o->fifo_enabled),&(o->fifo_size),
@@ -863,11 +874,25 @@ int Cdrtrack_destroy(struct CdrtracK **o, int flag)
 }
 
 
+int Cdrtrack_set_track_type(struct CdrtracK *o, int track_type, int flag)
+{
+ if(track_type==BURN_AUDIO) {
+   o->track_type= BURN_AUDIO;
+   o->sector_size= 2352.0;
+ } else {
+   o->track_type= BURN_MODE1;
+   o->sector_size= 2048.0;
+ }
+ return(1);
+}
+
+
 int Cdrtrack_get_size(struct CdrtracK *track, double *size, double *padding,
-                      int flag)
+                      double *sector_size, int flag)
 {
  *size= track->fixed_size;
  *padding= track->padding;
+ *sector_size= track->sector_size;
  return(1);
 }
 
@@ -879,18 +904,106 @@ int Cdrtrack_get_fifo(struct CdrtracK *track, struct CdrfifO **fifo, int flag)
 }
 
 
+/** Try wether automatic audio extraction is appropriate and eventually open
+    a file descriptor to the raw data.
+    @return -2 could not open track source, no use in retrying
+            -1 severe error
+             0 not appropriate to extract, burn plain file content
+             1 to be extracted, *fd is a filedescriptor delivering raw data
+*/
+int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, int flag)
+{
+ int l,ret;
+#ifdef Cdrskin_libburn_has_audioxtR
+ struct libdax_audioxtr *xtr= NULL;
+ char *fmt,*fmt_info;
+ int num_channels,sample_rate,bits_per_sample;
+#endif 
+
+ *fd= -1;
+
+ if(track->track_type!=BURN_AUDIO && !track->track_type_by_default)
+   return(0);
+ l= strlen(track->source_path);
+ if(l<4)
+   return(0);
+ if(strcmp(track->source_path+l-4,".wav")!=0)
+   return(0);
+
+ if(track->track_type_by_default) {
+   Cdrtrack_set_track_type(track,BURN_AUDIO,0);
+   track->track_type_by_default= 2;
+   fprintf(stderr,"cdrskin: NOTE: Activated -audio for '%s'\n",
+           track->source_path);
+ }
+
+#ifdef Cdrskin_libburn_has_audioxtR
+
+ ret= libdax_audioxtr_new(&xtr,track->source_path,0);
+ if(ret<=0)
+   return(ret);
+ libdax_audioxtr_get_id(xtr,&fmt,&fmt_info,
+                        &num_channels,&sample_rate,&bits_per_sample,0);
+ if((num_channels!=2) || sample_rate!=44100 || bits_per_sample!=16)
+   {ret= 0; goto ex;}
+ ret= libdax_audioxtr_detach_fd(xtr,fd,0);
+ if(ret<=0)
+   {ret= -1*!!ret; goto ex;}
+
+ fprintf(stderr,"cdrskin: NOTE: Will extract plain audio from '%s'\n",
+         track->source_path);
+ ret= 1;
+ex:
+ libdax_audioxtr_destroy(&xtr,0);
+ return(ret);
+
+#else /* Cdrskin_libburn_has_audioxtR */
+
+ return(0);
+
+#endif 
+}
+
+
 /** Deliver an open file descriptor corresponding to the source path of track.
     @return <=0 error, 1 success
 */
 int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 {
+ int is_wav= 0;
+
  if(track->source_path[0]=='-' && track->source_path[1]==0)
    *fd= 0;
  else if(track->source_path[0]=='#' && 
          (track->source_path[1]>='0' && track->source_path[1]<='9'))
    *fd= atoi(track->source_path+1);
  else {
+   *fd= -1;
+
+#define Try_auto_extract 1
+#ifdef Try_auto_extract
+
+   is_wav= Cdrtrack_extract_audio(track,fd,0);
+   if(is_wav<0 && is_wav!=-2)
+     return(-1);
+   if(is_wav==0)
+     *fd= open(track->source_path,O_RDONLY);
+
+#else /* Try_auto_extract */
+
+   if(*fd>=0)
+     close(*fd);
    *fd= open(track->source_path,O_RDONLY);
+
+   is_wav= 0;
+
+   if(*fd>=0 && is_wav==1) {
+     char wav_head[44];
+     read(*fd, wav_head, 44);
+   }
+
+#endif /* ! Try_auto_extract */
+
    if(*fd==-1) {
      fprintf(stderr,"cdrskin: failed to open source address '%s'\n",
              track->source_path);
@@ -900,7 +1013,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
      if(track->fixed_size<=0) { 
        struct stat stbuf;
        if(fstat(*fd,&stbuf)!=-1)
-         track->fixed_size= stbuf.st_size;
+         track->fixed_size= stbuf.st_size-(44*(is_wav==1));
      }
    }
  }
@@ -948,6 +1061,9 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
    if(ret<=0)
     return(ret);
  } else {
+
+   /* >>> ??? obtain track sector size and use instead of 2048 ? */
+
    ret= Cdrfifo_new(&ff,source_fd,pipe_fds[1],2048,track->fifo_size,0);
    if(ret<=0)
      return(ret);
@@ -1019,6 +1135,14 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  track->trackno= trackno;
  tr= burn_track_create();
  track->libburn_track= tr;
+
+ /* Note: track->track_type may get set in here */
+ if(track->source_fd==-1) {
+   ret= Cdrtrack_open_source_path(track,&source_fd,0);
+   if(ret<=0)
+     goto ex;
+ }
+
  padding= 0.0;
  sector_pad_up= track->sector_pad_up;
  if(track->padding>0) {
@@ -1044,11 +1168,6 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  burn_track_define_data(tr,0,(int) lib_padding,sector_pad_up,
                         track->track_type);
 
- if(track->source_fd==-1) {
-   ret= Cdrtrack_open_source_path(track,&source_fd,0);
-   if(ret<=0)
-     goto ex;
- }
  fixed_size= track->fixed_size;
  if((flag&2) && track->padding>0) {
    if(flag&1)
@@ -2111,6 +2230,7 @@ struct CdrskiN {
 
  /** track_type may be set to BURN_MODE1, BURN_AUDIO, etc. */
  int track_type;
+ int track_type_by_default; /* 0= explicit, 1=not set, 2=by file extension */
 
  /** The list of tracks with their data sources and parameters */
  struct CdrtracK *tracklist[Cdrskin_track_maX];
@@ -2213,6 +2333,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->padding= 0.0;
  o->set_by_padsize= 0;
  o->track_type= BURN_MODE1;
+ o->track_type_by_default= 1;
  for(i=0;i<Cdrskin_track_maX;i++)
    o->tracklist[i]= NULL;
  o->track_counter= 0;
@@ -2281,13 +2402,15 @@ int Cdrskin_destroy(struct CdrskiN **o, int flag)
 /** Return information about current track source */
 int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                        double *fixed_size, double *padding,
-                       int *set_by_padsize, int *track_type, int flag)
+                       int *set_by_padsize, int *track_type,
+                       int *track_type_by_default, int flag)
 {
  strcpy(source_path,skin->source_path);
  *fixed_size= skin->fixed_size;
  *padding= skin->padding;
- *track_type= skin->track_type;
  *set_by_padsize= skin->set_by_padsize;
+ *track_type= skin->track_type;
+ *track_type_by_default= skin->track_type_by_default;
  return(1);
 }
 
@@ -3432,7 +3555,7 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
 */
 {
  double bytes_to_write,written_bytes= 0.0,written_total_bytes= 0.0,buffer_size;
- double fixed_size,padding;
+ double fixed_size,padding,sector_size,speed_factor;
  double measured_total_speed,measured_speed;
  double elapsed_time,elapsed_total_time,current_time;
  double estim_time,estim_minutes,estim_seconds,percent;
@@ -3480,10 +3603,6 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  } else
    goto thank_you_for_patience;
 
- bytes_to_write= ((double) p->sectors)*2048.0;
- written_total_bytes= ((double) p->sector)*2048.0;
- written_bytes= written_total_bytes-*last_count;
-
  old_track_idx= skin->supposed_track_idx;
 #ifdef Cdrskin_progress_track_brokeN
  /* with libburn.0.2 there is always reported 0 as p->track */
@@ -3499,12 +3618,24 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
 #endif /* ! Cdrskin_progress_track_brokeN */
 
  if(old_track_idx>=0 && old_track_idx<skin->supposed_track_idx) {
-   Cdrtrack_get_size(skin->tracklist[old_track_idx],&fixed_size,&padding,0);
+   Cdrtrack_get_size(skin->tracklist[old_track_idx],&fixed_size,&padding,
+                     &sector_size,0);
    if(skin->verbosity>=Cdrskin_verbose_progresS)
      printf("\n");
    printf("%sTrack %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-          debug_mark,old_track_idx+1,fixed_size,fixed_size,fixed_size/2048.0);
+          debug_mark,old_track_idx+1,fixed_size,fixed_size,
+          fixed_size/sector_size);
  }
+
+ sector_size= 2048.0;
+ if(skin->supposed_track_idx>=0 && 
+    skin->supposed_track_idx<skin->track_counter)
+   Cdrtrack_get_size(skin->tracklist[skin->supposed_track_idx],&fixed_size,
+                     &padding,&sector_size,0);
+
+ bytes_to_write= ((double) p->sectors)*sector_size;
+ written_total_bytes= ((double) p->sector)*sector_size;
+ written_bytes= written_total_bytes-*last_count;
 
  if(written_total_bytes<1024*1024) {
 thank_you_for_patience:;
@@ -3604,8 +3735,7 @@ thank_you_for_patience:;
      }
      if(skin->supposed_track_idx >= 0 && 
         skin->supposed_track_idx < skin->track_counter) {
-       Cdrtrack_get_size(skin->tracklist[skin->supposed_track_idx],
-                         &fixed_size,&padding,0);
+       /* fixed_size,padding are fetched above via Cdrtrack_get_size() */;
      } else if(skin->fixed_size!=0) {
        fixed_size= skin->fixed_size;
        padding= skin->padding;
@@ -3616,9 +3746,10 @@ thank_you_for_patience:;
                (int) ((fixed_size+padding)/1024.0/1024.0));
      } else
        sprintf(mb_text,"%4d",(int) (written_total_bytes/1024.0/1024.0));
+     speed_factor= Cdrskin_cd_speed_factoR*sector_size/2048;
      printf("\r%sTrack %-2.2d: %s MB written %s[buf  50%%]  %4.1fx.",
             debug_mark,skin->supposed_track_idx+1,mb_text,fifo_text,
-            measured_speed/Cdrskin_cd_speed_factoR);
+            measured_speed/speed_factor);
      fflush(stdout);
    }
    if(skin->is_writing==0) {
@@ -3682,7 +3813,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  int fifo_disabled= 0,fifo_percent,total_min_fill,mb;
  double put_counter,get_counter,empty_counter,full_counter;
  double start_time,last_time;
- double total_count= 0.0,last_count= 0.0,size,padding;
+ double total_count= 0.0,last_count= 0.0,size,padding,sector_size= 2048.0;
 
  printf("cdrskin: beginning to burn disk\n");
 
@@ -3704,7 +3835,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      fprintf(stderr,"cdrskin: FATAL : cannot add track %d to session.\n",i+1);
      return(0);
    }
-   Cdrtrack_get_size(skin->tracklist[i],&size,&padding,0);
+   Cdrtrack_get_size(skin->tracklist[i],&size,&padding,&sector_size,0);
    skin->fixed_size+= size+padding;
  }
 
@@ -3733,7 +3864,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
 
  if(skin->verbosity>=Cdrskin_verbose_progresS) {
    for(i=0;i<skin->track_counter;i++) {
-     Cdrtrack_get_size(skin->tracklist[i],&size,&padding,0);
+     Cdrtrack_get_size(skin->tracklist[i],&size,&padding,&sector_size,0);
      if(size<=0) {
        printf("Track %-2.2d: data  unknown length",i+1);
      } else {
@@ -3762,7 +3893,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      if(frac>99)
        frac= 99;
      printf("Total size:    %5d MB (%-2.2d:%-2.2d.%-2.2d) = %d sectors\n",
-             mb,min,sec,frac,(int) (skin->fixed_size/2048));
+             mb,min,sec,frac,(int) (skin->fixed_size/sector_size));
      seconds+= 2;
      min= seconds/60.0;
      sec= seconds-min*60;
@@ -3770,7 +3901,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      if(frac>99)
        frac= 99;
      printf("Lout start:    %5d MB (%-2.2d:%-2.2d/%-2.2d) = %d sectors\n",
-            mb,min,sec,frac,(int) (skin->fixed_size/2048));
+            mb,min,sec,frac,(int) (skin->fixed_size/sector_size));
    }
  }
 
@@ -3883,12 +4014,12 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
    printf("\n");
  if(max_track<=0) {
    printf("Track 01: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-          total_count,total_count,total_count/2048.0);
+          total_count,total_count,total_count/sector_size);
  } else {
-   Cdrtrack_get_size(skin->tracklist[max_track],&size,&padding,0);
+   Cdrtrack_get_size(skin->tracklist[max_track],&size,&padding,&sector_size,0);
    printf(
          "Track %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-         max_track+1,size,size,size/2048.0);
+         max_track+1,size,size,size/sector_size);
  }
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    printf("Writing  time:  %.3fs\n",Sfile_microtime(0)-start_time);
@@ -4203,6 +4334,7 @@ set_abort_max_wait:;
 
    } else if(strcmp(argv[i],"-audio")==0) {
      skin->track_type= BURN_AUDIO;
+     skin->track_type_by_default= 0;
 
    } else if(strncmp(argv[i],"-blank=",7)==0) {
      cpt= argv[i]+7;
@@ -4239,6 +4371,7 @@ set_blank:;
      /* >>> !!! All Subsequent Tracks Option */
 
      skin->track_type= BURN_MODE1;
+     skin->track_type_by_default= 0;
 
    } else if(strcmp(argv[i],"--demand_a_drive")==0) {
      /* is handled in Cdrpreskin_setup() */;

@@ -9,6 +9,7 @@
 
                             /* Public Macros */
 
+/* Maximum size for address paths and fmt_info strings */
 #define LIBDAX_AUDIOXTR_STRLEN 4096
 
 
@@ -35,7 +36,10 @@ struct libdax_audioxtr;
     @param path Address of the audio file to extract. "-" is stdin (but might
                 be not suitable for all futurely supported formats).
     @param flag Bitfield for control purposes (unused yet, submit 0)
-    @return >0 success, <=0 failure
+    @return >0 success
+             0 unsuitable format
+            -1 severe error
+            -2 path not found
 */
 int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag);
 
@@ -69,6 +73,21 @@ int libdax_audioxtr_get_id(struct libdax_audioxtr *xtr,
 */
 int libdax_audioxtr_read(struct libdax_audioxtr *xtr,
                          char buffer[], int buffer_size, int flag);
+
+
+/** Try to obtain a file descriptor which will deliver extracted data
+    to normal calls of read(2). This may fail because the format is
+    unsuitable for that, but ".wav" is ok. If this call succeeds the xtr
+    object will have forgotten its file descriptor and libdax_audioxtr_read()
+    will return a usage error. One may use *fd after libdax_audioxtr_destroy()
+    and will have to close it via close(2) when done with it.
+    @param xtr Opaque handle to extractor
+    @param fd Eventually returns the file descriptor number
+    @param flag Bitfield for control purposes
+                bit0= do not dup(2) and close(2) but hand out original fd
+    @return 1 success, 0 cannot hand out fd , -1 severe error
+*/
+int libdax_audioxtr_detach_fd(struct libdax_audioxtr *o, int *fd, int flag);
 
 
 /** Clean up after extraction and destroy extractor object.

@@ -15,20 +15,26 @@
 #include <stdlib.h>
 #include <errno.h>
 
+
+/* libdax_audioxtr is quite independent of libburn. It only needs
+   the messaging facility libdax_msgs. So we got two build variations:
+*/
 #ifdef Dewav_without_libburN
 
+/* This build environment is standalone relying only on libdax components */
 #include "../libburn/libdax_msgs.h"
 struct libdax_msgs *libdax_messenger= NULL;
 
 #else /* Dewav_without_libburN */
 
-/* The API of libburn */
+/* This build environment uses libdax_msgs via libburn */
+/* Thus the API header of libburn */
 #include "../libburn/libburn.h"
 
 #endif /* ! Dewav_without_libburN */
 
 
-/* The API extension for .wav extraction */
+/* The API for .wav extraction */
 #include "../libburn/libdax_audioxtr.h"
 
 
@@ -39,6 +45,8 @@ int main(int argc, char **argv)
 
  /* The read-and-extract object for use with in_path */
  struct libdax_audioxtr *xtr= NULL;
+ /* The file descriptor eventually detached from xtr */
+ int xtr_fd= -2;
 
  /* Default output is stdout */
  int out_fd= 1;
@@ -48,7 +56,7 @@ int main(int argc, char **argv)
  int num_channels, sample_rate, bits_per_sample;
 
  /* Auxiliary variables */
- int ret, i, be_strict= 1, buf_count;
+ int ret, i, be_strict= 1, buf_count, detach_fd= 0;
  char buf[2048];
 
  if(argc < 2)
@@ -66,6 +74,9 @@ int main(int argc, char **argv)
      be_strict= 0;
    } else if(strcmp(argv[i],"--strict")==0) {
      be_strict= 1;
+   } else if(strcmp(argv[i],"--detach_fd")==0) {
+     /* Test the dirty detach method */
+     detach_fd= 1;
    } else if(strcmp(argv[i],"--help")==0) {
 help:;
      fprintf(stderr,
@@ -84,8 +95,11 @@ help:;
    in_path= "-";
 
 
+/* Depending on wether this was built standalone or with full libburn :
+*/
 #ifdef Dewav_without_libburN
 
+ /* Initialize and set up libdax messaging system */
  ret= libdax_msgs_new(&libdax_messenger,0);
  if(ret<=0) {
    fprintf(stderr,"Failed to create libdax_messenger object.\n");
@@ -97,7 +111,7 @@ help:;
 
 #else /* Dewav_without_libburN */
 
- /* Initialize libburn and set up messaging system */
+ /* Initialize libburn and set up its messaging system */
  if(burn_initialize() == 0) {
    fprintf(stderr,"Failed to initialize libburn.\n");
    exit(3);
@@ -126,8 +140,7 @@ help:;
  libdax_audioxtr_get_id(xtr, &fmt, &fmt_info,
                         &num_channels, &sample_rate, &bits_per_sample, 0);
  fprintf(stderr, "Detected format: %s\n", fmt_info);
- if((num_channels!=2 && num_channels!=4) || 
-    sample_rate!=44100 || bits_per_sample!=16) {
+ if(num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
    fprintf(stderr,
          "%sAudio source parameters do not comply to cdrskin/README specs\n",
          (be_strict ? "" : "WARNING: "));
@@ -135,11 +148,29 @@ help:;
      exit(6);
  }
 
+ if(detach_fd) {
+   /* Take over fd from xtr */;
+   ret= libdax_audioxtr_detach_fd(xtr, &xtr_fd, 0);
+   if(ret<=0) {
+     fprintf(stderr, "Cannot detach file descriptor from extractor\n");
+     exit(8);
+   }
+   /* not needed any more */
+   libdax_audioxtr_destroy(&xtr, 0);
+   fprintf(stderr, "Note: detached fd and freed extractor object.\n");
+ }
 
  /* Extract and put out raw audio data */;
  while(1) {
 
-   buf_count= libdax_audioxtr_read(xtr, buf, sizeof(buf), 0);
+   if(detach_fd) {
+     buf_count= read(xtr_fd, buf, sizeof(buf));
+     if(buf_count==-1)
+       fprintf(stderr,"Error while reading from detached fd\n(%d) '%s'\n",
+                      errno, strerror(errno));
+   } else {
+     buf_count= libdax_audioxtr_read(xtr, buf, sizeof(buf), 0);
+   }
    if(buf_count < 0)
      exit(7);
    if(buf_count == 0)
@@ -158,6 +189,7 @@ help:;
  /* Shutdown */
  if(out_fd>2)
    close(out_fd);
+ /* ( It is permissible to do this with xtr==NULL ) */
  libdax_audioxtr_destroy(&xtr, 0);
 
 #ifdef Dewav_without_libburN

@@ -9,6 +9,7 @@ def_opts=
 libvers="-DCdrskin_libburn_0_2_3"
 cleanup_src_or_obj="cdrskin/cleanup.c"
 libdax_msgs_o="libburn/libdax_msgs.o"
+libdax_audioxtr_o="libburn/libdax_audioxtr.o"
 do_strip=0
 static_opts=
 warn_opts="-Wall"
@@ -28,16 +29,19 @@ do
   elif test "$i" = "-cvs_A60220"
   then
     libvers="-DCdrskin_libburn_cvs_A60220_tS"
+    libdax_audioxtr_o=
     libdax_msgs_o="libburn/message.o"
     cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-libburn_0_2_2"
   then
     libvers="-DCdrskin_libburn_0_2_2"
+    libdax_audioxtr_o=
     libdax_msgs_o="libburn/message.o"
     cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-libburn_0_2_3"
   then
     libvers="-DCdrskin_libburn_0_2_3"
+    libdax_audioxtr_o="libburn/libdax_audioxtr.o"
     libdax_msgs_o="libburn/libdax_msgs.o"
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
@@ -117,6 +121,7 @@ then
     \
     libburn/sg.o \
     libburn/write.o \
+    $libdax_audioxtr_o \
     $libdax_msgs_o \
     \
     libburn/mmc.o \

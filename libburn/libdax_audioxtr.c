@@ -27,7 +27,7 @@ extern struct libdax_msgs *libdax_messenger;
 
 int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag)
 {
- int ret;
+ int ret= -1;
  struct libdax_audioxtr *o;
 
  o= *xtr= (struct libdax_audioxtr *) malloc(sizeof(struct libdax_audioxtr));
@@ -45,12 +45,12 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag)
 
  ret= libdax_audioxtr_open(o,0);
  if(ret<=0)
-   goto failure;
+   {ret= -2*(ret<0); goto failure;}
 
  return(1);
 failure:
  libdax_audioxtr_destroy(xtr,0);
- return(-1);
+ return(ret);
 }
 
 
@@ -195,5 +195,26 @@ int libdax_audioxtr_read(struct libdax_audioxtr *o,
    return(-2);
  ret= read(o->fd,buffer,buffer_size);
  return(ret);
+}
+
+
+int libdax_audioxtr_detach_fd(struct libdax_audioxtr *o, int *fd, int flag)
+{
+ if(o->fd<0)
+   return(-1);
+ if(strcmp(o->fmt,".wav")!=0)
+   return(0);
+ if(flag&1) {
+   *fd= o->fd;
+ } else {
+   *fd= dup(o->fd);
+   if(*fd>=0 && strcmp(o->path,"-")!=0)
+     close(o->fd);
+ }
+ if(*fd>=0) {
+   o->fd= -1;
+   return(1);
+ }
+ return(-1);
 }
 
