@@ -749,8 +749,9 @@ struct CdrfifO {
 /* --------------------------------------------------------------------- */
 
 /** cdrecord pads up to 600 kB in any case. 
-    libburn yields blank result on tracks <~ 600 kB */
-static double Cdrtrack_minimum_sizE= 600*1024;
+    libburn yields blank result on tracks <~ 600 kB
+    cdrecord demands 300 sectors = 705600 bytes for -audio */
+static double Cdrtrack_minimum_sizE= 300;
 
 
 /** This structure represents a track resp. a data source */
@@ -906,12 +907,14 @@ int Cdrtrack_get_fifo(struct CdrtracK *track, struct CdrfifO **fifo, int flag)
 
 /** Try wether automatic audio extraction is appropriate and eventually open
     a file descriptor to the raw data.
-    @return -2 could not open track source, no use in retrying
+    @return -3 identified as .wav but with cdrecord-inappropriate parameters
+            -2 could not open track source, no use in retrying
             -1 severe error
              0 not appropriate to extract, burn plain file content
              1 to be extracted, *fd is a filedescriptor delivering raw data
 */
-int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, int flag)
+int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
+                           int flag)
 {
  int l,ret;
 #ifdef Cdrskin_libburn_has_audioxtR
@@ -933,7 +936,7 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, int flag)
  if(track->track_type_by_default) {
    Cdrtrack_set_track_type(track,BURN_AUDIO,0);
    track->track_type_by_default= 2;
-   fprintf(stderr,"cdrskin: NOTE: Activated -audio for '%s'\n",
+   fprintf(stderr,"cdrskin: NOTE : Activated -audio for '%s'\n",
            track->source_path);
  }
 
@@ -944,14 +947,19 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, int flag)
    return(ret);
  libdax_audioxtr_get_id(xtr,&fmt,&fmt_info,
                         &num_channels,&sample_rate,&bits_per_sample,0);
- if((num_channels!=2) || sample_rate!=44100 || bits_per_sample!=16)
-   {ret= 0; goto ex;}
+ if(strcmp(fmt,".wav")!=0 || 
+    num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
+   fprintf(stderr,"cdrskin: ( %s )\n",fmt_info);
+   fprintf(stderr,"cdrskin: FATAL : Inappropriate audio coding in '%s'.\n",
+                  track->source_path);
+   {ret= -3; goto ex;}
+ }
+ libdax_audioxtr_get_size(xtr,xtr_size,0);
  ret= libdax_audioxtr_detach_fd(xtr,fd,0);
  if(ret<=0)
    {ret= -1*!!ret; goto ex;}
-
- fprintf(stderr,"cdrskin: NOTE: Will extract plain audio from '%s'\n",
-         track->source_path);
+ fprintf(stderr,"cdrskin: NOTE : %.f audio bytes in '%s'\n",
+                (double) *xtr_size, track->source_path);
  ret= 1;
 ex:
  libdax_audioxtr_destroy(&xtr,0);
@@ -971,6 +979,7 @@ ex:
 int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 {
  int is_wav= 0;
+ off_t xtr_size= 0;
 
  if(track->source_path[0]=='-' && track->source_path[1]==0)
    *fd= 0;
@@ -979,49 +988,46 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
    *fd= atoi(track->source_path+1);
  else {
    *fd= -1;
-
-#define Try_auto_extract 1
-#ifdef Try_auto_extract
-
-   is_wav= Cdrtrack_extract_audio(track,fd,0);
-   if(is_wav<0 && is_wav!=-2)
+   is_wav= Cdrtrack_extract_audio(track,fd,&xtr_size,0);
+   if(is_wav==-1)
      return(-1);
+   if(is_wav==-3)
+     return(0);
    if(is_wav==0)
      *fd= open(track->source_path,O_RDONLY);
-
-#else /* Try_auto_extract */
-
-   if(*fd>=0)
-     close(*fd);
-   *fd= open(track->source_path,O_RDONLY);
-
-   is_wav= 0;
-
-   if(*fd>=0 && is_wav==1) {
-     char wav_head[44];
-     read(*fd, wav_head, 44);
-   }
-
-#endif /* ! Try_auto_extract */
-
    if(*fd==-1) {
      fprintf(stderr,"cdrskin: failed to open source address '%s'\n",
              track->source_path);
      fprintf(stderr,"cdrskin: errno=%d , \"%s\"\n",errno,
                     errno==0?"-no error code available-":strerror(errno));
-   } else {
-     if(track->fixed_size<=0) { 
+     return(0);
+   }
+   if(track->fixed_size<=0) {
+     if(xtr_size>0)
+       track->fixed_size= xtr_size;
+     else {
        struct stat stbuf;
        if(fstat(*fd,&stbuf)!=-1)
-         track->fixed_size= stbuf.st_size-(44*(is_wav==1));
+         track->fixed_size= stbuf.st_size;
      }
    }
  }
- if(track->fixed_size<Cdrtrack_minimum_sizE && *fd>=0) {
-   fprintf(stderr,
-           "cdrskin: NOTE : Enforcing minimum track size of %.f bytes\n",
-           Cdrtrack_minimum_sizE);
-   track->fixed_size= Cdrtrack_minimum_sizE;
+
+ if(track->fixed_size < Cdrtrack_minimum_sizE * track->sector_size) {
+   if(track->track_type == BURN_AUDIO) {
+     /* >>> cdrecord: We differ in automatic padding with audio:
+       Audio tracks must be at least 705600 bytes and a multiple of 2352.
+     */
+     fprintf(stderr,
+             "cdrskin: FATAL : Audio tracks must be at least %.f bytes\n",
+             Cdrtrack_minimum_sizE*track->sector_size);
+     return(0);
+   } else {
+     fprintf(stderr,
+             "cdrskin: NOTE : Enforcing minimum track size of %.f bytes\n",
+             Cdrtrack_minimum_sizE*track->sector_size);
+     track->fixed_size= Cdrtrack_minimum_sizE*track->sector_size;
+  }
  }
  track->source_fd= *fd;
  return(*fd>=0);

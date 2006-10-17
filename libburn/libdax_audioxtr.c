@@ -38,10 +38,13 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag)
  o->fd= -1;
  strcpy(o->fmt,"unidentified");
  o->fmt_info[0]= 0;
+ o->data_size= 0;
+ o->extract_count= 0;
 
  o->wav_num_channels= 0;
  o->wav_sample_rate= 0;
  o->wav_bits_per_sample= 0;
+ o->wav_subchunk2_size= 0;
 
  ret= libdax_audioxtr_open(o,0);
  if(ret<=0)
@@ -136,6 +139,8 @@ static int libdax_audioxtr_identify(struct libdax_audioxtr *o, int flag)
  sprintf(o->fmt_info,
          ".wav , num_channels=%d , sample_rate=%d , bits_per_sample=%d",
          o->wav_num_channels,o->wav_sample_rate,o->wav_bits_per_sample);
+ o->wav_subchunk2_size= libdax_audioxtr_to_int(o,(unsigned char *)buf+40,4,0);
+ o->data_size= o->wav_subchunk2_size;
 
  return(1);
 }
@@ -161,6 +166,7 @@ static int libdax_audioxtr_init_reading(struct libdax_audioxtr *o, int flag)
  if(o->fd==0) /* stdin: hope no read came after libdax_audioxtr_identify() */
    return(1);
 
+ o->extract_count= 0;
  ret= lseek(o->fd,44,SEEK_SET);
  if(ret==-1)
    return(0);
@@ -186,6 +192,17 @@ int libdax_audioxtr_get_id(struct libdax_audioxtr *o,
 }
 
 
+int libdax_audioxtr_get_size(struct libdax_audioxtr *o, off_t *size, int flag)
+{
+ if(strcmp(o->fmt,".wav")==0) {
+   *size= o->wav_subchunk2_size;
+   return(1);
+ }
+ *size= 0;
+ return(0);
+}
+
+
 int libdax_audioxtr_read(struct libdax_audioxtr *o,
                          char buffer[], int buffer_size, int flag)
 {
@@ -193,7 +210,14 @@ int libdax_audioxtr_read(struct libdax_audioxtr *o,
 
  if(buffer_size<=0 || o->fd<0)
    return(-2);
+ if(o->data_size>0 && !(flag&1))
+   if(buffer_size > o->data_size - o->extract_count)
+     buffer_size= o->data_size - o->extract_count;
+ if(buffer_size<=0)
+   return(0);
  ret= read(o->fd,buffer,buffer_size);
+ if(ret>0)
+   o->extract_count+= ret;
  return(ret);
 }
 

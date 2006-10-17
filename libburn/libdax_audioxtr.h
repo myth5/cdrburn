@@ -60,12 +60,23 @@ int libdax_audioxtr_get_id(struct libdax_audioxtr *xtr,
                            int *bits_per_sample, int flag);
 
 
+/** Obtain a prediction about the extracted size based on internal information
+    of the formatted file.
+    @param xtr Opaque handle to extractor
+    @param size Gets filled with the predicted size
+    @param flag Bitfield for control purposes (unused yet, submit 0)
+    @return 1 prediction was possible , 0 no prediction could be made
+*/
+int libdax_audioxtr_get_size(struct libdax_audioxtr *o, off_t *size, int flag);
+
+
 /** Obtain next buffer full of extracted data in desired format (only raw audio
     for now).
     @param xtr Opaque handle to extractor
     @param buffer Gets filled with extracted data
     @param buffer_size Maximum number of bytes to be filled into buffer
-    @param flag Bitfield for control purposes (unused yet, submit 0)
+    @param flag Bitfield for control purposes
+                bit0= do not stop at predicted end of data
     @return >0 number of valid buffer bytes,
              0 End of file
             -1 operating system reports error
@@ -134,6 +145,12 @@ struct libdax_audioxtr {
  /* Format parameter info text */
  char fmt_info[LIBDAX_AUDIOXTR_STRLEN];
 
+ /* Number of bytes to extract (0= unknown/unlimited) */
+ off_t data_size;
+
+ /* Number of extracted data bytes */
+ off_t extract_count;
+
 
  /* Format dependent parameters */
 
@@ -148,6 +165,10 @@ struct libdax_audioxtr {
 
  /* 8 bits = 8, 16 bits = 16, etc. */
  int wav_bits_per_sample;
+
+ /* == NumSamples * NumChannels * BitsPerSample/8
+    This is the number of bytes in the data. */
+ unsigned wav_subchunk2_size;
 
 };
 

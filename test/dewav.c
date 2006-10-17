@@ -54,9 +54,10 @@ int main(int argc, char **argv)
  /* Inquired source parameters */
  char *fmt, *fmt_info;
  int num_channels, sample_rate, bits_per_sample;
+ off_t data_size;
 
  /* Auxiliary variables */
- int ret, i, be_strict= 1, buf_count, detach_fd= 0;
+ int ret, i, be_strict= 1, buf_count, detach_fd= 0, extract_all= 0;
  char buf[2048];
 
  if(argc < 2)
@@ -75,8 +76,11 @@ int main(int argc, char **argv)
    } else if(strcmp(argv[i],"--strict")==0) {
      be_strict= 1;
    } else if(strcmp(argv[i],"--detach_fd")==0) {
-     /* Test the dirty detach method */
+     /* Test the dirty detach method. Always --extract_all  */
      detach_fd= 1;
+   } else if(strcmp(argv[i],"--extract_all")==0) {
+     /* Dirty : read all available bytes regardless of data_size  */
+     extract_all= 1;
    } else if(strcmp(argv[i],"--help")==0) {
 help:;
      fprintf(stderr,
@@ -140,7 +144,10 @@ help:;
  libdax_audioxtr_get_id(xtr, &fmt, &fmt_info,
                         &num_channels, &sample_rate, &bits_per_sample, 0);
  fprintf(stderr, "Detected format: %s\n", fmt_info);
- if(num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
+ libdax_audioxtr_get_size(xtr, &data_size, 0);
+ fprintf(stderr, "Data size      : %.f bytes\n", (double) data_size);
+ if(strcmp(fmt,".wav")!=0 ||
+    num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
    fprintf(stderr,
          "%sAudio source parameters do not comply to cdrskin/README specs\n",
          (be_strict ? "" : "WARNING: "));
@@ -162,14 +169,13 @@ help:;
 
  /* Extract and put out raw audio data */;
  while(1) {
-
    if(detach_fd) {
      buf_count= read(xtr_fd, buf, sizeof(buf));
      if(buf_count==-1)
        fprintf(stderr,"Error while reading from detached fd\n(%d) '%s'\n",
                       errno, strerror(errno));
    } else {
-     buf_count= libdax_audioxtr_read(xtr, buf, sizeof(buf), 0);
+     buf_count= libdax_audioxtr_read(xtr, buf, sizeof(buf), !!extract_all);
    }
    if(buf_count < 0)
      exit(7);
