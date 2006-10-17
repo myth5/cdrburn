@@ -28,6 +28,9 @@
 #include "toc.h"
 #include "util.h"
 
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
 static void enumerate_common(char *fname, int bus_no, int host_no,
 			     int channel_no, int target_no, int lun_no);
 
@@ -235,6 +238,12 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	out.idata->valid = 0;
 	out.mdata = malloc(sizeof(struct scsi_mode_data));
 	out.mdata->valid = 0;
+	if (out.idata == NULL || out.mdata == NULL) {
+		libdax_msgs_submit(libdax_messenger, -1, 0x00020108,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Could not allocate new drive object", 0, 0);
+		return;
+	}
 	memset(&out.params, 0, sizeof(struct params));
 	t = burn_drive_register(&out);
 
@@ -268,9 +277,17 @@ int sg_grab(struct burn_drive *d)
 	int count;
 	struct cam_device *cam;
 
+	mmc_function_spy("sg_grab");
+
+	assert(d->cam == NULL);
+
 	cam = cam_open_device(d->devname, O_RDWR);
-	if (cam == NULL)
+	if (cam == NULL) {
+		libdax_msgs_submit(libdax_messenger, d->global_index, 0x00020003,
+		LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+		"Could not grab drive", 0/*os_errno*/, 0);
 		return 0;
+	}
 /*	er = ioctl(fd, SG_GET_ACCESS_COUNT, &count);*/
 	count = 1;
 	if (1 == count) {
@@ -291,11 +308,15 @@ int sg_grab(struct burn_drive *d)
 
 int sg_release(struct burn_drive *d)
 {
-printf("%s\n", __func__);
+	mmc_function_spy("sg_release");
+
 	if (d->cam == NULL) {
 		burn_print(1, "release an ungrabbed drive.  die\n");
 		return 0;
 	}
+
+	mmc_function_spy("sg_release ----------- closing.");
+
 	sg_close_drive(d);
 	return 0;
 }
@@ -305,6 +326,16 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 	int done = 0;
 	int err;
 	union ccb *ccb;
+
+	char buf[161];
+	snprintf(buf, sizeof (buf), "sg_issue_command  d->cam=%p d->released=%d",
+		(void*)d->cam, d->released);
+	mmc_function_spy(buf);
+
+	if (d->cam == NULL) {
+		c->error = 0;
+		return 0;
+	}
 
 	c->error = 0;
 
@@ -353,7 +384,19 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 
 	do {
 		err = cam_send_ccb(d->cam, ccb);
-		assert(err != -1);
+		if (err == -1) {
+			libdax_msgs_submit(libdax_messenger,
+				d->global_index, 0x0002010c,
+				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				"Failed to transfer command to drive",
+				errno, 0);
+			cam_freeccb(ccb);
+			sg_close_drive(d);
+			d->released = 1;
+			d->busy = BURN_DRIVE_IDLE;
+			c->error = 1;
+			return -1;
+		}
 		/* XXX */
 		memcpy(c->sense, &ccb->csio.sense_data, ccb->csio.sense_len);
 		if ((ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
@@ -439,3 +482,4 @@ enum response scsi_error(struct burn_drive *d, unsigned char *sense,
 	burn_print(1, "key:0x%x, asc:0x%x, ascq:0x%x\n", key, asc, ascq);
 	return FAIL;
 }
+
