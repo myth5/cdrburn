@@ -174,14 +174,16 @@ Burn a compressed afio archive to CD on-the-fly
     find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao \
                                   driveropts=burnfree padsize=300k tsize=650m - 
 
-Burn 5 audio tracks to CD
+Burn 6 audio tracks from files with different formats to CD.
+Anything except .wav files has to be converted into raw format first
     ogg123 -d raw -f track01.cd /path/to/track1.ogg
     oggdec -R -o track02.cd /path/to/track2.ogg
     lame --decode -t /path/to/track3.mp3 track03.cd   
     madplay -o raw:track04.cd /path/to/track4.mp3
     mppdec --raw-le /path/to/track5.mpc track05.cd
-    cdrskin dev=/dev/hdc blank=fast fs=0 -eject -audio track0[1-5].cd
 
+    cdrskin dev=/dev/hdc blank=fast fs=0 -eject \
+           -audio track0[1-5].cd /path/to/track6.wav
 
 
            Usage example with  http://scdbackup.sourceforge.net
@@ -332,19 +334,18 @@ fs=16m
 
                                   Audio CD
 
-Builtin extraction of raw audio data from filetypes .au and .wav is not
-implemented yet. Lorenzo Taylor enabled option -audio in cdrskin (thanks !)
-and reports neat results with audio data files which are :
-  headerless 
-  44100Hz 
-  16bit, stereo (or 4-channel if the 4-channel bit is set),
+Lorenzo Taylor enabled option -audio in cdrskin (thanks !) and reports neat
+results with audio data files which are :
+  headerless PCM
+  44100 Hz sampling rate 
+  16 bit persample
+  stereo (2 channels)
   little-endian byte order
-He proposes to extract them from usual audio formats by commands like
-given above under "Usage examples".
+Files with name extension .wav get examined wether they are in Microsoft WAVE
+format with above parameters and eventually get extracted by cdrskin itself.
+All other formats (including SUN's format .au) are to be extracted by commands
+like those given above under "Usage examples".
 
-The existence of cdrecord-builtin .wav extraction seems to have
-hampered the development of a standalone stripping tool. If you know
-a command line that would do the trick, contact me or libburn.pykix.org .
 I myself am not into audio. So libburn-hackers@pykix.org might be the
 best address for suggestions, requests and bug reports.
 
