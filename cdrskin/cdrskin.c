@@ -3325,9 +3325,9 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  if(ret<=0)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
- while(burn_drive_get_status(drive,NULL))
+ while(burn_drive_get_status(drive,NULL) != BURN_DRIVE_IDLE)
    usleep(100002);
- while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
+ while ((s= burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
    usleep(100002);
  Cdrskin_report_disc_status(skin,s,0);
  if(s==BURN_DISC_APPENDABLE && skin->no_blank_appendable) {
@@ -3472,7 +3472,7 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
 
- while(burn_drive_get_status(drive,NULL))
+ while(burn_drive_get_status(drive,NULL) != BURN_DRIVE_IDLE)
    usleep(100002);
  while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
    usleep(100002);
@@ -3516,7 +3516,7 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
 
  loop_counter= 0;
  start_time= Sfile_microtime(0);
- while (burn_drive_get_status(drive, &p)!=BURN_DRIVE_IDLE) {
+ while(burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
    if(loop_counter>0)
      if(skin->verbosity>=Cdrskin_verbose_progresS)
        fprintf(stderr,
@@ -3850,10 +3850,10 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
    return(ret);
  drive= skin->drives[skin->driveno].drive;
 
- while (burn_drive_get_status(drive, NULL))
+ while(burn_drive_get_status(drive, NULL) != BURN_DRIVE_IDLE)
    usleep(100002); /* >>> ??? add a timeout ? */
 
- while ((s = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
+ while((s= burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
    usleep(100002); /* >>> ??? add a timeout ? */
 
  if(skin->verbosity>=Cdrskin_verbose_progresS)
