@@ -76,13 +76,6 @@ static unsigned int drive_count;
 static int drive_is_grabbed = 0;
 
 
-/** Here you may enable simulated burn by default. This does not apply to
-    blanking. Anyway, some CD recorders obey the request to simulate, some do
-    not. Explicit options are:  --burn_for_real  and  --try_to_simulate
-*/
-static int simulate_burn = 0;
-
-
 /* Some in-advance definitions to allow a more comprehensive ordering
    of the functions and their explanations in here */
 int libburner_aquire_by_adr(char *drive_adr);
@@ -258,7 +251,7 @@ int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 	enum burn_disc_status disc_state;
 	struct burn_progress progress;
 
-	while (burn_drive_get_status(drive, NULL))
+	while (burn_drive_get_status(drive, NULL) != BURN_DRIVE_IDLE)
 		usleep(1001);
 
 	while ((disc_state = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
@@ -291,7 +284,7 @@ int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 	printf(
 	      "Expect some garbage sector numbers and some zeros at first.\n");
 	burn_disc_erase(drive, blank_fast);
-	while (burn_drive_get_status(drive, &progress)) {
+	while (burn_drive_get_status(drive, &progress) != BURN_DRIVE_IDLE) {
 		printf("Blanking sector  %d\n", progress.sector);
 		sleep(1);
 	}
@@ -321,15 +314,17 @@ int libburner_regrab(struct burn_drive *drive) {
 }
 
 
-/** Brings the preformatted image (ISO 9660, afio, ext2, whatever) onto media.
-    To make sure your image is fully readable on any Linux machine, this
-    function adds 300 kB of padding to the track.
+/** Brings preformatted track images (ISO 9660, audio, ...) onto media.
+    To make sure a data image is fully readable on any Linux machine, this
+    function adds 300 kB of padding to the (usualy single) track.
+    Audio tracks get padded to complete their last sector.
 
     In case of external signals expect abort handling of an ongoing burn to
     last up to a minute. Wait the normal burning timespan before any kill -9.
 */
-int libburner_payload(struct burn_drive *drive, const char *source_adr,
-		     off_t size)
+int libburner_payload(struct burn_drive *drive, 
+		      char source_adr[][4096], int source_adr_count,
+		      off_t stdin_size, int simulate_burn, int all_tracks_type)
 {
 	struct burn_source *data_src;
 	struct burn_disc *target_disc;
@@ -339,44 +334,54 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 	struct burn_track *track;
 	struct burn_progress progress;
 	time_t start_time;
-	int last_sector = 0;
+	int last_sector = 0, padding = 0, trackno;
+	char *adr;
+
+	if (all_tracks_type != BURN_AUDIO) {
+		all_tracks_type = BURN_MODE1;
+		/* a padding of 300 kB helps to avoid the read-ahead bug */
+		padding = 300*1024;
+	}
 
 	target_disc = burn_disc_create();
 	session = burn_session_create();
 	burn_disc_add_session(target_disc, session, BURN_POS_END);
-	track = burn_track_create();
 
-	/* a padding of 300 kB is helpful to avoid the read-ahead bug */
-	burn_track_define_data(track, 0, 300*1024, 1, BURN_MODE1);
+	for (trackno = 0 ; trackno < source_adr_count; trackno++) {
+	  track = burn_track_create();
+	  burn_track_define_data(track, 0, padding, 1, all_tracks_type);
 
-	if (source_adr[0] == '-' && source_adr[1] == 0) {
-		data_src = burn_fd_source_new(0, -1, size);
+	  adr = source_adr[trackno];
+	  if (adr[0] == '-' && adr[1] == 0) {
+		data_src = burn_fd_source_new(0, -1, stdin_size);
 		printf("Note: using standard input as source with %.f bytes\n",
-			(double) size);
-	} else
-		data_src = burn_file_source_new(source_adr, NULL);
-	if (data_src == NULL) {
+			(double) stdin_size);
+	  } else
+		data_src = burn_file_source_new(adr, NULL);
+	  if (data_src == NULL) {
 		fprintf(stderr,
-		       "FATAL: Could not open data source '%s'.\n",source_adr);
+		       "FATAL: Could not open data source '%s'.\n",adr);
 		if(errno!=0)
 			fprintf(stderr,"(Most recent system error: %s )\n",
 				strerror(errno));
 		return 0;
-	}
-
-	if (burn_track_set_source(track, data_src) != BURN_SOURCE_OK) {
+	  }
+	  if (burn_track_set_source(track, data_src) != BURN_SOURCE_OK) {
 		printf("FATAL: Cannot attach source object to track object\n");
 		return 0;
-	}
-	burn_session_add_track(session, track, BURN_POS_END);
-	burn_source_free(data_src);
+	  }
 
-	while (burn_drive_get_status(drive, NULL))
-		usleep(1001);
+	  burn_session_add_track(session, track, BURN_POS_END);
+	  printf("Track %d : source is '%s'\n", trackno, adr);
+	  burn_source_free(data_src);
+        } /* trackno loop end */
+
+	while (burn_drive_get_status(drive, NULL) != BURN_DRIVE_IDLE)
+		usleep(100001);
 
 	/* Evaluate drive and media */
 	while ((disc_state = burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
-		usleep(1001);
+		usleep(100001);
 	if (disc_state != BURN_DISC_BLANK) {
 		if (disc_state == BURN_DISC_FULL ||
 		    disc_state == BURN_DISC_APPENDABLE) {
@@ -424,13 +429,13 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 	burn_write_opts_free(burn_options);
 	while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING)
 		usleep(1002);
-	while (burn_drive_get_status(drive, &progress)) {
+	while (burn_drive_get_status(drive, &progress) != BURN_DRIVE_IDLE) {
 		if( progress.sectors <= 0 || progress.sector == last_sector)
 			printf(
 			     "Thank you for being patient since %d seconds.\n",
 			     (int) (time(0) - start_time));
 		else
-			printf("Burning sector %d of %d\n",
+			printf("Track %d : sector %d of %d\n", progress.track,
 				progress.sector, progress.sectors);
 		last_sector = progress.sector;
 		sleep(1);
@@ -445,28 +450,34 @@ int libburner_payload(struct burn_drive *drive, const char *source_adr,
 }
 
 
-/** Converts command line arguments into a few program parameters.
+/** The setup parameters of libburn */
+static char drive_adr[BURN_DRIVE_ADR_LEN]= {""};
+static int driveno= 0;
+static int do_blank= 0;
+static char source_adr[99][4096];
+static int source_adr_count= 0;
+static off_t stdin_size= 650*1024*1024;
+static int simulate_burn = 0;
+static int all_tracks_type = BURN_MODE1;
+
+
+/** Converts command line arguments into above setup parameters.
     drive_adr[] must provide at least BURN_DRIVE_ADR_LEN bytes.
     source_adr[] must provide at least 4096 bytes.
 */
-int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
-                   int *do_blank, char source_adr[], off_t *size)
+int libburner_setup(int argc, char **argv)
 {
-    int i, insuffient_parameters = 0;
-    int print_help = 0;
-
-    drive_adr[0] = 0;
-    *driveno = 0;
-    *do_blank = 0;
-    source_adr[0] = 0;
-    *size = 650*1024*1024;
+    int i, insuffient_parameters = 0, print_help = 0;
 
     for (i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "--blank_fast")) {
-            *do_blank = 1;
+        if (!strcmp(argv[i], "--audio")) {
+            all_tracks_type = BURN_AUDIO;
+
+        } else if (!strcmp(argv[i], "--blank_fast")) {
+            do_blank = 1;
 
         } else if (!strcmp(argv[i], "--blank_full")) {
-            *do_blank = 2;
+            do_blank = 2;
 
         } else if (!strcmp(argv[i], "--burn_for_real")) {
             simulate_burn = 0;
@@ -478,10 +489,10 @@ int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
                 return 1;
             } else if (strcmp(argv[i], "-") == 0) {
                 drive_adr[0] = 0;
-                *driveno = -1;
+                driveno = -1;
             } else if (isdigit(argv[i][0])) {
                 drive_adr[0] = 0;
-                *driveno = atoi(argv[i]);
+                driveno = atoi(argv[i]);
             } else {
                 if(strlen(argv[i]) >= BURN_DRIVE_ADR_LEN) {
                     fprintf(stderr,"--drive address too long (max. %d)\n",
@@ -496,58 +507,62 @@ int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
                 fprintf(stderr,"--stdin_size requires an argument\n");
                 return 3;
             } else
-                *size = atoi(argv[i]);
-            if (*size < 600*1024) /* seems to be minimum readable track size */
-                *size = 600*1024;
+                stdin_size = atoi(argv[i]);
+            if (stdin_size < 600*1024) /* minimum readable track size */
+                stdin_size = 600*1024;
         } else if (!strcmp(argv[i], "--try_to_simulate")) {
             simulate_burn = 1;
 
-        } else if (!strcmp(argv[i], "--verbose")) {
-            ++i;
-            if (i >= argc) {
-                fprintf(stderr,"--verbose requires an argument\n");
-                return 4;
-            } else
-                burn_set_verbosity(atoi(argv[i]));
         } else if (!strcmp(argv[i], "--help")) {
             print_help = 1;
 
+        } else if (!strncmp(argv[i], "--",2)) {
+            fprintf(stderr, "Unidentified option: %s\n", argv[i]);
+            return 7;
         } else {
             if(strlen(argv[i]) >= 4096) {
                 fprintf(stderr, "Source address too long (max. %d)\n", 4096-1);
                 return 5;
             }
-            strcpy(source_adr, argv[i]);
+            if(source_adr_count >= 99) {
+                fprintf(stderr, "Too many tracks (max. 99)\n");
+                return 6;
+            }
+            strcpy(source_adr[source_adr_count], argv[i]);
+            source_adr_count++;
         }
     }
     insuffient_parameters = 1;
-    if (*driveno < 0)
+    if (driveno < 0)
         insuffient_parameters = 0;
-    if (source_adr[0] != 0)
+    if (source_adr_count > 0)
         insuffient_parameters = 0; 
-    if (*do_blank)
+    if (do_blank)
         insuffient_parameters = 0;
     if (print_help || insuffient_parameters ) {
         printf("Usage: %s\n", argv[0]);
         printf("       [--drive <address>|<driveno>|\"-\"]\n");
-        printf("       [--verbose <level>] [--blank_fast|--blank_full]\n");
-        printf("       [--burn_for_real|--try_to_simulate] [--stdin_size <bytes>]\n");
-        printf("       [<imagefile>|\"-\"]\n");
+        printf("       [--blank_fast|--blank_full] [--audio]\n");
+        printf("       [--try_to_simulate] [--stdin_size <bytes>]\n");
+        printf("       [<one or more imagefiles>|\"-\"]\n");
         printf("Examples\n");
         printf("A bus scan (needs rw-permissions to see a drive):\n");
         printf("  %s --drive -\n",argv[0]);
         printf("Burn a file to drive chosen by number:\n");
-        printf("  %s --drive 0 --burn_for_real my_image_file\n",
+        printf("  %s --drive 0 my_image_file\n",
             argv[0]);
         printf("Burn a file to drive chosen by persistent address:\n");
-        printf("  %s --drive /dev/hdc --burn_for_real my_image_file\n", argv[0]);
+        printf("  %s --drive /dev/hdc my_image_file\n", argv[0]);
         printf("Blank a used CD-RW (is combinable with burning in one run):\n");
-        printf("  %s --drive 0 --blank_fast\n",argv[0]);
+        printf("  %s --drive /dev/hdc --blank_fast\n",argv[0]);
+        printf("Burn two audio tracks\n");
+        printf("  lame --decode -t /path/to/track1.mp3 track1.cd\n");
+        printf("  test/dewav /path/to/track2.wav -o track2.cd\n");
+        printf("  %s --drive /dev/hdc --audio track1.cd track2.cd\n", argv[0]);
         printf("Burn a compressed afio archive on-the-fly, pad up to 700 MB:\n");
         printf("  ( cd my_directory ; find . -print | afio -oZ - ) | \\\n");
-        printf("  %s --drive /dev/hdc --burn_for_real --stdin_size 734003200  -\n", argv[0]);
-        printf("To be read from *not mounted* CD via:\n");
-        printf("   afio -tvZ /dev/hdc\n");
+        printf("  %s --drive /dev/hdc --stdin_size 734003200  -\n", argv[0]);
+        printf("To be read from *not mounted* CD via: afio -tvZ /dev/hdc\n");
         printf("Program tar would need a clean EOF which our padded CD cannot deliver.\n");
         if (insuffient_parameters)
             return 6;
@@ -558,23 +573,23 @@ int libburner_setup(int argc, char **argv, char drive_adr[], int *driveno,
 
 int main(int argc, char **argv)
 {
-	int driveno, ret, do_blank;
-	char source_adr[4096], drive_adr[BURN_DRIVE_ADR_LEN];
-	off_t stdin_size;
+	int ret;
 
-	ret = libburner_setup(argc, argv, drive_adr, &driveno, &do_blank, 
-		       source_adr, &stdin_size);
+	ret = libburner_setup(argc, argv);
 	if (ret)
 		exit(ret);
 
-	printf("Initializing library ...\n");
+	printf("Initializing libburn.pykix.org ...\n");
 	if (burn_initialize())
 		printf("Done\n");
 	else {
 		printf("FAILED\n");
-		fprintf(stderr,"\nFATAL: Failed to initialize libburn.\n");
+		fprintf(stderr,"\nFATAL: Failed to initialize.\n");
 		exit(33);
 	}
+
+	/* Print messages of severity SORRY or more directly to stderr */
+	burn_msgs_set_severities("NEVER", "SORRY", "libburner : ");
 
 	/* Activate the default signal handler which eventually will try to
 	   properly shutdown drive and library on aborting events. */
@@ -593,7 +608,7 @@ int main(int argc, char **argv)
 					  do_blank == 1);
 		if (ret<=0)
 			{ ret = 36; goto release_drive; }
-		if (ret != 2 && source_adr[0] != 0)
+		if (ret != 2 && source_adr_count > 0)
 			ret = libburner_regrab(drive_list[driveno].drive);
 		if (ret<=0) {
 			fprintf(stderr,
@@ -601,9 +616,10 @@ int main(int argc, char **argv)
 			{ ret = 37; goto finish_libburn; }
 		}
 	}
-	if (source_adr[0] != 0) {
-		ret = libburner_payload(drive_list[driveno].drive, source_adr,
-				 stdin_size);
+	if (source_adr_count > 0) {
+		ret = libburner_payload(drive_list[driveno].drive,
+				source_adr, source_adr_count, stdin_size,
+				simulate_burn, all_tracks_type);
 		if (ret<=0)
 			{ ret = 38; goto release_drive; }
 	}
@@ -618,7 +634,7 @@ finish_libburn:;
 	/* burn_drive_info_free(drive_list); */
 
 	burn_finish();
-	return ret;
+	exit(ret);
 }
 
 
