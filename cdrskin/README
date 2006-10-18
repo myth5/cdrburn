@@ -338,7 +338,7 @@ Lorenzo Taylor enabled option -audio in cdrskin (thanks !) and reports neat
 results with audio data files which are :
   headerless PCM
   44100 Hz sampling rate 
-  16 bit persample
+  16 bits per sample
   stereo (2 channels)
   little-endian byte order
 Files with name extension .wav get examined wether they are in Microsoft WAVE
