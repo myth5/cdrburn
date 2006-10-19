@@ -1980,7 +1980,7 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-nopad\t\tDo not pad (default)\n");
      fprintf(stderr,"\t-help\t\tprint this text to stderr and exit\n");
      fprintf(stderr,
-     "Option -audio is enabled but does no special .au or .wav processing.\n");
+         "Option -audio does automatic extraction of .wav but not of .au .\n");
      fprintf(stderr,
     "By default any argument that does not match grep '^-.' or '=' is used\n");
      fprintf(stderr,
