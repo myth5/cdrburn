@@ -235,9 +235,8 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 		goto failed;
 	}
 
-	d->toc_entry = malloc(d->toc_entries * sizeof(struct burn_toc_entry));
+	d->toc_entry = calloc(d->toc_entries, sizeof(struct burn_toc_entry));
 	e = d->toc_entry;
-	memset((void *)e, 0, d->toc_entries * sizeof(struct burn_toc_entry));
 	e[0].point = 0xA0;
 	if (tar[0]->mode & BURN_AUDIO)
 		e[0].control = TOC_CONTROL_AUDIO;

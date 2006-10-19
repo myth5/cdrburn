@@ -29,8 +29,7 @@ struct burn_source *burn_source_new(void)
 {
 	struct burn_source *out;
 
-	out = malloc(sizeof(struct burn_source));
-	memset(out, 0, sizeof(struct burn_source));
+	out = calloc(1, sizeof(struct burn_source));
 	out->refcount = 1;
 	return out;
 }

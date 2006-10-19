@@ -39,8 +39,7 @@ extern struct libdax_msgs *libdax_messenger;
 struct burn_disc *burn_disc_create(void)
 {
 	struct burn_disc *d;
-	d = malloc(sizeof(struct burn_disc));
-	memset(d, 0, sizeof(struct burn_disc));
+	d = calloc(1, sizeof(struct burn_disc));
 	d->refcnt = 1;
 	d->sessions = 0;
 	d->session = NULL;
@@ -64,8 +63,7 @@ void burn_disc_free(struct burn_disc *d)
 struct burn_session *burn_session_create(void)
 {
 	struct burn_session *s;
-	s = malloc(sizeof(struct burn_session));
-	memset(s, 0, sizeof(struct burn_session));
+	s = calloc(1, sizeof(struct burn_session));
 	s->refcnt = 1;
 	s->tracks = 0;
 	s->track = NULL;
@@ -105,8 +103,7 @@ int burn_disc_add_session(struct burn_disc *d, struct burn_session *s,
 struct burn_track *burn_track_create(void)
 {
 	struct burn_track *t;
-	t = malloc(sizeof(struct burn_track));
-	memset(t, 0, sizeof(struct burn_track));
+	t = calloc(1, sizeof(struct burn_track));
 	t->refcnt = 1;
 	t->indices = 0;
 	t->offset = 0;
