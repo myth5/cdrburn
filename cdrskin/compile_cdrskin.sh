@@ -7,7 +7,7 @@
 debug_opts=
 def_opts=
 libvers="-DCdrskin_libburn_0_2_3"
-cleanup_src_or_obj="cdrskin/cleanup.c"
+cleanup_src_or_obj="libburn/cleanup.o"
 libdax_msgs_o="libburn/libdax_msgs.o"
 libdax_audioxtr_o="libburn/libdax_audioxtr.o"
 do_strip=0
@@ -43,14 +43,13 @@ do
     libvers="-DCdrskin_libburn_0_2_3"
     libdax_audioxtr_o="libburn/libdax_audioxtr.o"
     libdax_msgs_o="libburn/libdax_msgs.o"
+    cleanup_src_or_obj="libburn/cleanup.o"
   elif test "$i" = "-newapi" -o "$i" = "-experimental"
   then
     def_opts="$def_opts -DCdrskin_new_api_tesT"
-    cleanup_src_or_obj="libburn/cleanup.o"
   elif test "$i" = "-oldfashioned"
   then
     def_opts="$def_opts -DCdrskin_oldfashioned_api_usE"
-    cleanup_src_or_obj="cdrskin/cleanup.c"
   elif test "$i" = "-do_not_compile_cdrskin"
   then
     compile_cdrskin=0
@@ -70,12 +69,12 @@ do
     debug_opts="$debug_opts -O2"
   elif test "$i" = "-help" -o "$i" = "--help" -o "$i" = "-h"
   then
-    echo "cdrskin/compile_cdrskin.sh : to be executed within  ./cdrskin-0.1.3.0.2.ts"
+    echo "cdrskin/compile_cdrskin.sh : to be executed within top level directory"
     echo "Options:"
     echo "  -compile_cdrfifo  compile program cdrskin/cdrfifo."
     echo "  -compile_dewav    compile program test/dewav without libburn."
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
-    echo "  -libburn_0_2_2    set macro to match libburn-0.2.2"
+    echo "  -libburn_0_2_2    set macro to match libburn-0.2.2."
     echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
     echo "  -experimental     use newly introduced libburn features."

@@ -277,7 +277,9 @@ or
 /* #include <libburn/libburn.h> */
 #include "../libburn/libburn.h"
 
+#ifdef Cdrskin_libburn_has_audioxtR
 #include "../libburn/libdax_audioxtr.h"
+#endif
 
 #ifdef Cdrskin_libburn_has_cleanup_handleR
 #define Cleanup_set_handlers burn_set_signal_handling
@@ -916,11 +918,11 @@ int Cdrtrack_get_fifo(struct CdrtracK *track, struct CdrfifO **fifo, int flag)
 int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
                            int flag)
 {
- int l,ret;
+ int l;
 #ifdef Cdrskin_libburn_has_audioxtR
  struct libdax_audioxtr *xtr= NULL;
  char *fmt,*fmt_info;
- int num_channels,sample_rate,bits_per_sample;
+ int num_channels,sample_rate,bits_per_sample,ret;
 #endif 
 
  *fd= -1;
