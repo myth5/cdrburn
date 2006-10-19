@@ -7,5 +7,6 @@ Name: libburn
 Description: Disc reading/writing library
 Version: @VERSION@
 Requires: 
-Libs: -L${libdir} -lburn @THREAD_LIBS@
+Libs: -L${libdir} -lburn
+Libs.private: @THREAD_LIBS@ @LIBBURN_ARCH_LIBS@
 Cflags: -I${includedir}/libburn
