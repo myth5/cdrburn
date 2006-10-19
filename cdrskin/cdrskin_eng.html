@@ -112,7 +112,9 @@ wishes as well as on the development of libburn.</DT>
 <DT></DT>
 <LI>
 Option -audio is enabled but by default not advertised via option -help, 
-because no beheading of .au or .wav files takes place yet.
+because no beheading of .au or .wav files takes place yet. 
+<BR>Note: In development version 0.2.3 there is automatic extraction of
+.wav files but not of .au.
 </LI>
 <LI>
 Burns only a single closed session. No -multi option yet.
@@ -185,14 +187,28 @@ cdrskin_0.2.2-x86-suse9_0-static.tar.gz</A>, (250 KB), -static compiled,
 
 <P>
 <DL>
-<DT>Development snapshot:</DT>
+<DT>Development snapshot, version 0.2.3 :</DT>
+<DD>&nbsp;</DD>
+<DD>Contains non-critical bug fix about failure to eject.</DD>
+<DD>&nbsp;</DD>
+<DD>Enhancements towards stable version:
+ <UL>
+ <LI>cdrecord compatibility with addresses of form [ATA:]Bus,Target,Lun.</LI>
+ <LI>Drives adressable via links and device siblings (/dev/cdrom , /dev/scd0).
+ </LI>
+ <LI>Comments and empty lines allowed in startup files.</LI>
+ <LI>Options -scanbus and --devices print SORRY messages about busy drives.
+ </LI>
+ <LI>Track source files with ending .wav are checked for compliance and
+     extracted automatically.</LI>
+ </UL></DD>
 <DD>&nbsp;</DD>
 <DD><A HREF="README_cdrskin_devel">README 0.2.3</A>
 <DD><A HREF="cdrskin__help_devel">cdrskin_0.2.3 --help</A></DD>
 <DD><A HREF="cdrskin_help_devel">cdrskin_0.2.3 -help</A></DD>
 <DD>&nbsp;</DD>
-<DD>Maintainers of cdrskin unstable packages please use SVN of
-<A HREF="http://libburn.pykix.org"> libburn.pykix.org</A></DD>
+<DT>Maintainers of cdrskin unstable packages please use SVN of
+<A HREF="http://libburn.pykix.org"> libburn.pykix.org</A></DT>
 <DD>Download: <KBD><B>svn co http://libburn-svn.pykix.org/trunk libburn_pykix</B>
 </KBD></DD>
 <DD>Build: <KBD><B>cd libburn_pykix ; ./bootstrap ; ./configure ; make</B>
@@ -205,19 +221,19 @@ vanilla tools like make and gcc are needed.</DD>
 <DD>&nbsp;</DD>
 <DT>The following downloads are intended for adventurous end users or
 admins with full system souvereignty.</DT>
-<DT>Source (./bootstrap is already applied, build tested, for more see above
+<DD>Source (./bootstrap is already applied, build tested, for more see above
 <A HREF="README_cdrskin_devel">upcoming README</A> ):
-</DT>
+</DD>
 <DD>
 <A HREF="cdrskin-0.2.3.tar.gz">cdrskin-0.2.3.tar.gz</A>
-(450 KB).
+(500 KB).
 </DD>
-<DT>Binary (untar and move to /usr/bin/cdrskin):</DT>
+<DD>Binary (untar and move to /usr/bin/cdrskin):</DD>
 <DD><A HREF="cdrskin_0.2.3-x86-suse9_0.tar.gz">
 cdrskin_0.2.3-x86-suse9_0.tar.gz</A>, (60 KB).
 </DD>
 <DD><A HREF="cdrskin_0.2.3-x86-suse9_0-static.tar.gz">
-cdrskin_0.2.3-x86-suse9_0-static.tar.gz</A>, (250 KB)
+cdrskin_0.2.3-x86-suse9_0-static.tar.gz</A>, (260 KB)
 </DD>
 </DL>
 </P>

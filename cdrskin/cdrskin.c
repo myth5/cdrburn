@@ -1681,7 +1681,7 @@ return:
    2 end program run (--help)
 */
 {
- int i,ret,bragg_with_audio= 0;
+ int i,ret;
  char *value_pt;
 
 #ifndef Cdrskin_extra_leaN
@@ -1739,7 +1739,7 @@ return:
        {ret= 2; goto final_checks;}
 
    } else if(strcmp(argv[i],"--bragg_with_audio")==0) {
-     bragg_with_audio= 1;
+     /* OBSOLETE 0.2.3 */;
 
    } else if(strcmp(argv[i],"--demand_a_drive")==0) {
      o->scan_demands_drive= 1;
@@ -1869,8 +1869,6 @@ set_dev:;
      printf(" --allow_setuid     disable setuid blocker (very insecure !)\n");
      printf(
          " --any_track        allow source_addresses to match '^-.' or '='\n");
-     printf(
-           " --bragg_with_audio list -audio as supported option with -help\n");
      printf(" --demand_a_drive   exit !=0 on bus scans with empty result\n");
      printf(" --devices          list accessible devices (tells /dev/...)\n");
      printf(
@@ -1975,8 +1973,7 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-sao\t\tWrite disk in SAO mode.\n");
      fprintf(stderr,"\ttsize=#\t\tannounces exact size of source data\n");
      fprintf(stderr,"\tpadsize=#\tAmount of padding\n");
-     if(bragg_with_audio)
-       fprintf(stderr,"\t-audio\t\tSubsequent tracks are CD-DA audio tracks\n");
+     fprintf(stderr,"\t-audio\t\tSubsequent tracks are CD-DA audio tracks\n");
      fprintf(stderr,
             "\t-data\t\tSubsequent tracks are CD-ROM data mode 1 (default)\n");
      fprintf(stderr,"\t-pad\t\tpadsize=30k\n");
@@ -4369,7 +4366,7 @@ set_blank:;
             (skin->blank_fast?"fast":"all"));
 
    } else if(strcmp(argv[i],"--bragg_with_audio")==0) {
-     /* is handled in Cdrpreskin_setup() */;
+     /* OBSOLETE 0.2.3 : was handled in Cdrpreskin_setup() */;
 
    } else if(strcmp(argv[i],"-checkdrive")==0) {
      skin->do_checkdrive= 1;

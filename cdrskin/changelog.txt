@@ -510,8 +510,7 @@ configure.ac
 Makefile.am
 Forwarded changes from 0.2.2 to 0.2.3 
 
-
-Sep 2006  []
+Sep 2006  [187] [188] [189] [190]
 cdrskin/cdrskin.c
 cdrskin/compile_cdrskin.sh
 cdrskin/cdrskin_eng.html
@@ -519,50 +518,534 @@ cdrskin/README
 cdrskin/changelog.txt
 - cdrskin/add_ts_changes_to_libburn_0_2_1
 + cdrskin/add_ts_changes_to_libburn_0_2_3
-Perfomed development version leap to cdrskin-0.2.3
+Makefile.am
+cdrskin/cdrskin_timestamp.h
+Performed development version leap to cdrskin-0.2.3
 
------------------------------- cycle - cdrskin-0.2.3 - 2006.09.21.082411
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.09.21.082411
 
+21 Sep 2006  [191]
+README
+Clarified build from SVN versus tarball
 
-2006  []
+2006.09.21.173012  [192]
 cdrskin/cdrskin.c
 cdrskin/compile_cdrskin.sh
-Give up -tarball_0_2 , -cvs_A51208 , -libburn_0_2_1
-Officialize most gestures out of Cdrskin_new_api_tesT
+Gave up compile options -tarball_0_2 , -cvs_A51208 , -libburn_0_2_1
+Now standard and therefore no longer needed as macros:
+Cdrskin_libburn_p_sectoR
+Cdrskin_libburn_with_fd_sourcE
+Cdrskin_libburn_largefilE
+Cdrskin_libburn_padding_does_worK 
 
-2006  []
+2006.09.21.185623  [193]
 cdrskin/cdrskin.c
-Tackle failure to open drive on eject
+cdrskin/compile_cdrskin.sh
+Officialized gestures of pre-0.2.3 -experimental, introduced -oldfashioned
+
+2006.09.21.194006 [194]
+cdrskin/cdrskin.c
+Investigating failure to open drive on eject
+
+2006.09.22.133027  [195]
+libburn/libburn.h
+libburn/sg.c
+libburn/sg.h
+libburn/drive.c
+cdrskin/cdrskin.c
+Implemented resolving of softlinks (ticket 33)
+
+2006.09.22.170220  [196]
+libburn/libburn.h
+libburn/sg.c
+libburn/sg.h
+libburn/drive.c
+cdrskin/cdrskin.c
+Implemented new API function burn_drive_convert_fs_adr()
 
 
-2006  []
+2006.09.22.172307  [197]
+cdrskin/cdrskin.c
+Fixed SIGSEGV of -eject on non-existent device address
+
+22 Sep 2006  [198]
+libburn/sg.c
+libburn/sg.h
+libburn/drive.c
+Implemented finding matching /dev/sgN from /dev/srM or /dev/scdK 
+(ioctl(): SCSI_IOCTL_GET_IDLUN)
+
+2006.09.22.195414  [199]
+cdrskin/cdrskin.c
+Removed bug prone implementation of link resolving (now only via libburn)
+
+2006.09.22.202631  [200]
+cdrskin/cdrskin.c
+Kept new address conversion from hopping on libburn drive numbers
+
+2006.09.22.203939  [201]
+cdrskin/cdrskin.c
+Fixed --no_follow_links and renamed to --no_convert_fs_adr
+
+2006.09.23.080015  [202]
+libburn/drive.c
+Restructured SCSI search, removed a potential bug with hdX
+
+23 Sep 2006  [203]
+libburn/libburn.h
+Made burn_drive_convert_scsi_adr() a new API function
+
+23 Sep 2006  [204]
+libburn/drive.c
+libburn/sg.c
+Changed outdated comments
+
+23 Sep 2006  [205]
+libburn/libburn.h
+libburn/drive.c
+Introduced new API function burn_drive_obtain_scsi_adr()
+
+2006.09.23.100001  [not in libburn-0.2.2 yet]
+cdrskin-0.2.2/cdrskin/cdrskin.c
+Backported bug fix of revision 197. Version timestamp : 2006.09.23.100001
+
+23 Sep 2006  [206] [207]
+libburn/drive.c
+libburn/sg.c
+Enabled unused SCSI part of struct burn_drive. Switched persistent address to burn_drive.devname
+
+2006.09.23.114858  [208]
+cdrskin/cdrskin.c
+Implemented --no_pseudo_scsi_adr
+
+2006.09.23.132755 [209]
+cdrskin/cdrskin.c
+libburn/drive.c
+Removed a bug with SCSI address of scanned drives without such address
+
+23 Sep 2006  [210]
+cdrskin/README
+Explained the new addressing mode
+
+2006.09.23.182444  [211]
+cdrskin/README
+cdrskin/cdrskin.c
+Bus,Target,Lun for dev=ATA and dev=ATAPI, real SCSI addressing by default 
+
+2006.09.23.183608  [212]
+cdrskin/cdrskin.c
+Made small improvement with debug message
+
+2006.09.24.171706  [214]
+Makefile.am
+libburn/libburn.h
+libburn/libdax_msgs.h
+libburn/libdax_msgs.c
+libburn/init.c
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin.c
+Added an error message handling facility (ticket 74)
+
+2006.09.24.180836  [215]
+libburn/init.c
+libburn/sg.c
+libburn/libdax_msgs.h
+libburn/libdax_msgs.c
+cdrskin/cdrskin.c
+Made use of new message handling facility and removed first bugs
+
+24 Sep 2006  [216]
+libburn/libdax_msgs.h
+Recorded error_code 0x00020001
+
+24 Sep 2006  [217] [218]
+Makefile.am
+libburn/libburn.h
+libburn/write.c
+libburn/drive.c
+cdrskin/compile_cdrskin.sh
+Obsoleted libburn/message.[ch]
+
+25 Sep 2006  [219]
+libburn/read.c
+libburn/write.c
+Removed inclusion of libburn/message.h
+
+2006.09.25.104629  [220]
+libburn/init.c
+libburn/drive.c
+cdrskin/cdrskin.c
+Converted "libburn_experimental:" messages of address conversion into "DEBUG"
+
+2006.09.25.141035  [221]
+libburn/libdax_msgs.h
+libburn/libdax_msgs.c
+libburn/drive.c
+libburn/sg.h
+libburn/sg.c
+Implemented sg_close_drive_fd (ticket 74)
+
+2006.09.25.144506  [222]
+libburn/libdax_msgs.c
+Achieved minimum strerror thread safety (strerror_r is burned by Unix and GNU)
+
+2006.09.26.114552  [223]
+libburn/libburn.h
+libburn/init.c
+libburn/libdax_msgs.c
+cdrskin/cdrskin.c
+Made first use of queued messages and fixed several bugs with that
+
+2006.09.26.142824  [224]
+libburn/sg.c
+libburn/libdax_msgs.h
+cdrskin/cdrskin.c
+Made changes with usage of queued messages
+
+24 Sep 2006  [225]
+Makefile.am
+libburn/libburn.h
+libburn/write.c
+libburn/drive.c
+- libburn/message.c
+- libburn/message.h
+Removed libburn/message.[ch]
+
+2006.09.26.205504  [227] 
+libburn/drive.c
+Enhanced softlink resolution
+
+2006.09.26.210711  [228]
+libburn/drive.c
+Fixed bug in enhanced softlink resolution
+
+2006.09.27.063147  [229]
+cdrskin/cdrskin.c
+Fixed bug with relative device addresses and Cdrpreskin__cdrecord_to_dev()
+
+2006.09.27.074910  [230]
+cdrskin/cdrskin.c
+Fixed broken -version and --help (second time for same mistake)
+
+2006.09.27.080826  [231]
+cdrskin/README
+cdrskin/cdrskin.c
+Allowed comments and empty lines in startup files
+
+2006.09.27.082057  [232]
+cdrskin/cdrskin.c
+Prevented reading of startup files with first arg -version, -help or --help
+
+2006.09.27.115919  [233]
+libburn/drive.c
+libburn/sg.h
+libburn/sg.c
+libburn/libdax_msgs.h
+cdrskin/cdrskin.c
+
+2006.09.27.120656  [234]
+libburn/drive.h
+libburn/init.c
+libburn/transport.h
+libburn/libburn.h
+Disabled but did not discarded failed attempt to lock against growisofs
+
+2006.09.27.134332  [235]
+libburn/sg.c
+Kept /dev/hdX from all having SCSI address 0,0,0
+
+2006.09.27.142312  [236]
+libburn/drive.c
+Curbed endless links to 20 hops
+
+2006.09.27.143843  [237]
+libburn/sg.c
+Removed obsolete code and comments
+
+2006.09.28.074434  [238]
+cdrskin/cdrskin.c
+Enabled optional growisofs lock attempt via --drive_scsi_exclusive
+
+28 Sep 2006  [239]
+libburn/libburn.h
+Made official exclusive==2 with burn_preset_device_open()
+
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.09.28.100934
+
+2006.09.28.115152  [240]
+cdrskin/cdrskin.c
+Restored vanished line at end of -help text and added a new one
+
+2006.10.01.104140  [243]
+libburn/drive.c
+cdrskin/cdrskin.c
+Enhanced Cdrpreskin__cdrecord_to_dev so it warns of invisible SCSI drive.
+
+2006.10.02.103418  [244]
+libburn/libburn.h
+libburn/drive.h
+libburn/drive.c
+libburn/libdax_msgs.h
+libburn/libdax_msgs.c
+cdrskin/cdrskin.c
+Implemented burn_abort() and made use of it
+
+2006.10.03.162719  [245]
+Makefile.am
+libburn/libburn.h
+libburn/init.c
+libburn/cleanup.h
+libburn/cleanup.c
+cdrskin/cleanup.h
+cdrskin/cleanup.c
 test/libburner.c
---audio and multi-track
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin.c
+Implemented new API function burn_set_signal_handling(), libburner uses it
+
+5 Oct 2006 [246]
+libburn/drive.c
+Uploaded forgotten part of revision 245
+
+2006.10.05.142628  [247]
+libburn/libburn.h
+libburn/transport.h
+libburn/sg.c
+libburn/sg.h
+libburn/drive.c
+cdrskin/cdrskin.c
+Made use of SCSI_IOCTL_GET_BUS_NUMBER in hope of cdrecord compatibility
+
+6 Oct 2006  [248]
++ libburn/asserts.txt
+Listed findings on assert() within libburn
+
+7 Oct 2006  [249]
+libburn/async.c
+libburn/libdax_msgs.h
+libburn/asserts.txt
+Got rid by soft means of assert() in async.c
+
+2006.10.07.121234  [250]
+libburn/libburn.h
+libburn/async.c
+libburn/drive.h
+libburn/drive.c
+libburn/init.c
+libburn/libdax_msgs.h
+libburn/sg.c
+libburn/asserts.txt
+Got rid of assert() in drive.c by soft means
+
+2006.10.07.132916  [251]
+libburn/init.c
+libburn/async.c
+Got rid of assert() in init.c by soft means
+
+2006.10.07.142454  [252]
+libburn/libburn.h
+libburn/async.c
+libburn/options.c
+libburn/sector.c
+libburn/spc.c
+libburn/libdax_msgs.h
+Got rid of assert() in options.c by soft means
+
+7 Oct 2006  [253]
+libburn/read.c
+Got rid of assert() in read.c by soft means
+
+2006.10.07.170913  [254]
+libburn/sg.c
+libburn/asserts.txt
+Got rid of some assert() in sg.c by soft means
+
+2006.10.07.175427  [255]
+libburn/spc.c
+libburn/async.c
+libburn/libdax_msgs.h
+Got rid of assert() in spc.c by soft means
+
+2006.10.08.095016  [256]
+libburn/structure.c
+libburn/sector.c
+libburn/spc.c
+libburn/libdax_msgs.h
+libburn/asserts.txt
+Got rid of assert() in structure.c by soft means
+
+8 Oct 2006  [257]
+libburn/toc.c
+Got rid of assert() in toc.c by soft means
+
+8 Oct 2006  [258]
+libburn/util.c
+Got rid of assert() in util.c by soft means
+
+2006.10.09.083438  [259]
+libburn/write.c
+libburn/structure.c
+libburn/libdax_msgs.h
+libburn/asserts.txt
+Got rid of assert() in write.c by soft means
+
+2006.10.09.123518  [260]
+libburn/mmc.c
+libburn/read.c
+libburn/sector.c
+libburn/mmc.h
+libburn/transport.h
+libburn/asserts.txt
+Got rid of assert() in mmc.c by soft means
+
+2006.10.10.112545  [261]
+libburn/sector.h
+libburn/sector.c
+libburn/async.c
+libburn/write.h
+libburn/write.c
+libburn/libdax_msgs.h
+libburn/asserts.txt
+Got rid of assert() in sector.c by soft means
+
+2006.10.10.175444  [262]
+libburn/sg.c
+libburn/libdax_msgs.h
+Got rid of assert() in sg.c by soft means
+
+10 Oct 2006  [263]
+libburn/asserts.txt
+Got rid of assert() in libburn
+
+2006.10.11.191959  [264]
+cdrskin/cdrskin.c 
+cdrskin/README
+Changed pseudo-cdrecord addresses: /dev/hdX = ATA:(X-'a')/2,(X-'a')%2,0
+
+13 Oct 2006  [270]
+Makefile.am
+libburn/sg.c
+libburn/cleanup.c
+libburn/sg-linux.c
+libburn/read.c
+libburn/drive.c
+libburn/sbc.c
+libburn/transport.h
+cdrskin/cleanup.c
+Made libburn and cdrskin build on my Linux again
+
+
+2006.10.13.114554  [271]
+cdrskin/cdrskin.c
+libburn/write.c
+libburn/sg-linux.c
+libburn/libdax_msgs.h
+Removed bug in burn_disc_write_sync(): BURN_DRIVE_IDLE, then d->sync_cache()
+
+
+2006.10.14.105224  [272]
+libburn/sg.h
+libburn/sg-freebsd.c
+libburn/sg-linux.c
+libburn/drive.c
+Introduced burn_drive_enumerator_t to allow more complete sg-freebsd implementation
+
+2006.10.15.133035  [274]
+cdrskin/cdrskin.c
+Changed ambigous include statement of libburn.h 
+
+
+15 Oct 2006 2006  [275]
+Makefile.am
+libburn/libdax_msgs.h
++ libburn/libdax_audioxtr.h
++ libburn/libdax_audioxtr.c
+Implemented a first attempt of a .wav decapitator (ticket 38)
+
+15 Oct 2006 2006  [276]
++ test/dewav.c
+Implemented a first attempt of a .wav decapitator (ticket 38)
+
+15 Oct 2006 2006  [277]
+test/dewav.c
+Fixed permissions of eventually created output file
+
+15 Oct 2006 2006  [278]
+test/dewav.c
+cdrskin/compile_cdrskin.sh
+Hunting a malloc/free memory problem
+
+15 Oct 2006 2006  [279]
+libburn/libdax_audioxtr.c
+Hopefully fixed memory problem which causes sigabrt on free
+
+15 Oct 2006 2006  [280]
+libburn/libdax_audioxtr.c
+Hopefully fixed problem with stdin as audio source
+
+15 Oct 2006 2006  [281]
+test/dewav.c
+Made helptext print to stderr rather than stdout
+
+2006.10.17.141053  [283]
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+libburn/libdax_audioxtr.h
+libburn/libdax_audioxtr.c
+test/dewav.c
+Roughly implemented automatic .wav extraction in cdrskin
+
+2006.10.17.164140  [284]
+cdrskin/cdrskin.c
+libburn/libdax_audioxtr.h
+libburn/libdax_audioxtr.c
+test/dewav.c
+Implemented some cdrecord pickiness for .wav extraction
+
+18 Oct 2006  [285]
+test/libburner.c
+Added --audio and multi-track, removed --verbose, hid --burn_for_real
+
+2006.10.18.174334  [286]
+cdrskin/cdrskin.c
+Removed assumption BURN_DRIVE_IDLE==0
+
+18 Oct 2006  [287]
+cdrskin/README
+Changed audio statements to reflect new situation
+
+18 Oct 2006  [288]
+cdrskin/README
+Removed a typo
+
+19 Oct 2006  [292]
+test/libburner.c
+Freed all tracks after burning and not only last one
+
+2006.10.19.094543  [293]
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Made cdrskin use libburn/cleanup.[oh] by default (not cdrskin/cleanup.[ch])
+
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.19
+
 
 2006  []
-Resolve softlinks (ticket 33)
+Open O_EXCL all devices in address resolution chain
+(Might help with non-standard hdX device siblings)
 
 2006  []
-Find matching /dev/sgN from srM or scdK 
-Occupy /dev/srM and /dev/scdK when occupying /dev/sgN
+Convert libburn_experimental: into LIBDAX_MSGS_SEV_DEBUG
+Convert burn_print() into libdax_msgs_submit()
 
 2006  []
-Implement a .wav decapitator (ticket 38)
+Test unlocking of all drives by burn_drive_info_free()
+Test unlocking of single drive by burn_drive_grab(), burn_drive_release()
+
+
 
 2006  []
 Clear outdated persistent read buffer after small CD image was read (ticket 57)
 
-2006  []
-Add an error message handling facility (ticket 74)
-
-2006  []
-Transplant signal handler from cdrskin to libburn
-
-
-2006  []
->>> libburn/libburn.h
->>> libburn/drive.c
->>> libburn/sg.c
->>> Promoted burn_drive_is_open() to official API
 
 
