@@ -7,6 +7,8 @@ AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
+AM_CONFIG_HEADER(config.h)
+
 dnl Making releases:
 dnl   BURN_MICRO_VERSION += 1;
 dnl   BURN_INTERFACE_AGE += 1;
@@ -68,6 +70,12 @@ LIBTOOL="$LIBTOOL --silent"
 AC_PROG_INSTALL
 
 AC_CHECK_HEADERS()
+
+AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+	[AC_DEFINE(HAVE_TM_GMTOFF, 1,
+		[Define this if tm structure includes a tm_gmtoff entry.])],
+	,
+	[#include <time.h>])
 
 THREAD_LIBS=-lpthread
 AC_SUBST(THREAD_LIBS)

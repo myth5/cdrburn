@@ -4,6 +4,9 @@
 /**
  * Utility functions for the Libisofs library.
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <wchar.h>
 #include <iconv.h>
@@ -421,16 +424,11 @@ void iso_bb(uint8_t *buf, uint32_t num, int bytes)
 void iso_datetime_7(unsigned char *buf, time_t t)
 {
 	static int tzsetup = 0;
-	static int tzoffset;
+	int tzoffset;
 	struct tm tm;
 
 	if (!tzsetup) {
 		tzset();
-
-		tzoffset = -timezone / 60 / 15;
-		if (tzoffset < -48)
-			tzoffset += 101;
-
 		tzsetup = 1;
 	}
 
@@ -442,6 +440,13 @@ void iso_datetime_7(unsigned char *buf, time_t t)
 	buf[3] = tm.tm_hour;
 	buf[4] = tm.tm_min;
 	buf[5] = tm.tm_sec;
+#ifdef HAVE_TM_GMTOFF
+	tzoffset = -tm.tm_gmtoff / 60 / 15;
+#else
+	tzoffset = -timezone / 60 / 15;
+#endif
+	if (tzoffset < -48)
+		tzoffset += 101;
 	buf[6] = tzoffset;
 }
 
@@ -472,11 +477,6 @@ void iso_datetime_17(unsigned char *buf, time_t t)
 	} else {
 		if (!tzsetup) {
 			tzset();
-
-			tzoffset = -timezone / 60 / 15;
-			if (tzoffset < -48)
-				tzoffset += 101;
-
 			tzsetup = 1;
 		}
 
@@ -489,6 +489,13 @@ void iso_datetime_17(unsigned char *buf, time_t t)
 		sprintf((char*)&buf[10], "%02d", tm.tm_min);
 		sprintf((char*)&buf[12], "%02d", MIN(59, tm.tm_sec));
 		memcpy(&buf[14], "00", 2);
+#ifdef HAVE_TM_GMTOFF
+		tzoffset = -tm.tm_gmtoff / 60 / 15;
+#else
+		tzoffset = -timezone / 60 / 15;
+#endif
+		if (tzoffset < -48)
+			tzoffset += 101;
 		buf[16] = tzoffset;
 	}
 }
