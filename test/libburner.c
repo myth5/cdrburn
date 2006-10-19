@@ -331,7 +331,7 @@ int libburner_payload(struct burn_drive *drive,
 	struct burn_session *session;
 	struct burn_write_opts *burn_options;
 	enum burn_disc_status disc_state;
-	struct burn_track *track;
+	struct burn_track *track, *tracklist[99];
 	struct burn_progress progress;
 	time_t start_time;
 	int last_sector = 0, padding = 0, trackno;
@@ -348,7 +348,7 @@ int libburner_payload(struct burn_drive *drive,
 	burn_disc_add_session(target_disc, session, BURN_POS_END);
 
 	for (trackno = 0 ; trackno < source_adr_count; trackno++) {
-	  track = burn_track_create();
+	  tracklist[trackno] = track = burn_track_create();
 	  burn_track_define_data(track, 0, padding, 1, all_tracks_type);
 
 	  adr = source_adr[trackno];
@@ -441,7 +441,9 @@ int libburner_payload(struct burn_drive *drive,
 		sleep(1);
 	}
 	printf("\n");
-	burn_track_free(track);
+
+	for (trackno = 0 ; trackno < source_adr_count; trackno++)
+		burn_track_free(tracklist[trackno]);
 	burn_session_free(session);
 	burn_disc_free(target_disc);
 	if(simulate_burn)
