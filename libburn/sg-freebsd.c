@@ -206,6 +206,9 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	out.devname = burn_strdup(fname);
 	out.cam = NULL;
 
+	out.start_lba= -2000000000;
+	out.end_lba= -2000000000;
+
 	out.grab = sg_grab;
 	out.release = sg_release;
 	out.issue_command = sg_issue_command;

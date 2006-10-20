@@ -440,6 +440,10 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	for(i= 0; i<LIBBURN_SG_MAX_SIBLINGS; i++)
 		out.sibling_fds[i] = -1337;
 
+	/* ts A61020 */
+	out.start_lba= -2000000000;
+	out.end_lba= -2000000000;
+
 	out.grab = sg_grab;
 	out.release = sg_release;
 	out.issue_command = sg_issue_command;

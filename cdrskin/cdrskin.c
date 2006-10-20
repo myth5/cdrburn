@@ -170,6 +170,7 @@ or
 #define Cdrskin_libburn_has_burn_msgS 1
 #define Cdrskin_libburn_has_burn_aborT 1
 #define Cdrskin_libburn_has_audioxtR 1
+#define Cdrskin_libburn_has_get_start_end_lbA 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -3405,6 +3406,19 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  } else {
    printf("  Is not erasable\n");
  }
+
+#ifdef Cdrskin_libburn_has_get_start_end_lbA
+ { int start_lba,end_lba,min,sec,fr;
+   ret= burn_drive_get_start_end_lba(drive,&start_lba,&end_lba,0);
+   if(ret>0) {
+     burn_lba_to_msf(start_lba,&min,&sec,&fr);
+     printf("  ATIP start of lead in:  %d (%d:%d/%d)\n",start_lba,min,sec,fr);
+     burn_lba_to_msf(end_lba,&min,&sec,&fr);
+     printf("  ATIP start of lead out: %d (%d:%d/%d)\n",end_lba,min,sec,fr);
+   }
+ }
+#endif /* Cdrskin_libburn_has_get_start_end_lbA */
+
  printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed,x_speed);
  ret= 1;
 ex:;

@@ -627,6 +627,21 @@ void burn_drive_release(struct burn_drive *drive, int eject);
 */
 enum burn_disc_status burn_disc_get_status(struct burn_drive *drive);
 
+
+/* ts A61020 */
+/** Returns start and end lba of the media which is currently inserted
+    in the given drive. The drive has to be grabbed to have hope for reply.
+    Shortcomming (not a feature): only blank media will return valid info.
+    @param drive The drive to query.
+    @param start_lba Returns the start lba value
+    @param end_lba Returns the end lba value
+    @param flag Bitfield for control purposes (unused yet, submit 0)
+    @return 1 if lba values are valid , 0 if invalid
+*/
+int burn_drive_get_start_end_lba(struct burn_drive *d,
+                                 int *start_lba, int *end_lba, int flag);
+
+
 /** Tells whether a disc can be erased or not
     @return Non-zero means erasable
 */

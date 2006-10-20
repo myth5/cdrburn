@@ -318,6 +318,10 @@ void mmc_read_toc(struct burn_drive *d)
 		burn_print(12, " - control %d, adr %d\n", tdata[1] & 0xF,
 			   tdata[1] >> 4);
 
+/*
+		fprintf(stderr, "libburn_experimental: toc entry #%d : %d %d %d\n",i,tdata[8], tdata[9], tdata[10]); 
+*/
+
 		if (tdata[3] == 1) {
 			if (burn_msf_to_lba(tdata[8], tdata[9], tdata[10])) {
 				d->disc->session[0]->hidefirst = 1;
@@ -384,11 +388,26 @@ void mmc_read_disc_info(struct burn_drive *d)
 
 	data = c.page->data;
 	d->erasable = !!(data[2] & 16);
+
+	/* ts A61020 */
+	d->start_lba = d->end_lba = -2000000000;
+
+/*
+	fprintf(stderr, "libburn_experimental: data[2]= %d  0x%x\n",
+			(unsigned) data[2], (unsigned) data[2]);
+*/
 	switch (data[2] & 3) {
 	case 0:
 		d->toc_entries = 0;
 		d->start_lba = burn_msf_to_lba(data[17], data[18], data[19]);
 		d->end_lba = burn_msf_to_lba(data[21], data[22], data[23]);
+
+/*
+		fprintf(stderr, "libburn_experimental: start_lba = %d (%d %d %d) , end_lba = %d (%d %d %d)\n",
+			d->start_lba, data[17], data[18], data[19],
+			d->end_lba, data[21], data[22], data[23]);
+*/
+
 		d->status = BURN_DISC_BLANK;
 		break;
 	case 1:

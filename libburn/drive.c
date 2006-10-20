@@ -297,6 +297,10 @@ void burn_drive_release(struct burn_drive *d, int le)
 		return;
 	}
 
+	/* ts A61020 : mark media info as invalid */
+	d->start_lba= -2000000000;
+	d->end_lba= -2000000000;
+
 	d->unlock(d);
 	if (le)
 		d->eject(d);
@@ -1103,3 +1107,14 @@ int burn_abort(int patience,
 	return(still_not_done == 0); 
 }
 
+
+/* ts A61020 API function */
+int burn_drive_get_start_end_lba(struct burn_drive *d, 
+				int *start_lba, int *end_lba, int flag)
+{
+	if (d->start_lba == -2000000000 || d->end_lba == -2000000000)
+		return 0;
+	*start_lba = d->start_lba;
+	*end_lba= d->end_lba;
+	return 1;
+}
