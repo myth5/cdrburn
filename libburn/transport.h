@@ -107,11 +107,11 @@ struct burn_drive
 	struct cam_device* cam;
 #else
 	int fd;
-#endif
 
 	/* ts A60926 : trying to lock against growisofs /dev/srN, /dev/scdN */
 	int sibling_count;
 	int sibling_fds[LIBBURN_SG_MAX_SIBLINGS];
+#endif
 
 	/* ts A60904 : ticket 62, contribution by elmom */
 	/**
