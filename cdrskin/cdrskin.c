@@ -171,6 +171,7 @@ or
 #define Cdrskin_libburn_has_burn_aborT 1
 #define Cdrskin_libburn_has_audioxtR 1
 #define Cdrskin_libburn_has_get_start_end_lbA 1
+#define Cdrskin_libburn_has_burn_disc_unsuitablE 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -3156,6 +3157,18 @@ int Cdrskin_report_disc_status(struct CdrskiN *skin, enum burn_disc_status s,
         "BURN_DISC_APPENDABLE \"There is an incomplete disc in the drive\"\n");
  } else if(s==BURN_DISC_EMPTY) {
    printf("BURN_DISC_EMPTY \"There is no disc at all in the drive\"\n");
+ } else if(s==BURN_DISC_UNREADY) {
+   printf("BURN_DISC_UNREADY \"The current status is not yet known\"\n");
+
+#ifdef Cdrskin_libburn_has_burn_disc_unsuitablE
+
+ } else if(s==BURN_DISC_UNGRABBED) {
+   printf("BURN_DISC_UNGRABBED \"API usage error: drive not grabbed\"\n");
+ } else if(s==BURN_DISC_UNSUITABLE) {
+   printf("BURN_DISC_UNSUITABLE \"Media is not suitable\"\n");
+
+#endif /* Cdrskin_libburn_has_burn_disc_unsuitablE */
+
  } else 
    printf("-unknown status code-\n");
  return(1);

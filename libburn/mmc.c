@@ -286,7 +286,23 @@ void mmc_read_toc(struct burn_drive *d)
 	d->issue_command(d, &c);
 
 	if (c.error) {
+
+		/* ts A61020 : this snaps on non-blank DVD media */
+		/* Very unsure wether this old measure is ok.
+		   Obviously higher levels do not care about this.
+		   DVD+RW burns go on after passing through here.
+
 		d->busy = BURN_DRIVE_IDLE;
+		*/
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+			 0x0002010d,
+			 LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
+			 "Could not inquire TOC (non-blank DVD media ?)", 0,0);
+		d->status = BURN_DISC_UNSUITABLE;
+		d->toc_entries = 0;
+		/* Prefering memory leaks over fandangos */
+		d->toc_entry = malloc(sizeof(struct burn_toc_entry));
+
 		return;
 	}
 

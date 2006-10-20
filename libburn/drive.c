@@ -45,7 +45,8 @@ void burn_drive_free(struct burn_drive *d)
 		sg_close_drive(d);
 	free((void *) d->idata);
 	free((void *) d->mdata);
-	free((void *) d->toc_entry);
+	if(d->toc_entry != NULL)
+		free((void *) d->toc_entry);
 	free(d->devname);
 	d->global_index = -1;
 }
@@ -162,7 +163,10 @@ int burn_drive_grab(struct burn_drive *d, int le)
 		d->load(d);
 
 	d->lock(d);
-	d->status = BURN_DISC_BLANK;
+
+	/* ts A61020 : this was BURN_DISC_BLANK as pure guess */
+	d->status = BURN_DISC_UNREADY;
+
 	if (d->mdata->cdr_write || d->mdata->cdrw_write ||
 	    d->mdata->dvdr_write || d->mdata->dvdram_write) {
 
@@ -186,6 +190,8 @@ int burn_drive_grab(struct burn_drive *d, int le)
 			old_erasable = new_erasable;
 
 			d->read_disc_info(d);
+			if(d->status == BURN_DISC_UNSUITABLE)
+		break;
 
 			new_speed = burn_drive_get_write_speed(d);
 			new_erasable = burn_disc_erasable(d);
@@ -309,7 +315,7 @@ void burn_drive_release(struct burn_drive *d, int le)
 
 	d->status = BURN_DISC_UNREADY;
 	d->released = 1;
-	if (d->toc_entry)
+	if (d->toc_entry != NULL)
 		free(d->toc_entry);
 	d->toc_entry = NULL;
 	d->toc_entries = 0;
@@ -1118,3 +1124,15 @@ int burn_drive_get_start_end_lba(struct burn_drive *d,
 	*end_lba= d->end_lba;
 	return 1;
 }
+
+
+/* ts A61020 API function */
+int burn_disc_pretend_blank(struct burn_drive *d)
+{
+	if (d->status != BURN_DISC_UNREADY && 
+	    d->status != BURN_DISC_UNSUITABLE)
+		return 0;
+	d->status = BURN_DISC_BLANK;
+	return 1;
+}
+

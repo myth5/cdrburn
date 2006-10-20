@@ -318,7 +318,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x0002010a (FATAL,HIGH)   = Unsuitable track mode
  0x0002010b (FATAL,HIGH)   = Burn run failed
  0x0002010c (FATAL,HIGH)   = Failed to transfer command to drive
- 0x0002010d
+ 0x0002010d (DEBUG,HIGH)   = Could not inquire TOC
  0x0002010e
  0x0002010f
  0x00020110 (FATAL,HIGH)   = Persistent drive address too long

@@ -176,7 +176,11 @@ enum burn_disc_status
 
 	/* ts A61007 */
 	/** The drive was not grabbed when the status was inquired */
-	BURN_DISC_UNGRABBED
+	BURN_DISC_UNGRABBED,
+
+	/* ts A61020 */
+	/** The media seems not to be suitable for burning */
+	BURN_DISC_UNSUITABLE
 };
 
 
@@ -626,6 +630,16 @@ void burn_drive_release(struct burn_drive *drive, int eject);
             Note: BURN_DISC_UNGRABBED indicates wrong API usage
 */
 enum burn_disc_status burn_disc_get_status(struct burn_drive *drive);
+
+
+/* ts A61020 */
+/** WARNING: This revives an old bug-like behavior that might be dangerous.
+    Sets the drive status to BURN_DISC_BLANK if it is BURN_DISC_UNREADY
+    or BURN_DISC_UNSUITABLE. Thus marking media as writable which actually
+    failed to declare themselves either blank or (partially) filled.
+    @return 1 drive status has been set , 0 = unsuitable drive status
+*/
+int burn_disc_pretend_blank(struct burn_drive *d);
 
 
 /* ts A61020 */
