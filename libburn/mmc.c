@@ -757,3 +757,27 @@ void mmc_sync_cache(struct burn_drive *d)
 	c.dir = NO_TRANSFER;
 	d->issue_command(d, &c);
 }
+
+/* ts A61021 : the mmc specific part of sg.c:enumerate_common()
+*/
+int mmc_setup_drive(struct burn_drive *d)
+{
+	d->read_atip = mmc_read_atip;
+	d->read_toc = mmc_read_toc;
+	d->write = mmc_write;
+	d->erase = mmc_erase;
+	d->read_sectors = mmc_read_sectors;
+	d->perform_opc = mmc_perform_opc;
+	d->set_speed = mmc_set_speed;
+	d->send_cue_sheet = mmc_send_cue_sheet;
+	d->sync_cache = mmc_sync_cache;
+	d->get_nwa = mmc_get_nwa;
+	d->close_disc = mmc_close_disc;
+	d->close_session = mmc_close_session;
+
+	/* ts A61020 */
+	d->start_lba= -2000000000;
+	d->end_lba= -2000000000;
+
+	return 1;
+}

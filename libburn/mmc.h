@@ -39,4 +39,9 @@ void mmc_perform_opc(struct burn_drive *);
 void mmc_get_configuration(struct burn_drive *);
 int mmc_get_nwa(struct burn_drive *);
 void mmc_send_cue_sheet(struct burn_drive *, struct cue_sheet *);
+
+/* ts A61021 : the mmc specific part of sg.c:enumerate_common()
+*/
+int mmc_setup_drive(struct burn_drive *d);
+
 #endif /*__MMC*/

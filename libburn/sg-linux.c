@@ -100,6 +100,15 @@ int sg_close_drive_fd(char *fname, int driveno, int *fd, int sorry)
 	return 0;	
 }
 
+int sg_drive_is_open(struct burn_drive * d)
+{
+	/* a bit more detailed case distinction than needed */
+	if (d->fd == -1337)
+		return 0;
+	if (d->fd < 0)
+		return 0;
+	return 1;
+}
 
 /* ts A60924 */
 int sg_handle_busy_device(char *fname, int os_errno)
@@ -420,94 +429,37 @@ void sg_enumerate(void)
 }
 
 /* ts A60923 - A61005 : introduced new SCSI parameters */
+/* ts A61021 : moved non os-specific code to spc,sbc,mmc,drive */
 static void enumerate_common(char *fname, int bus_no, int host_no,
 			     int channel_no, int target_no, int lun_no)
 {
-	int i;
-	struct burn_drive *t;
+	int ret, i;
 	struct burn_drive out;
 
-	/* ts A60923 */
-	out.bus_no = bus_no;
-	out.host = host_no;
-	out.id = target_no;
-	out.channel = channel_no;
-	out.lun = lun_no;
+	/* General libburn drive setup */
+	burn_setup_drive(&out, fname);
 
-	out.devname = burn_strdup(fname);
+	/* This transport adapter uses SCSI-family commands and models
+           (seems the adapter would know better than its boss, if ever) */
+	ret = burn_scsi_setup_drive(&out, bus_no, host_no, channel_no,
+				    target_no, lun_no, 0);
+	if (ret<=0)
+		return;
+
+	/* Operating system adapter is Linux Generic SCSI (sg) */
+	/* Adapter specific handles and data */
 	out.fd = -1337;
 	out.sibling_count = 0;
 	for(i= 0; i<LIBBURN_SG_MAX_SIBLINGS; i++)
 		out.sibling_fds[i] = -1337;
-
-	/* ts A61020 */
-	out.start_lba= -2000000000;
-	out.end_lba= -2000000000;
-	out.read_atip = mmc_read_atip;
-
+	/* Adapter specific functions */
 	out.grab = sg_grab;
 	out.release = sg_release;
+	out.drive_is_open= sg_drive_is_open;
 	out.issue_command = sg_issue_command;
-	out.getcaps = spc_getcaps;
-	out.released = 1;
-	out.status = BURN_DISC_UNREADY;
 
-	out.eject = sbc_eject;
-	out.load = sbc_load;
-	out.lock = spc_prevent;
-	out.unlock = spc_allow;
-	out.read_disc_info = spc_sense_write_params;
-	out.get_erase_progress = spc_get_erase_progress;
-	out.test_unit_ready = spc_test_unit_ready;
-	out.probe_write_modes = spc_probe_write_modes;
-	out.read_toc = mmc_read_toc;
-	out.write = mmc_write;
-	out.erase = mmc_erase;
-	out.read_sectors = mmc_read_sectors;
-	out.perform_opc = mmc_perform_opc;
-	out.set_speed = mmc_set_speed;
-	out.send_parameters = spc_select_error_params;
-	out.send_write_parameters = spc_select_write_params;
-	out.send_cue_sheet = mmc_send_cue_sheet;
-	out.sync_cache = mmc_sync_cache;
-	out.get_nwa = mmc_get_nwa;
-	out.close_disc = mmc_close_disc;
-	out.close_session = mmc_close_session;
-	out.idata = malloc(sizeof(struct burn_scsi_inquiry_data));
-	out.idata->valid = 0;
-	out.mdata = malloc(sizeof(struct scsi_mode_data));
-	out.mdata->valid = 0;
-
-	/* ts A61007 : obsolete Assert in drive_getcaps() */
-	if(out.idata == NULL || out.mdata == NULL) {
-		libdax_msgs_submit(libdax_messenger, -1, 0x00020108,
-			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
-			"Could not allocate new drive object", 0, 0);
-		return;
-	}
-
-	memset(&out.params, 0, sizeof(struct params));
-	t = burn_drive_register(&out);
-
-/* ts A60821
-   <<< debug: for tracing calls which might use open drive fds */
-	mmc_function_spy("enumerate_common : -------- doing grab");
-
-/* try to get the drive info */
-	if (sg_grab(t)) {
-		burn_print(2, "getting drive info\n");
-		t->getcaps(t);
-		t->unlock(t);
-		t->released = 1;
-	} else {
-		burn_print(2, "unable to grab new located drive\n");
-		burn_drive_unregister(t);
-	}
-
-/* ts A60821
-   <<< debug: for tracing calls which might use open drive fds */
-	mmc_function_spy("enumerate_common : ----- would release ");
-
+	/* Finally register drive and inquire drive information */
+	burn_drive_finish_enum(&out);
 }
 
 /*

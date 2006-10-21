@@ -1,5 +1,21 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
+
+/* >>> ts A61021 : for testing the new arrangement of code 
+		   please outcomment these defines : */
+
+/* Keeps alive old enumerate_common(). New version delegates much work
+   to methods in drive, mmc, spc, and sbc .
+*/
+#define Scsi_freebsd_make_own_enumeratE 1
+
+
+/* Keeps alive old sg_enumerate(). New version delegates most work to
+   sg_give_next_adr().
+*/
+#define Scsi_freebsd_old_sg_enumeratE 1
+
+
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
@@ -37,33 +53,17 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 /* ts A51221 */
 int burn_drive_is_banned(char *device_address);
 
-/* ts A60813 : storage objects are in libburn/init.c
-   wether to use O_EXCL
-   wether to use O_NOBLOCK with open(2) on devices
-   wether to take O_EXCL rejection as fatal error */
-extern int burn_sg_open_o_excl;
-extern int burn_sg_open_o_nonblock;
-extern int burn_sg_open_abort_busy;
-
 
 /* ts A60821
    <<< debug: for tracing calls which might use open drive fds */
 int mmc_function_spy(char * text);
 
-/** Returns the next index number and the next enumerated drive address.
-    @param idx An opaque handle. Make no own theories about it.
-    @param adr Takes the reply
-    @param adr_size Gives maximum size of reply including final 0
-    @param initialize  1 = start new,
-                       0 = continue, use no other values for now
-                      -1 = finish
-    @return 1 = reply is a valid address , 0 = no further address available
-           -1 = severe error (e.g. adr_size too small)
-*/
+
+#ifdef Scsi_freebsd_old_sg_enumeratE
+
 int sg_give_next_adr(burn_drive_enumerator_t *idx,
 		     char adr[], int adr_size, int initialize)
 {
-
 	return (0);
 }
 
@@ -78,6 +78,208 @@ int sg_obtain_scsi_adr(char *path, int *bus_no, int *host_no, int *channel_no,
 	return (0);
 }
 
+#else /* Scsi_freebsd_old_sg_enumeratE */
+
+/* ts A61021 : Moved most code from sg_enumerate under sg_give_next_adr() */
+/* Some helper functions for sg_give_next_adr() */
+
+static int sg_init_enumerator(burn_drive_enumerator_t *idx)
+{
+	idx->skip_device = 0;
+
+	if ((idx->fd = open(XPT_DEVICE, O_RDWR)) == -1) {
+		warn("couldn't open %s", XPT_DEVICE);
+		return -1;
+	}
+
+	bzero(&(idx->ccb), sizeof(union ccb));
+
+	idx->ccb.ccb_h.path_id = CAM_XPT_PATH_ID;
+	idx->ccb.ccb_h.target_id = CAM_TARGET_WILDCARD;
+	idx->ccb.ccb_h.target_lun = CAM_LUN_WILDCARD;
+
+	idx->ccb.ccb_h.func_code = XPT_DEV_MATCH;
+	idx->bufsize = sizeof(struct dev_match_result) * 100;
+	idx->ccb.cdm.match_buf_len = idx->bufsize;
+	idx->ccb.cdm.matches = (struct dev_match_result *)malloc(idx->bufsize);
+	if (idx->ccb.cdm.matches == NULL) {
+		warnx("can't malloc memory for matches");
+		close(idx->fd);
+		return -1;
+	}
+	idx->ccb.cdm.num_matches = 0;
+	idx->i = idx->ccb.cdm.num_matches; /* to trigger buffer load */
+
+	/*
+	 * We fetch all nodes, since we display most of them in the default
+	 * case, and all in the verbose case.
+	 */
+	idx->ccb.cdm.num_patterns = 0;
+	idx->ccb.cdm.pattern_buf_len = 0;
+
+	return 1;
+}
+
+
+static int sg_next_enumeration_buffer(burn_drive_enumerator_t *idx)
+{
+	/*
+	 * We do the ioctl multiple times if necessary, in case there are
+	 * more than 100 nodes in the EDT.
+	 */
+	if (ioctl(idx->fd, CAMIOCOMMAND, &(idx->ccb)) == -1) {
+		warn("error sending CAMIOCOMMAND ioctl");
+		return -1;
+	}
+
+	if ((idx->ccb.ccb_h.status != CAM_REQ_CMP)
+	    || ((idx->ccb.cdm.status != CAM_DEV_MATCH_LAST)
+		&& (idx->ccb.cdm.status != CAM_DEV_MATCH_MORE))) {
+		warnx("got CAM error %#x, CDM error %d\n",
+		      idx->ccb.ccb_h.status, idx->ccb.cdm.status);
+		return -1;
+	}
+	return 1;
+}
+
+
+/** Returns the next index number and the next enumerated drive address.
+    @param idx An opaque handle. Make no own theories about it.
+    @param adr Takes the reply
+    @param adr_size Gives maximum size of reply including final 0
+    @param initialize  1 = start new,
+                       0 = continue, use no other values for now
+                      -1 = finish
+    @return 1 = reply is a valid address , 0 = no further address available
+           -1 = severe error (e.g. adr_size too small)
+*/
+int sg_give_next_adr(burn_drive_enumerator_t *idx,
+		     char adr[], int adr_size, int initialize)
+{
+	int ret;
+
+	if (initialize == 1) {
+		ret = sg_init_enumerator(idx);
+		if (ret<=0)
+			return ret;
+	} else if (initialize == -1) {
+		if(idx->fd != -1)
+			close(idx->fd);
+		idx->fd = -1;
+		return 0;
+	}
+
+
+try_item:; /* This spaghetti loop keeps the number of tabs small  */
+
+	/* Loop content from old sg_enumerate() */
+
+	while (idx->i >= idx->ccb.cdm.num_matches) {
+		ret = sg_next_enumeration_buffer(idx);
+		if (ret<=0)
+			return -1;
+		if (!((idx->ccb.ccb_h.status == CAM_REQ_CMP)
+			&& (idx->ccb.cdm.status == CAM_DEV_MATCH_MORE)) )
+			return 0;
+		idx->i = 0;
+	}
+
+	switch (idx->ccb.cdm.matches[idx->i].type) {
+	case DEV_MATCH_BUS:
+		break;
+	case DEV_MATCH_DEVICE: {
+		struct device_match_result* result;
+
+		result = &(idx->ccb.cdm.matches[i].result.device_result);
+		if (result->flags & DEV_RESULT_UNCONFIGURED)
+			idx->skip_device = 1;
+		else
+			idx->skip_device = 0;
+		break;
+	}
+	case DEV_MATCH_PERIPH: {
+		struct periph_match_result* result;
+		char buf[64];
+
+		result = &(idx->ccb.cdm.matches[i].result.periph_result);
+		if (idx->skip_device || 
+		    strcmp(result->periph_name, "pass") == 0)
+			break;
+		snprintf(buf, sizeof (buf), "/dev/%s%d",
+			 result->periph_name, result->unit_number);
+		if(adr_size <= strlen(buf)
+			return -1;
+		strcpy(adr, buf);
+
+		/* Found next enumerable address */
+		return 1;
+
+	}
+	default:
+		/* printf(stderr, "unknown match type\n"); */
+		break;
+	}
+
+	(idx->i)++;
+	goto try_item; /* Regular function exit is return 1 above  */
+}
+
+
+int sg_is_enumerable_adr(char* adr)
+{
+	burn_drive_enumerator_t idx;
+	int initialize = 1;
+	char buf[64];
+
+	while(1) {
+		ret = sg_give_next_adr(&idx, buf, sizeof(buf), initialize);
+		initialize = 0;
+		if (ret <= 0)
+	break;
+		if (strcmp(adr, buf) == 0) {
+			sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+			return 1;
+		}
+	}
+	sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+	return (0);
+}
+
+
+/** Try to obtain SCSI address parameters.
+    @return  1 is success , 0 is failure
+*/
+int sg_obtain_scsi_adr(char *path, int *bus_no, int *host_no, int *channel_no,
+                       int *target_no, int *lun_no)
+{
+	burn_drive_enumerator_t idx;
+	int initialize = 1;
+	char buf[64];
+	struct periph_match_result* result;
+
+	while(1) {
+		ret = sg_give_next_adr(&idx, buf, sizeof(buf), initialize);
+		initialize = 0;
+		if (ret <= 0)
+	break;
+		if (strcmp(adr, buf) != 0)
+	continue;
+		result = &(idx->ccb.cdm.matches[i].result.periph_result);
+		*bus_no = result->path_id;
+		*host_no = result->path_id;
+		*channel_no = 0;
+		*target_no = result->target_id
+		*lun_no = result->target_lun;
+		sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+		return 1;
+	}
+	sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+	return (0);
+}
+
+#endif /* ! Scsi_freebsd_old_sg_enumeratE */
+
+
 int sg_close_drive(struct burn_drive * d)
 {
 	if (d->cam != NULL) {
@@ -87,13 +289,26 @@ int sg_close_drive(struct burn_drive * d)
 	return 0;
 }
 
+int sg_drive_is_open(struct burn_drive * d)
+{
+	return (d->cam != NULL);
+}
+
+
 void ata_enumerate(void)
 {
-	/* Do not supported */
+	/* ts A61021: Only a dummy function is needed in FreeBSD */
+	/* The difference between sg and ata should be encapsulated
+	   in sg-linux.c */
+	;
 }
+
 
 void sg_enumerate(void)
 {
+
+#ifdef Scsi_freebsd_old_sg_enumeratE
+
 	union ccb ccb;
 	int bufsize, fd;
 	unsigned int i;
@@ -188,8 +403,35 @@ void sg_enumerate(void)
 		&& (ccb.cdm.status == CAM_DEV_MATCH_MORE));
 
 	close(fd);
+
+#else /* Scsi_freebsd_old_sg_enumeratE */
+
+	burn_drive_enumerator_t idx;
+	int initialize = 1;
+	char buf[64];
+
+	while(1) {
+		ret = sg_give_next_adr(&idx, buf, sizeof(buf), initialize);
+		initialize = 0;
+		if (ret <= 0)
+	break;
+		if (burn_drive_is_banned(buf))
+	continue; 
+		enumerate_common(buf, idx.result->path_id, idx.result->path_id,
+				0, idx.result->target_id, 
+				idx.result->target_lun);
+	}
+	sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+
+#endif /* ! Scsi_freebsd_old_sg_enumeratE */
+
 }
 
+
+#ifdef Scsi_freebsd_make_own_enumeratE
+
+/* ts A61021: The old version which mixes SCSI and operating system adapter
+*/
 static void enumerate_common(char *fname, int bus_no, int host_no,
 			     int channel_no, int target_no, int lun_no)
 {
@@ -212,6 +454,7 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 
 	out.grab = sg_grab;
 	out.release = sg_release;
+	out.drive_is_open= sg_drive_is_open;
 	out.issue_command = sg_issue_command;
 	out.getcaps = spc_getcaps;
 	out.released = 1;
@@ -271,7 +514,41 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 
 }
 
-/*
+#else /* Scsi_freebsd_make_own_enumeratE */
+
+/* The new, more concise version of enumerate_common */
+static void enumerate_common(char *fname, int bus_no, int host_no,
+			     int channel_no, int target_no, int lun_no)
+{
+	int ret;
+	struct burn_drive out;
+
+	/* General libburn drive setup */
+	burn_setup_drive(&out, fname);
+
+	/* This transport adapter uses SCSI-family commands and models
+	   (seems the adapter would know better than its boss, if ever) */
+	ret = burn_scsi_setup_drive(&out, bus_no, host_no, channel_no,
+                                 target_no, lun_no, 0);
+        if (ret<=0)
+                return;
+
+	/* Operating system adapter is CAM */
+	/* Adapter specific handles and data */
+	out.cam = NULL;
+	/* Adapter specific functions */
+	out.grab = sg_grab;
+	out.release = sg_release;
+	out.drive_is_open = sg_drive_is_open;
+	out.issue_command = sg_issue_command;
+
+	/* Finally register drive and inquire drive information */
+	burn_drive_finish_enum(&out);
+}
+
+#endif /* ! Scsi_freebsd_make_own_enumeratE */
+
+/* ts A61021: do not believe this:
 	we use the sg reference count to decide whether we can use the
 	drive or not.
 	if refcount is not one, drive is open somewhere else.
@@ -304,6 +581,7 @@ int sg_grab(struct burn_drive *d)
 	sg_close_drive(d);
 	return 0;
 }
+
 
 /*
 	non zero return means you still have the drive and it's not

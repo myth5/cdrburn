@@ -33,6 +33,16 @@ extern struct libdax_msgs *libdax_messenger;
 static struct burn_drive drive_array[255];
 static int drivetop = -1;
 
+/* ts A61021 : the unspecific part of sg.c:enumerate_common()
+*/
+int burn_setup_drive(struct burn_drive *d, char *fname)
+{
+	d->devname = burn_strdup(fname);
+	memset(&d->params, 0, sizeof(struct params));
+	d->released = 1;
+	d->status = BURN_DISC_UNREADY;
+	return 1;
+}
 
 /* ts A60904 : ticket 62, contribution by elmom */
 /* splitting former burn_drive_free() (which freed all, into two calls) */
@@ -65,21 +75,8 @@ void burn_drive_free_all(void)
 /* ts A60822 */
 int burn_drive_is_open(struct burn_drive *d)
 {
-#if defined(__FreeBSD__)
-
-	if (d->cam == NULL)
-		return 0;
-
-#else /* __FreeBSD__ */
-
-	/* a bit more detailed case distinction than needed */
-	if (d->fd == -1337)
-		return 0;
-	if (d->fd < 0)
-		return 0;
-
-#endif /* ! __FreeBSD__ */
-	return 1;
+	/* ts A61021 : moved decision to sg.c */
+	return d->drive_is_open(d);
 }
 
 
@@ -277,6 +274,39 @@ int burn_drive_unregister(struct burn_drive *d)
 	burn_drive_free(d);
 	drivetop--;
 	return 1;
+}
+
+
+/* ts A61021 : after-setup activities from sg.c:enumerate_common()
+*/
+struct burn_drive *burn_drive_finish_enum(struct burn_drive *d)
+{
+	struct burn_drive *t;
+	/* ts A60821
+   	<<< debug: for tracing calls which might use open drive fds */
+	int mmc_function_spy(char * text);
+
+	t = burn_drive_register(d);
+
+	/* ts A60821 */
+	mmc_function_spy("enumerate_common : -------- doing grab");
+
+	/* try to get the drive info */
+	if (t->grab(t)) {
+	        burn_print(2, "getting drive info\n");
+	        t->getcaps(t);
+	        t->unlock(t);
+	        t->released = 1;
+	} else {
+	        burn_print(2, "unable to grab new located drive\n");
+	        burn_drive_unregister(t);
+		t = NULL;
+	}
+
+	/* ts A60821 */
+	mmc_function_spy("enumerate_common : ----- would release ");
+
+	return t;
 }
 
 

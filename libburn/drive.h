@@ -61,4 +61,13 @@ int burn_drive_is_occupied(struct burn_drive *d);
 int burn_drive_forget(struct burn_drive *d, int force);
 int burn_drive_convert_fs_adr_sub(char *path, char adr[], int *rec_count);
 
+/* ts A61021 : the unspecific part of sg.c:enumerate_common()
+*/
+int burn_setup_drive(struct burn_drive *d, char *fname);
+
+/* ts A61021 : after-setup activities from sg.c:enumerate_common()
+*/
+struct burn_drive *burn_drive_finish_enum(struct burn_drive *d);
+
+
 #endif /* __DRIVE */

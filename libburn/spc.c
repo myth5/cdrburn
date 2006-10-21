@@ -23,6 +23,10 @@
 #include "debug.h"
 #include "options.h"
 
+#include "libdax_msgs.h"
+extern struct libdax_msgs *libdax_messenger;
+
+
 /* spc command set */
 static unsigned char SPC_INQUIRY[] = { 0x12, 0, 0, 0, 255, 0 };
 
@@ -432,4 +436,62 @@ int spc_block_type(enum burn_block_types b)
 	}
 	/* ts A61007 : already prevented in burn_write_opts_set_write_type() */
 	/* a ssert(0); */;
+}
+
+/* ts A61021 : the spc specific part of sg.c:enumerate_common()
+*/
+int spc_setup_drive(struct burn_drive *d)
+{
+	d->getcaps = spc_getcaps;
+	d->lock = spc_prevent;
+	d->unlock = spc_allow;
+	d->read_disc_info = spc_sense_write_params;
+	d->get_erase_progress = spc_get_erase_progress;
+	d->test_unit_ready = spc_test_unit_ready;
+	d->probe_write_modes = spc_probe_write_modes;
+	d->send_parameters = spc_select_error_params;
+	d->send_write_parameters = spc_select_write_params;
+	return 1;	
+}
+
+/* ts A61021 : the general SCSI specific part of sg.c:enumerate_common()
+   @param flag Bitfiled for control purposes
+               bit0= do not setup spc/sbc/mmc
+*/
+int burn_scsi_setup_drive(struct burn_drive *d, int bus_no, int host_no,
+			int channel_no, int target_no, int lun_no, int flag)
+{
+	int ret;
+
+        /* ts A60923 */
+	d->bus_no = bus_no;
+	d->host = host_no;
+	d->id = target_no;
+	d->channel = channel_no;
+	d->lun = lun_no;
+
+	d->idata = malloc(sizeof(struct burn_scsi_inquiry_data));
+	d->idata->valid = 0;
+	d->mdata = malloc(sizeof(struct scsi_mode_data));
+	d->mdata->valid = 0;
+
+	/* ts A61007 : obsolete Assert in drive_getcaps() */
+	if(d->idata == NULL || d->mdata == NULL) {
+	        libdax_msgs_submit(libdax_messenger, -1, 0x00020108,
+	                LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+	                "Could not allocate new drive object", 0, 0);
+		return -1;
+	}
+	if(!(flag & 1)) {
+		ret = spc_setup_drive(d);
+		if (ret<=0)
+			return ret;
+		ret = sbc_setup_drive(d);
+		if (ret<=0)
+			return ret;
+		ret = mmc_setup_drive(d);
+		if (ret<=0)
+			return ret;
+	}
+	return 1;
 }

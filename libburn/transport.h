@@ -145,6 +145,10 @@ struct burn_drive
 /* transport functions */
 	int (*grab) (struct burn_drive *);
 	int (*release) (struct burn_drive *);
+
+	/* ts A61021 */
+	int (*drive_is_open) (struct burn_drive *);
+
 	int (*issue_command) (struct burn_drive *, struct command *);
 
 /* lower level functions */

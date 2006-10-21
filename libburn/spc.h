@@ -22,4 +22,16 @@ int spc_block_type(enum burn_block_types b);
 int spc_get_erase_progress(struct burn_drive *d);
 int spc_test_unit_ready(struct burn_drive *d);
 
+/* ts A61021 : the spc specific part of sg.c:enumerate_common()
+*/
+int spc_setup_drive(struct burn_drive *d);
+
+/* ts A61021 : the general SCSI specific part of sg.c:enumerate_common()
+   @param flag Bitfield for control purposes
+               bit0= do not setup spc/sbc/mmc
+*/
+int burn_scsi_setup_drive(struct burn_drive *d, int bus_no, int host_no,
+			int channel_no, int target_no, int lun_no, int flag);
+
+
 #endif /*__SPC*/

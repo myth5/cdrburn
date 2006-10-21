@@ -9,7 +9,16 @@
        which are now local in sg_enumerate() . So that sg_give_next_adr()
        can work in BSD and sg_enumerate() can use it. */
 struct burn_drive_enumeration_state {
+
+#ifdef Scsi_freebsd_old_sg_enumeratE
 	int dummy;
+#else
+	union ccb ccb;
+	int bufsize, fd;
+	unsigned int i;
+	int skip_device;
+#endif /* ! Scsi_freebsd_old_sg_enumeratE */
+
 };
 typedef struct burn_drive_enumeration_state burn_drive_enumerator_t;
 

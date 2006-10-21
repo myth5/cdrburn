@@ -36,3 +36,13 @@ void sbc_eject(struct burn_drive *d)
 	c.dir = NO_TRANSFER;
 	d->issue_command(d, &c);
 }
+
+/* ts A61021 : the sbc specific part of sg.c:enumerate_common()
+*/
+int sbc_setup_drive(struct burn_drive *d)
+{
+	d->eject = sbc_eject;
+	d->load = sbc_load;
+	return 1;
+}
+
