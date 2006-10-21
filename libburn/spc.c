@@ -157,10 +157,24 @@ void spc_sense_caps(struct burn_drive *d)
 	m->cdrw_write = page[3] & 2;
 	m->cdr_read = page[2] & 1;
 	m->cdr_write = page[3] & 1;
+
+	/* ts A61021 : these fields are marked obsolete in MMC 3 */
 	m->max_read_speed = page[8] * 256 + page[9];
 	m->cur_read_speed = page[14] * 256 + page[15];
+
+	/* in MMC-3 : see [30-31] and blocks beginning at [32] */
 	m->max_write_speed = page[18] * 256 + page[19];
+	/* New field to be set by atip */
+	m->min_write_speed = m->max_write_speed;
+
+	/* in MMC-3 : [28-29] */
 	m->cur_write_speed = page[20] * 256 + page[21];
+
+	/* >>> ts A61021 : iterate over all speeds :
+	  data[30-31]: number of speed performance descriptor blocks
+	  data[32-35]: block 0 : [+2-3] speed in kbytes/sec
+	*/
+
 	m->c2_pointers = page[5] & 16;
 	m->valid = 1;
 	m->underrun_proof = page[4] & 128;

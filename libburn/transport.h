@@ -79,6 +79,10 @@ struct scsi_mode_data
 	int simulate;
 	int max_read_speed;
 	int max_write_speed;
+
+	/* ts A61021 */
+	int min_write_speed;
+
 	int cur_read_speed;
 	int cur_write_speed;
 	int retry_page_length;
@@ -146,6 +150,10 @@ struct burn_drive
 /* lower level functions */
 	void (*erase) (struct burn_drive *, int);
 	void (*getcaps) (struct burn_drive *);
+
+	/* ts A61021 */
+	void (*read_atip) (struct burn_drive *);
+
 	int (*write) (struct burn_drive *, int, struct buffer *);
 	void (*read_toc) (struct burn_drive *);
 	void (*lock) (struct burn_drive *);

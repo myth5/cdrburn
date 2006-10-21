@@ -172,6 +172,7 @@ or
 #define Cdrskin_libburn_has_audioxtR 1
 #define Cdrskin_libburn_has_get_start_end_lbA 1
 #define Cdrskin_libburn_has_burn_disc_unsuitablE 1
+#define Cdrskin_libburn_has_read_atiP 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -3326,7 +3327,7 @@ ex:;
 int Cdrskin_atip(struct CdrskiN *skin, int flag)
 {
  int ret,is_not_really_erasable= 0;
- double x_speed;
+ double x_speed_max, x_speed_min= -1.0;
  enum burn_disc_status s;
  struct burn_drive *drive;
 
@@ -3400,10 +3401,26 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
 
 #endif /* Cdrskin_atip_speed_brokeN */
 
+#ifdef Cdrskin_libburn_has_read_atiP
+ ret= burn_disc_read_atip(drive);
+ if(ret>0) {
+   ret= burn_drive_get_min_write_speed(drive);
+   x_speed_min= ((double) ret)/Cdrskin_libburn_cd_speed_factoR;
+ }
+#endif
+
+#ifdef Cdrskin_libburn_has_burn_disc_unsuitablE
+ if(burn_disc_get_status(drive) == BURN_DISC_UNSUITABLE) {
+   printf("Current: UNSUITABLE MEDIA\n");
+   {ret= 0; goto ex;}
+ }
+#endif
 
  ret= burn_drive_get_write_speed(drive);
- x_speed= ((double) ret)/Cdrskin_libburn_cd_speed_factoR;
- printf("cdrskin: burn_drive_get_write_speed = %d  (%.1fx)\n",ret,x_speed);
+ x_speed_max= ((double) ret)/Cdrskin_libburn_cd_speed_factoR;
+ if(x_speed_min<0)
+   x_speed_min= x_speed_max;
+ printf("cdrskin: burn_drive_get_write_speed = %d  (%.1fx)\n",ret,x_speed_max);
  if(skin->verbosity>=Cdrskin_verbose_progresS) {
    if(burn_disc_erasable(drive))
      printf("Current: CD-RW\n");
@@ -3425,14 +3442,16 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
    ret= burn_drive_get_start_end_lba(drive,&start_lba,&end_lba,0);
    if(ret>0) {
      burn_lba_to_msf(start_lba,&min,&sec,&fr);
-     printf("  ATIP start of lead in:  %d (%d:%d/%d)\n",start_lba,min,sec,fr);
+     printf("  ATIP start of lead in:  %d (%-2.2d:%-2.2d/%-2.2d)\n",
+            start_lba,min,sec,fr);
      burn_lba_to_msf(end_lba,&min,&sec,&fr);
-     printf("  ATIP start of lead out: %d (%d:%d/%d)\n",end_lba,min,sec,fr);
+     printf("  ATIP start of lead out: %d (%-2.2d:%-2.2d/%-2.2d)\n",
+            end_lba,min,sec,fr);
    }
  }
 #endif /* Cdrskin_libburn_has_get_start_end_lbA */
 
- printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed,x_speed);
+ printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed_min,x_speed_max);
  ret= 1;
 ex:;
  Cdrskin_release_drive(skin,0);

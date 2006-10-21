@@ -439,6 +439,17 @@ void mmc_read_atip(struct burn_drive *d)
 	struct buffer buf;
 	struct command c;
 
+        /* ts A61021 */
+	unsigned char *data;
+	/* Speed values from A1: 
+	   With 4 cdrecord tells 10 or 8 where MMC-1 says 8.
+	   cdrecord 8 appear on 4xCD-RW and thus seem to be quite invalid.
+	   My CD-R (>=24 speed) tell no A1.
+	   The higher non-MMC-1 values are hearsay.
+	*/
+        static int speed_value[16]= {  0,  2,  4,  6,  10,  -5,  16,  -7,
+				      24, 32, 40, 48, -12, -13, -14, -15};
+
 	mmc_function_spy("mmc_read_atip");
 	memcpy(c.opcode, MMC_GET_ATIP, sizeof(MMC_GET_ATIP));
 	c.retry = 1;
@@ -450,6 +461,125 @@ void mmc_read_atip(struct burn_drive *d)
 	c.dir = FROM_DRIVE;
 	d->issue_command(d, &c);
 	burn_print(1, "atip shit for you\n");
+
+
+	/* ts A61021 */
+	data = c.page->data;
+	d->erasable= !!(data[6]&64);
+	d->start_lba= burn_msf_to_lba(data[8],data[9],data[10]);
+	d->end_lba= burn_msf_to_lba(data[12],data[13],data[14]);
+	if (data[6]&4) {
+		if (speed_value[(data[16]>>4)&7] > 0)
+			d->mdata->min_write_speed = 
+				speed_value[(data[16]>>4)&7]*176;
+		if (speed_value[(data[16])&15] > 0)
+			d->mdata->max_write_speed = 
+				speed_value[(data[16])&15]*176;
+	}
+
+#ifdef Burn_mmc_be_verbous_about_atiP
+	{ int i;
+	fprintf(stderr,"libburn_experimental: Returned ATIP Data\n");
+	for(i= 0; i<28; i++)
+		fprintf(stderr,"%3.3d (0x%2.2x)%s",
+			data[i],data[i],((i+1)%5 ? "  ":"\n"));
+	fprintf(stderr,"\n");
+
+	fprintf(stderr,
+		"libburn_experimental: Indicative Target Writing Power= %d\n",
+		(data[4]>>4)&7);
+	fprintf(stderr,
+		"libburn_experimental: Reference speed= %d ->%d\n",
+		data[4]&7, speed_value[data[4]&7]);
+	fprintf(stderr,
+		"libburn_experimental: Is %sunrestricted\n",
+		(data[5]&64?"":"not "));
+	fprintf(stderr,
+		"libburn_experimental: Is %serasable, sub-type %d\n",
+		(data[6]&64?"":"not "),(data[6]>>3)&3);
+	fprintf(stderr,
+		"libburn_experimental: lead in: %d (%-2.2d:%-2.2d/%-2.2d)\n",
+		burn_msf_to_lba(data[8],data[9],data[10]),
+		data[8],data[9],data[10]);
+	fprintf(stderr,
+		"libburn_experimental: lead out: %d (%-2.2d:%-2.2d/%-2.2d)\n",
+		burn_msf_to_lba(data[12],data[13],data[14]),
+		data[12],data[13],data[14]);
+	if(data[6]&4)
+	  fprintf(stderr,
+		"libburn_experimental: A1 speed low %d   speed high %d\n",
+		speed_value[(data[16]>>4)&7], speed_value[(data[16])&7]);
+	if(data[6]&2)
+	  fprintf(stderr,
+		"libburn_experimental: A2 speed low %d   speed high %d\n",
+		speed_value[(data[20]>>4)&7], speed_value[(data[20])&7]);
+	if(data[6]&1)
+	  fprintf(stderr,
+		"libburn_experimental: A3 speed low %d   speed high %d\n",
+		speed_value[(data[24]>>4)&7], speed_value[(data[24])&7]);
+	}
+
+#endif /* Burn_mmc_be_verbous_about_atiP */
+
+/* ts A61020
+http://www.t10.org/ftp/t10/drafts/mmc/mmc-r10a.pdf , table 77 :
+
+ 0 ATIP Data Length MSB
+ 1 ATIP Data Length LSB
+ 2 Reserved
+ 3 Reserved
+ 4 bit7=1, bit4-6="Indicative Target Writing Power", bit3=reserved ,
+   bit0-2="Reference speed"
+ 5 bit7=0, bit6="URU" , bit0-5=reserved
+ 6 bit7=1, bit6="Disc Type", bit3-4="Disc Sub-Type", 
+   bit2="A1", bit1="A2", bit0="A3"
+ 7 reserved
+ 8 ATIP Start Time of lead-in (Min)
+ 9 ATIP Start Time of lead-in (Sec)
+10 ATIP Start Time of lead-in (Frame)
+11 reserved
+12 ATIP Last Possible Start Time of lead-out (Min)
+13 ATIP Last Possible Start Time of lead-out (Sec)
+14 ATIP Last Possible Start Time of lead-out (Frame)
+15 reserved
+16 bit7=0, bit4-6="Lowest Usable CLV Recording speed"
+   bit0-3="Highest Usable CLV Recording speed"
+17 bit7=0, bit4-6="Power Multiplication Factor p", 
+   bit1-3="Target y value of the Modulation/Power function", bit0=reserved
+18 bit7=1, bit4-6="Recommended Erase/Write Power Ratio (P(inf)/W(inf))"
+   bit0-3=reserved
+19 reserved
+20-22 A2 Values
+23 reserved
+24-26 A3 Values
+27 reserved
+
+Disc Type - zero indicates CD-R media; one indicates CD-RW media.
+
+Disc Sub-Type - shall be set to zero.
+
+A1 - when set to one, indicates that bytes 16-18 are valid.
+
+Lowest Usable CLV Recording Speed
+000b Reserved
+001b 2X
+010b - 111b Reserved
+
+Highest CLV Recording Speeds
+000b Reserved
+001b 2X
+010b 4X
+011b 6X
+100b 8X
+101b - 111b Reserved
+
+MMC-3 seems to recommend MODE SENSE (5Ah) page 2Ah rather than A1, A2, A3.
+This page is loaded in libburn function  spc_sense_caps() .
+Speed is given in kbytes/sec there. But i suspect this to be independent
+of media. So one would habe to associate the speed descriptor blocks with
+the ATIP media characteristics ? How ?
+
+*/
 }
 
 void mmc_read_sectors(struct burn_drive *d,

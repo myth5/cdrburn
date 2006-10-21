@@ -663,6 +663,12 @@ int burn_drive_get_write_speed(struct burn_drive *d)
 	return d->mdata->max_write_speed;
 }
 
+/* ts A61021 : New API function */
+int burn_drive_get_min_write_speed(struct burn_drive *d)
+{
+	return d->mdata->min_write_speed;
+}
+
 
 /* ts A51221 */
 static char *enumeration_whitelist[BURN_DRIVE_WHITELIST_LEN];
@@ -1133,6 +1139,22 @@ int burn_disc_pretend_blank(struct burn_drive *d)
 	    d->status != BURN_DISC_UNSUITABLE)
 		return 0;
 	d->status = BURN_DISC_BLANK;
+	return 1;
+}
+
+/* ts A61021: new API function */
+int burn_disc_read_atip(struct burn_drive *d)
+{
+	if (burn_drive_is_released(d)) {
+		libdax_msgs_submit(libdax_messenger,
+				d->global_index, 0x0002010e,
+				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				"Attempt to read ATIP from ungrabbed drive",
+				0, 0);
+		return -1;
+	}
+	d->read_atip(d);
+	/* >>> some control of success would be nice :) */
 	return 1;
 }
 

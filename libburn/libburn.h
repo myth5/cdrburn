@@ -639,7 +639,17 @@ enum burn_disc_status burn_disc_get_status(struct burn_drive *drive);
     failed to declare themselves either blank or (partially) filled.
     @return 1 drive status has been set , 0 = unsuitable drive status
 */
-int burn_disc_pretend_blank(struct burn_drive *d);
+int burn_disc_pretend_blank(struct burn_drive *drive);
+
+
+/* ts A61021 */
+/** Reads ATIP information from inserted media. To be obtained via
+    burn_drive_get_write_speed(), burn_drive_get_min_write_speed(),
+    burn_drive_get_start_end_lba(). The drive must be grabbed for this call.
+    @param drive The drive to query.
+    @return 1=sucess, 0=no valid ATIP info read, -1 severe error
+*/
+int burn_disc_read_atip(struct burn_drive *drive);
 
 
 /* ts A61020 */
@@ -652,7 +662,7 @@ int burn_disc_pretend_blank(struct burn_drive *d);
     @param flag Bitfield for control purposes (unused yet, submit 0)
     @return 1 if lba values are valid , 0 if invalid
 */
-int burn_drive_get_start_end_lba(struct burn_drive *d,
+int burn_drive_get_start_end_lba(struct burn_drive *drive,
                                  int *start_lba, int *end_lba, int flag);
 
 
@@ -1018,6 +1028,16 @@ void burn_read_opts_set_hardware_error_retries(struct burn_read_opts *opts,
     @return Maximum write speed in K/s
 */
 int burn_drive_get_write_speed(struct burn_drive *d);
+
+
+/* ts A61021 */
+/** Gets the minimum write speed for a drive. This might differ from 
+    burn_drive_get_write_speed() only after burn_disc_read_atip()
+    @param d Drive to query
+    @return Minimum write speed in K/s
+*/
+int burn_drive_get_min_write_speed(struct burn_drive *d);
+
 
 /** Gets the maximum read speed for a drive
     @param d Drive to query

@@ -208,6 +208,7 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 
 	out.start_lba= -2000000000;
 	out.end_lba= -2000000000;
+	out.read_atip = mmc_read_atip;
 
 	out.grab = sg_grab;
 	out.release = sg_release;
