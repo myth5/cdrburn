@@ -655,7 +655,8 @@ int burn_disc_read_atip(struct burn_drive *drive);
 /* ts A61020 */
 /** Returns start and end lba of the media which is currently inserted
     in the given drive. The drive has to be grabbed to have hope for reply.
-    Shortcomming (not a feature): only blank media will return valid info.
+    Shortcomming (not a feature): unless burn_disc_read_atip() was called 
+    only blank media will return valid info.
     @param drive The drive to query.
     @param start_lba Returns the start lba value
     @param end_lba Returns the end lba value
