@@ -4439,7 +4439,8 @@ set_abort_max_wait:;
     "cdrskin: --any_track : will accept any unknown option as track source\n");
 
    } else if(strcmp(argv[i],"-atip")==0) {
-     skin->do_atip= 1;
+     if(skin->do_atip<1)
+       skin->do_atip= 1;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
        printf("cdrskin: will put out some -atip style lines\n");
 
