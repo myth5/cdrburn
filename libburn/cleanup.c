@@ -87,6 +87,8 @@ static int Cleanup_handler_exit(int exit_value, int signum, int flag)
 {
  int ret;
 
+ if(cleanup_msg[0]!=0)
+   fprintf(stderr,"\n%s\n",cleanup_msg);
  if(cleanup_perform_app_handler_first)
    if(cleanup_app_handler!=NULL) {
      ret= (*cleanup_app_handler)(cleanup_app_handle,signum,0);
@@ -94,15 +96,11 @@ static int Cleanup_handler_exit(int exit_value, int signum, int flag)
        return(2);
    }
  if(cleanup_exiting) {
-   if(cleanup_msg[0]!=0)
-     fprintf(stderr,"%s\n",cleanup_msg);
    fprintf(stderr,"cleanup: ABORT : repeat by pid=%d, signum=%d\n",
            getpid(),signum);
    return(0);
  }
  cleanup_exiting= 1;
- if(cleanup_msg[0]!=0)
-   fprintf(stderr,"\n%s\n",cleanup_msg);
  alarm(0);
  if(!cleanup_perform_app_handler_first)
    if(cleanup_app_handler!=NULL) {

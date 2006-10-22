@@ -662,6 +662,10 @@ int burn_drive_info_forget(struct burn_drive_info *info, int force)
 
 struct burn_disc *burn_drive_get_disc(struct burn_drive *d)
 {
+	/* ts A61022: SIGSEGV on calling this function with blank media */
+	if(d->disc == NULL)
+		return NULL;
+
 	d->disc->refcnt++;
 	return d->disc;
 }

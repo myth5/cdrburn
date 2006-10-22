@@ -1969,6 +1969,7 @@ see_cdrskin_eng_html:;
      fprintf(stderr,
        "\t-eject\t\teject the disk after doing the work (might be ignored)\n");
      fprintf(stderr,"\t-dummy\t\tdo everything with laser turned off\n");
+     fprintf(stderr,"\t-toc\t\tretrieve and print TOC/PMA data\n");
      fprintf(stderr,
              "\t-atip\t\tretrieve media state, print \"Is *erasable\"\n");
      fprintf(stderr,"\t-raw96r\t\tWrite disk in RAW/RAW96R mode\n");
@@ -3321,7 +3322,64 @@ ex:;
 }
 
 
+/** Perform -toc under control of Cdrskin_atip().
+    @return <=0 error, 1 success
+*/
+int Cdrskin_toc(struct CdrskiN *skin, int flag)
+{
+ int num_sessions= 0,num_tracks= 0,lba;
+ int session_no, track_no;
+ struct burn_drive *drive;
+ struct burn_disc *disc= NULL;
+ struct burn_session **sessions;
+ struct burn_track **tracks;
+ struct burn_toc_entry toc_entry;
+
+ drive= skin->drives[skin->driveno].drive;
+
+ disc= burn_drive_get_disc(drive);
+ if(disc==NULL)
+   goto cannot_read;
+ sessions= burn_disc_get_sessions(disc,&num_sessions);
+ if(disc==NULL)
+   goto cannot_read;
+ for(session_no= 0; session_no<num_sessions; session_no++) {
+   tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
+   if(tracks==NULL)
+ continue;
+   printf("first: 1 last %d\n",num_tracks);
+   for(track_no= 0; track_no<num_tracks; track_no++) {
+     burn_track_get_entry(tracks[track_no], &toc_entry);
+     lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+     printf("track:  %2d lba: %9d (%9d) %2.2u:%2.2u:%2.2u",
+            track_no,lba,4*lba,toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+     printf(" adr: %d control: %d",toc_entry.adr,toc_entry.control);
+
+     /* >>> from where does cdrecord take "mode" ? */;
+
+     printf(" mode: %d\n",((toc_entry.control&7)<4?0:1));
+   }
+   burn_session_get_leadout_entry(sessions[session_no],&toc_entry);
+   lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+   printf("track:lout lba: %9d (%9d) %2.2u:%2.2u:%2.2u",
+          lba,4*lba,toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+   printf(" adr: %d control: %d",toc_entry.adr,toc_entry.control);
+   printf(" mode: -1\n");
+ }
+
+ if(disc!=NULL)
+   burn_disc_free(disc);
+ return(1);
+cannot_read:;
+ fprintf(stderr,"cdrecord_emulation: Cannot read TOC header\n");
+ fprintf(stderr,"cdrecord_emulation: Cannot read TOC/PMA\n");
+ return(0);
+}
+
+
 /** Perform -atip .
+    @param flag Bitfield for control purposes:
+                bit0= perform -toc
     @return <=0 error, 1 success
 */
 int Cdrskin_atip(struct CdrskiN *skin, int flag)
@@ -3453,6 +3511,8 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
 
  printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed_min,x_speed_max);
  ret= 1;
+ if(flag&1)
+   ret= Cdrskin_toc(skin,0);
 ex:;
  Cdrskin_release_drive(skin,0);
  return(ret);
@@ -4280,7 +4340,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
  static char ignored_full_options[][41]= {
    "-d", "-Verbose", "-V", "-silent", "-s", "-setdropts", "-prcap", "-inq",
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo", "-format", "-load",
-   "-lock", "-msinfo", "-toc", "-multi", "-fix", "-nofix", "-waiti",
+   "-lock", "-msinfo", "-multi", "-fix", "-nofix", "-waiti",
    "-immed", "-force", "-raw", "-raw96p", "-raw16",
    "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
@@ -4381,7 +4441,7 @@ set_abort_max_wait:;
    } else if(strcmp(argv[i],"-atip")==0) {
      skin->do_atip= 1;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
-       printf("cdrskin: will put out some -atip style line\n");
+       printf("cdrskin: will put out some -atip style lines\n");
 
    } else if(strcmp(argv[i],"-audio")==0) {
      skin->track_type= BURN_AUDIO;
@@ -4677,6 +4737,11 @@ set_speed:;
        printf("cdrskin: replace -tao by -sao with fixed size : %.f\n",
               skin->tao_to_sao_tsize);
 
+   } else if(strcmp(argv[i],"-toc")==0) {
+     skin->do_atip= 2;
+     if(skin->verbosity>=Cdrskin_verbose_cmD)
+       printf("cdrskin: will put out some -atip style lines plus -toc\n");
+
    } else if(strncmp(argv[i],"-tsize=",7)==0) {
      value_pt= argv[i]+7;
      goto set_tsize;
@@ -4938,7 +5003,7 @@ int Cdrskin_run(struct CdrskiN *skin, int *exit_value, int flag)
  if(skin->do_atip) {
    if(skin->n_drives<=0)
      {*exit_value= 7; goto no_drive;}
-   ret= Cdrskin_atip(skin,0);
+   ret= Cdrskin_atip(skin,!!(skin->do_atip>1));
    if(ret<=0)
      {*exit_value= 7; goto ex;}
  }

@@ -868,7 +868,7 @@ void burn_session_hide_first_track(struct burn_session *s, int onoff);
 
 /** Get the drive's disc struct - free when done
 	@param d drive to query
-	@return the disc struct
+	@return the disc struct or NULL on failure
 */
 struct burn_disc *burn_drive_get_disc(struct burn_drive *d);
 

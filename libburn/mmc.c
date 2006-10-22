@@ -272,7 +272,7 @@ void mmc_read_toc(struct burn_drive *d)
 	struct buffer buf;
 	struct command c;
 	int dlen;
-	int i;
+	int i, bpl= 12;
 	unsigned char *tdata;
 
 	mmc_function_spy("mmc_read_toc");
@@ -326,12 +326,21 @@ void mmc_read_toc(struct burn_drive *d)
 		burn_disc_add_session(d->disc, session, BURN_POS_END);
 		burn_session_free(session);
 	}
+
+	/* ts A61022 */
+	burn_print(bpl, "-----------------------------------\n");
+
 	for (i = 0; i < d->toc_entries; i++, tdata += 11) {
-		burn_print(12, "S %d, PT %d, TNO %d : ", tdata[0], tdata[3],
+
+		/* ts A61022: was burn_print level 12 */
+		burn_print(bpl, "S %d, PT %2.2Xh, TNO %d :", tdata[0],tdata[3],
 			   tdata[2]);
-		burn_print(12, "(%d:%d:%d)", tdata[8], tdata[9], tdata[10]);
-		burn_print(12, "A(%d:%d:%d)", tdata[4], tdata[5], tdata[6]);
-		burn_print(12, " - control %d, adr %d\n", tdata[1] & 0xF,
+		burn_print(bpl, " MSF(%d:%d:%d)", tdata[4],tdata[5],tdata[6]);
+		burn_print(bpl, " PMSF(%d:%d:%d %d)",
+				tdata[8], tdata[9], tdata[10],
+				burn_msf_to_lba(tdata[8], tdata[9], tdata[10])
+			);
+		burn_print(bpl, " - control %d, adr %d\n", tdata[1] & 0xF,
 			   tdata[1] >> 4);
 
 /*
@@ -376,6 +385,10 @@ void mmc_read_toc(struct burn_drive *d)
 			d->disc->session[tdata[0] - 1]->leadout_entry =
 				&d->toc_entry[i];
 	}
+
+	/* ts A61022 */
+	burn_print(bpl, "-----------------------------------\n");
+
 	if (d->status != BURN_DISC_APPENDABLE)
 		d->status = BURN_DISC_FULL;
 	toc_find_modes(d);
