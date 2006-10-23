@@ -3354,13 +3354,20 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
    for(track_no= 0; track_no<num_tracks; track_no++) {
      burn_track_get_entry(tracks[track_no], &toc_entry);
      lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
-     printf("track:  %2d lba: %9d (%9d) %2.2u:%2.2u:%2.2u",
-            track_no,lba,4*lba,toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+     if(track_no==0 && burn_session_get_hidefirst(sessions[session_no]))
+       printf("cdrskin: NOTE : first track is marked as \"hidden\".\n");
+     printf("track:  %2d lba: %9d (%9d) %2.2u:%2.2u:%2.2u",track_no+1,
+            lba,4*lba,toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
      printf(" adr: %d control: %d",toc_entry.adr,toc_entry.control);
 
-     /* >>> from where does cdrecord take "mode" ? */;
+     /* >>> From where does cdrecord take "mode" ? */
 
+     /* This is not the "mode" as printed by cdrecord :
+       printf(" mode: %d\n",burn_track_get_mode(tracks[track_no]));
+     */
+     /* own guess: cdrecord says "1" on data and "0" on audio : */
      printf(" mode: %d\n",((toc_entry.control&7)<4?0:1));
+
    }
    burn_session_get_leadout_entry(sessions[session_no],&toc_entry);
    lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
