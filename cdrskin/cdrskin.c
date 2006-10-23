@@ -173,6 +173,7 @@ or
 #define Cdrskin_libburn_has_get_start_end_lbA 1
 #define Cdrskin_libburn_has_burn_disc_unsuitablE 1
 #define Cdrskin_libburn_has_read_atiP 1
+#define Cdrskin_libburn_has_buffer_progresS 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -3662,7 +3663,8 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
                           enum burn_drive_status drive_status,
                           struct burn_progress *p,
                           double start_time, double *last_time,
-                          double *total_count, double *last_count, int flag)
+                          double *total_count, double *last_count,
+                          int *min_buffer_fill, int flag)
 /*
  bit0= growisofs style
 */
@@ -3673,7 +3675,7 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  double elapsed_time,elapsed_total_time,current_time;
  double estim_time,estim_minutes,estim_seconds,percent;
  int ret,fifo_percent,fill,space,advance_interval=0,new_mb,old_mb,time_to_tell;
- int fs,bs,old_track_idx;
+ int fs,bs,old_track_idx,buffer_fill;
  char fifo_text[80],mb_text[40];
  char *debug_mark= ""; /* use this to prepend a marker text for experiments */
 
@@ -3860,9 +3862,20 @@ thank_you_for_patience:;
      } else
        sprintf(mb_text,"%4d",(int) (written_total_bytes/1024.0/1024.0));
      speed_factor= Cdrskin_cd_speed_factoR*sector_size/2048;
-     printf("\r%sTrack %-2.2d: %s MB written %s[buf  50%%]  %4.1fx.",
+
+     buffer_fill= 50;
+#ifdef Cdrskin_libburn_has_buffer_progresS
+     if(p->buffer_capacity>0)
+       buffer_fill= (double) (p->buffer_capacity - p->buffer_available)*100.0
+                    / (double) p->buffer_capacity;
+     
+#endif /* Cdrskin_libburn_has_buffer_progresS */
+     if(buffer_fill<*min_buffer_fill)
+       *min_buffer_fill= buffer_fill;
+
+     printf("\r%sTrack %-2.2d: %s MB written %s[buf %3d%%]  %4.1fx.",
             debug_mark,skin->supposed_track_idx+1,mb_text,fifo_text,
-            measured_speed/speed_factor);
+            buffer_fill,measured_speed/speed_factor);
      fflush(stdout);
    }
    if(skin->is_writing==0) {
@@ -3923,7 +3936,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  struct burn_progress p;
  struct burn_drive *drive;
  int ret,loop_counter= 0,max_track= -1,i,hflag;
- int fifo_disabled= 0,fifo_percent,total_min_fill,mb;
+ int fifo_disabled= 0,fifo_percent,total_min_fill,mb,min_buffer_fill= 101;
  double put_counter,get_counter,empty_counter,full_counter;
  double start_time,last_time;
  double total_count= 0.0,last_count= 0.0,size,padding,sector_size= 2048.0;
@@ -4066,7 +4079,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
 
    if(loop_counter>0)
      Cdrskin_burn_pacifier(skin,drive_status,&p,start_time,&last_time,
-                           &total_count,&last_count,0);
+                           &total_count,&last_count,&min_buffer_fill,0);
 
 
    /* <<< debugging : artificial abort without a previous signal */;
@@ -4187,7 +4200,9 @@ fifo_full_at_end:;
   "Cdrskin: fifo was %.f times empty and %.f times full, min fill was %d%%.\n",
              empty_counter,full_counter,fifo_percent);
    }
-   printf("Min drive buffer fill was 50%%\n");
+   if(min_buffer_fill>100)
+     min_buffer_fill= 50;
+   printf("Min drive buffer fill was %d%%\n", min_buffer_fill);
  }
 
 #endif /* ! Cdrskin_extra_leaN */

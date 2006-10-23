@@ -47,6 +47,9 @@ static unsigned char MMC_TRACK_INFO[] = { 0x52, 0, 0, 0, 0, 0, 0, 16, 0, 0 };
 static unsigned char MMC_SEND_CUE_SHEET[] =
 	{ 0x5D, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+/* ts A61023 : get size and free space of drive buffer */
+static unsigned char MMC_READ_BUFFER_CAPACITY[] = { 0x5C, 0, 0, 0, 0, 0, 0, 16, 0, 0 };
+
 
 static int mmc_function_spy_do_tell = 0;
 
@@ -771,6 +774,40 @@ void mmc_sync_cache(struct burn_drive *d)
 	d->issue_command(d, &c);
 }
 
+
+/* ts A61023 : http://libburn.pykix.org/ticket/14
+               get size and free space of drive buffer
+*/
+int mmc_read_buffer_capacity(struct burn_drive *d)
+{
+	struct buffer buf;
+	struct command c;
+	unsigned char *data;
+
+	mmc_function_spy("mmc_read_buffer_capacity");
+	memcpy(c.opcode, MMC_READ_BUFFER_CAPACITY,
+		 sizeof(MMC_READ_BUFFER_CAPACITY));
+	c.retry = 1;
+	c.oplen = sizeof(MMC_READ_BUFFER_CAPACITY);
+	c.page = &buf;
+	c.page->bytes = 0;
+	c.page->sectors = 0;
+
+	c.dir = FROM_DRIVE;
+	d->issue_command(d, &c);
+
+	/* >>> ??? error diagnostics */
+
+	data = c.page->data;
+
+	d->progress.buffer_capacity =
+			(data[4]<<24)|(data[5]<<16)|(data[6]<<8)|data[7];
+	d->progress.buffer_available =
+			(data[8]<<24)|(data[9]<<16)|(data[10]<<8)|data[11];
+	return 1;
+}
+
+
 /* ts A61021 : the mmc specific part of sg.c:enumerate_common()
 */
 int mmc_setup_drive(struct burn_drive *d)
@@ -787,6 +824,7 @@ int mmc_setup_drive(struct burn_drive *d)
 	d->get_nwa = mmc_get_nwa;
 	d->close_disc = mmc_close_disc;
 	d->close_session = mmc_close_session;
+	d->read_buffer_capacity = mmc_read_buffer_capacity;
 
 	/* ts A61020 */
 	d->start_lba= -2000000000;
@@ -794,3 +832,4 @@ int mmc_setup_drive(struct burn_drive *d)
 
 	return 1;
 }
+

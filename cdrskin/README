@@ -145,13 +145,14 @@ Get an overview of cdrecord style addresses of available devices
     cdrskin -scanbus 
     cdrskin dev=ATA -scanbus 
 
-Note: Adresses reported with dev=ATA are to be used with prefix "ATA:".
-      Like "ATA:2,2,0" . Their numbers are not cdrecord compatible. See
-      "Pseudo-SCSI Adresses". It is well possible to use IDE device file
-      paths like "/dev/hdc" rather than "ATA:2,2,0".
-      With SCSI devices it is possible to use "/dev/sg1" or "/dev/scd0".
-Note: Address numbers have changed since cdrskin-0.2.2. To get the old number
-      scheme, use option  --old_pseudo_scsi_adr . Sorry for any inconvenience.
+Note: Adresses reported with dev=ATA are to be used with prefix "ATA:". You may
+      well use device file addresses as reported with --devices. Examples:
+        dev=1,1,0   dev=ATA:1,0,0   dev=/dev/hdc   dev=/dev/sg1
+      See also "Drive Addressing".
+Note: Address numbers have changed since cdrskin-0.2.2 in order to become
+      compatible with cdrecord numbers. To get the old number scheme, use
+      option  --old_pseudo_scsi_adr . See also "Pseudo-SCSI Adresses".
+      Sorry for any inconvenience.
 
 
 Obtain some info about the drive
@@ -182,7 +183,7 @@ Anything except .wav files has to be converted into raw format first
     madplay -o raw:track04.cd /path/to/track4.mp3
     mppdec --raw-le /path/to/track5.mpc track05.cd
 
-    cdrskin dev=/dev/hdc blank=fast fs=0 -eject \
+    cdrskin dev=1,1,0 blank=fast fs=0 -eject \
            -audio track0[1-5].cd /path/to/track6.wav
 
 
@@ -238,9 +239,25 @@ scdbackup which still runs a bit better with cdrecord than with cdrskin. TAO.
 I have the hope that Joerg feels more flattered than annoyed by cdrskin.
 
 
+                              Drive Addressing
+
+Drives get addressed either via their cdrecord-style addresses as listed
+with option -scanbus (see below "Pseudo-SCSI Adresses") or via the paths
+of device files.
+Not only device files listed by --devices may be used but also device files
+which via their major,minor numbers point to the same device driver as
+a listed device file. 
+
+Helpful with Linux kernel 2.4 is a special SCSI feature:
+It is possible to address a scsi(-emulated) drive via associated device files
+which are not listed by option --devices but point to the same SCSI addresses
+as listed device files. This addressing via e.g. /dev/sr0 or /dev/scd1 is
+compatible with generic read programs like dd and with write program growisofs.
+
+
                              Pseudo-SCSI Adresses
 
-cdrecord and cdrskin share the syntax of addresses but not necessarily
+cdrecord and cdrskin share the syntax of SCSI addresses but not necessarily
 the meaning of the components. A cdrecord-style address for cdrskin
   [prefix:]scsibus,target,lun
 can be interpreted in two different modes.

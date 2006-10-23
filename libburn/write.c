@@ -485,12 +485,19 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	/* ts A60831: added tnum-line, extended print message on proposal
            by bonfire-app@wanadoo.fr in http://libburn.pykix.org/ticket/58 */
         d->progress.track = tnum;
+
         burn_print(12, "track %d is %d sectors long\n", tnum, sectors);
 
 	if (tnum == s->tracks)
 		tmp = sectors > 150 ? 150 : sectors;
 
 	for (i = 0; i < sectors - tmp; i++) {
+
+		/* ts A61023 : http://libburn.pykix.org/ticket/14
+                               From time to time inquire drive buffer */
+		if ((i%64)==0)
+			d->read_buffer_capacity(d);
+
 		if (!sector_data(o, t, 0))
 			return 0;
 
@@ -499,6 +506,11 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	}
 	for (; i < sectors; i++) {
 		burn_print(1, "last track, leadout prep\n");
+
+		/* ts A61023 */
+		if ((i%64)==0)
+			d->read_buffer_capacity(d);
+
 		if (!sector_data(o, t, 1))
 			return 0;
 
@@ -596,6 +608,10 @@ return crap.  so we send the command, then ignore the result.
 	d->progress.start_sector = 0;
 	d->progress.sectors = 0;
 	d->progress.sector = 0;
+
+	/* ts A61023 */
+	d->progress.buffer_capacity = 0;
+	d->progress.buffer_available = 0;
 
 	d->busy = BURN_DRIVE_WRITING;
 

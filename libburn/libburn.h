@@ -295,7 +295,7 @@ struct burn_drive_info
 	/** This is currently the string which is used as persistent
 	    drive address. But be warned: there is NO GUARANTEE that this
 	    will stay so. Always use function  burn_drive_get_adr() to
-	    inquire a persisten address.       ^^^^^^ ALWAYS ^^^^^^ */
+	    inquire a persistent address.       ^^^^^^ ALWAYS ^^^^^^ */
 
 	/** Can the drive read DVD-RAM discs */
 	unsigned int read_dvdram:1;
@@ -378,6 +378,12 @@ struct burn_progress {
 	int sectors;
 	/** The current sector being processed */
 	int sector;
+
+	/* ts A61023 */
+	/** The capacity of the drive buffer */
+	unsigned buffer_capacity;
+	/** The free space in the drive buffer (might be slightly outdated) */
+	unsigned buffer_available;
 };
 
 /** Initialize the library.

@@ -196,6 +196,10 @@ struct burn_drive
 	struct scsi_mode_data *mdata;
 	int toc_entries;
 	struct burn_toc_entry *toc_entry;
+
+	/* ts A61023 : get size and free space of drive buffer */
+	int (*read_buffer_capacity) (struct burn_drive *d);
+
 };
 
 /* end of generic 'drive' data structures */
