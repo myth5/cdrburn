@@ -3267,7 +3267,8 @@ int Cdrskin_scanbus(struct CdrskiN *skin, int flag)
          printf("scsibus%d:\n",busno);
        first_on_bus= 0;
        printf("\t%s\t  %d) '%-8s' '%-16s' '%-4s' Removable CD-ROM\n",
-              btldev,i,skin->drives[i].vendor,skin->drives[i].product,"?..?");
+              btldev,i,skin->drives[i].vendor,skin->drives[i].product,
+              skin->drives[i].revision);
        drives_shown[i]= 1;
      }
    }
@@ -3314,6 +3315,7 @@ int Cdrskin_checkdrive(struct CdrskiN *skin, int flag)
  printf("Device type    : %s\n","Removable CD-ROM");
  printf("Vendor_info    : '%s'\n",drive_info->vendor);
  printf("Identifikation : '%s'\n",drive_info->product);
+ printf("Revision       : '%s'\n",drive_info->revision);
  printf("Driver flags   : %s\n","BURNFREE");
  printf("Supported modes: %s\n","SAO RAW/R96R");
  ret= 1;
