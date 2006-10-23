@@ -455,8 +455,8 @@ void mmc_read_atip(struct burn_drive *d)
         /* ts A61021 */
 	unsigned char *data;
 	/* Speed values from A1: 
-	   With 4 cdrecord tells 10 or 8 where MMC-1 says 8.
-	   cdrecord 8 appear on 4xCD-RW and thus seem to be quite invalid.
+	   With 4 cdrecord tells "10" or "8" where MMC-1 says "8".
+	   cdrecord "8" appear on 4xCD-RW and thus seem to be quite invalid.
 	   My CD-R (>=24 speed) tell no A1.
 	   The higher non-MMC-1 values are hearsay.
 	*/
