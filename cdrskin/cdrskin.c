@@ -926,7 +926,7 @@ int Cdrtrack_get_fifo(struct CdrtracK *track, struct CdrfifO **fifo, int flag)
 int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
                            int flag)
 {
- int l;
+ int l, ok= 0;
 #ifdef Cdrskin_libburn_has_audioxtR
  struct libdax_audioxtr *xtr= NULL;
  char *fmt,*fmt_info;
@@ -938,9 +938,13 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
  if(track->track_type!=BURN_AUDIO && !track->track_type_by_default)
    return(0);
  l= strlen(track->source_path);
- if(l<4)
-   return(0);
- if(strcmp(track->source_path+l-4,".wav")!=0)
+ if(l>=4)
+   if(strcmp(track->source_path+l-4,".wav")!=0) 
+     ok= 1;
+ if(l>=3)
+   if(strcmp(track->source_path+l-3,".au")!=0)
+     ok= 1;
+ if(!ok)
    return(0);
 
  if(track->track_type_by_default) {
@@ -957,7 +961,7 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
    return(ret);
  libdax_audioxtr_get_id(xtr,&fmt,&fmt_info,
                      &num_channels,&sample_rate,&bits_per_sample,&msb_first,0);
- if(strcmp(fmt,".wav")!=0 || 
+ if((strcmp(fmt,".wav")!=0 && strcmp(fmt,".au")!=0) || 
     num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
    fprintf(stderr,"cdrskin: ( %s )\n",fmt_info);
    fprintf(stderr,"cdrskin: FATAL : Inappropriate audio coding in '%s'.\n",

@@ -146,7 +146,7 @@ help:;
  fprintf(stderr, "Detected format: %s\n", fmt_info);
  libdax_audioxtr_get_size(xtr, &data_size, 0);
  fprintf(stderr, "Data size      : %.f bytes\n", (double) data_size);
- if(strcmp(fmt,".wav")!=0 ||
+ if((strcmp(fmt,".wav")!=0 && strcmp(fmt,".au")!=0) ||
     num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
    fprintf(stderr,
          "%sAudio source parameters do not comply to cdrskin/README specs\n",
@@ -154,6 +154,9 @@ help:;
    if(be_strict)
      exit(6);
  }
+ if(msb_first==0)
+   fprintf(stderr,
+           "NOTE: Extracted data to be written with cdrskin option -swab\n");
 
  if(detach_fd) {
    /* Take over fd from xtr */;

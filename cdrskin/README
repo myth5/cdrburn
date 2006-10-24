@@ -360,8 +360,10 @@ results with audio data files which are :
   little-endian byte order with option -swab
 Files with name extension .wav get examined wether they are in Microsoft WAVE
 format with above parameters and eventually get extracted by cdrskin itself.
-All other formats (including SUN's format .au) are to be extracted by commands
-like those given above under "Usage examples".
+Files with name extension .au get examined wether they are in SUN's audio 
+format with above parameters. Their big-endianness gets handled properly.
+Any other formats are to be extracted by commands like those given above under
+"Usage examples".
 
 I myself am not into audio. So libburn-hackers@pykix.org might be the
 best address for suggestions, requests and bug reports.
