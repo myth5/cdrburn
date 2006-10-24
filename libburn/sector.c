@@ -99,7 +99,7 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 	shortage = count - valid;
 
 	if (!shortage)
-		return;
+		goto ex;
 
 /* Next we use source data */
 	curr = valid;
@@ -116,7 +116,7 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 	shortage = count - curr;
 
 	if (!shortage)
-		return;
+		goto ex;
 
 /* Before going to the next track, we run through any tail */
 
@@ -132,7 +132,7 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 	shortage -= valid;
 
 	if (!shortage)
-		return;
+		goto ex;
 
 /* If we're still short, and there's a "next" pointer, we pull from that.
    if that depletes, we'll just fill with 0s.
@@ -152,6 +152,15 @@ ex:;
 	if(shortage)
 		memset(data + curr, 0, shortage); /* this is old icculus.org */
 	if (track->swap_source_bytes == 1) {
+
+/*
+{ static int swapping_count= 0;
+		fprintf(stderr,"\rlibburn_debug: swapping #%d   \r",
+			swapping_count);
+		swapping_count++;
+}
+*/
+
 		for (i = 1; i < count; i += 2) {
 			tr = data[i];
 			data[i] = data[i-1];
