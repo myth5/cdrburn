@@ -776,6 +776,7 @@ struct CdrtracK {
  int track_type;
  double sector_size;
  int track_type_by_default;
+ int swap_audio_bytes;
 
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
      data to libburn. 
@@ -812,7 +813,8 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                         double *fixed_size, double *padding,
                         int *set_by_padsize, int *track_type,
-                        int *track_type_by_default, int flag);
+                        int *track_type_by_default, int *swap_audio_bytes,
+                        int flag);
  int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
                           int *fifo_size, int *fifo_start_empty, int flag);
 
@@ -831,6 +833,7 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->track_type= BURN_MODE1;
  o->sector_size= 2048.0;
  o->track_type_by_default= 1;
+ o->swap_audio_bytes= 0;
  o->fifo_enabled= 0;
  o->fifo= NULL;
  o->fifo_outlet_fd= -1;
@@ -839,7 +842,8 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->libburn_track= NULL;
  ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),
                          &(o->set_by_padsize),&(skin_track_type),
-                         &(o->track_type_by_default),0);
+                         &(o->track_type_by_default),&(o->swap_audio_bytes),
+                         0);
  if(ret<=0)
    goto failed;
  Cdrtrack_set_track_type(o,skin_track_type,0);
@@ -964,8 +968,10 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
  ret= libdax_audioxtr_detach_fd(xtr,fd,0);
  if(ret<=0)
    {ret= -1*!!ret; goto ex;}
- fprintf(stderr,"cdrskin: NOTE : %.f audio bytes in '%s'\n",
-                (double) *xtr_size, track->source_path);
+ track->swap_audio_bytes= !!msb_first;
+ fprintf(stderr,"cdrskin: NOTE : %.f %saudio bytes in '%s'\n",
+                (double) *xtr_size, (msb_first ? "" : "(-swab) "),
+                track->source_path);
  ret= 1;
 ex:
  libdax_audioxtr_destroy(&xtr,0);
@@ -1179,7 +1185,8 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  }
  burn_track_define_data(tr,0,(int) lib_padding,sector_pad_up,
                         track->track_type);
-
+ burn_track_set_byte_swap(tr,
+                   (track->track_type==BURN_AUDIO && track->swap_audio_bytes));
  fixed_size= track->fixed_size;
  if((flag&2) && track->padding>0) {
    if(flag&1)
@@ -1983,6 +1990,8 @@ see_cdrskin_eng_html:;
             "\t-data\t\tSubsequent tracks are CD-ROM data mode 1 (default)\n");
      fprintf(stderr,"\t-pad\t\tpadsize=30k\n");
      fprintf(stderr,"\t-nopad\t\tDo not pad (default)\n");
+     fprintf(stderr,
+       "\t-swab\t\tAudio data source is byte-swapped (little-endian/Intel)\n");
      fprintf(stderr,"\t-help\t\tprint this text to stderr and exit\n");
      fprintf(stderr,
          "Option -audio does automatic extraction of .wav but not of .au .\n");
@@ -2241,6 +2250,7 @@ struct CdrskiN {
  /** track_type may be set to BURN_MODE1, BURN_AUDIO, etc. */
  int track_type;
  int track_type_by_default; /* 0= explicit, 1=not set, 2=by file extension */
+ int swap_audio_bytes;
 
  /** The list of tracks with their data sources and parameters */
  struct CdrtracK *tracklist[Cdrskin_track_maX];
@@ -2343,6 +2353,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->padding= 0.0;
  o->set_by_padsize= 0;
  o->track_type= BURN_MODE1;
+ o->swap_audio_bytes= 0;   /* >>> ??? does this have to be 1 ? */
  o->track_type_by_default= 1;
  for(i=0;i<Cdrskin_track_maX;i++)
    o->tracklist[i]= NULL;
@@ -2413,7 +2424,8 @@ int Cdrskin_destroy(struct CdrskiN **o, int flag)
 int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
                        double *fixed_size, double *padding,
                        int *set_by_padsize, int *track_type,
-                       int *track_type_by_default, int flag)
+                       int *track_type_by_default, int *swap_audio_bytes,
+                       int flag)
 {
  strcpy(source_path,skin->source_path);
  *fixed_size= skin->fixed_size;
@@ -2421,6 +2433,7 @@ int Cdrskin_get_source(struct CdrskiN *skin, char *source_path,
  *set_by_padsize= skin->set_by_padsize;
  *track_type= skin->track_type;
  *track_type_by_default= skin->track_type_by_default;
+ *swap_audio_bytes= skin->swap_audio_bytes;
  return(1);
 }
 
@@ -4368,7 +4381,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
    "-immed", "-force", "-raw", "-raw96p", "-raw16",
    "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
-   "-scms", "-shorttrack", "-noshorttrack", "-swab", "-packet", "-noclose",
+   "-scms", "-shorttrack", "-noshorttrack", "-packet", "-noclose",
    ""
  };
 
@@ -4744,6 +4757,9 @@ set_speed:;
 
      if(skin->verbosity>=Cdrskin_verbose_cmD)
        printf("cdrskin: speed : %f\n",skin->x_speed);
+
+   } else if(strcmp(argv[i],"-swab")==0) {
+     skin->swap_audio_bytes= 0;
 
    } else if(strcmp(argv[i],"-tao")==0) {
      if(skin->tao_to_sao_tsize<=0.0) {

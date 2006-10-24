@@ -79,7 +79,7 @@ static int get_outmode(struct burn_write_opts *o)
 
 static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 {
-	int valid, shortage, curr;
+	int valid, shortage, curr, i, tr;
 
 /* no track pointer means we're just generating 0s */
 	if (!track) {
@@ -147,9 +147,17 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 			curr += valid;
 		}
 	}
-	if (!shortage)
-		return;
-	memset(data + curr, 0, shortage);
+ex:;
+	/* ts A61024 : general finalizing processing */ 
+	if(shortage)
+		memset(data + curr, 0, shortage); /* this is old icculus.org */
+	if (track->swap_source_bytes == 1) {
+		for (i = 1; i < count; i += 2) {
+			tr = data[i];
+			data[i] = data[i-1];
+			data[i-1] = tr;
+		}
+	}
 }
 
 /* ts A61009 : seems to hand out sector start pointer in opts->drive->buffer

@@ -849,6 +849,16 @@ int burn_session_remove_track(struct burn_session *s, struct burn_track *t);
 void burn_track_define_data(struct burn_track *t, int offset, int tail,
 			    int pad, int mode);
 
+
+/* ts A61024 */
+/** Define wether a track shall swap bytes of its input stream.
+    @param t The track to change
+    @param swap_source_bytes 0=do not swap, 1=swap byte pairs
+    @return 1=success , 0=unacceptable value
+*/
+int burn_track_set_byte_swap(struct burn_track *t, int swap_source_bytes);
+
+
 /** Set the ISRC details for a track
 	@param t The track to change
 	@param country the 2 char country code. Each character must be

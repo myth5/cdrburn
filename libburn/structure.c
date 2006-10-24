@@ -118,6 +118,9 @@ struct burn_track *burn_track_create(void)
 	t->postgap = 0;
 	t->pregap1 = 0;
 	t->pregap2 = 0;
+
+	/* ts A61024 */
+	t->swap_source_bytes = 0;
 	return t;
 }
 
@@ -226,6 +229,17 @@ void burn_track_define_data(struct burn_track *t, int offset, int tail,
 	t->mode = mode;
 	t->tail = tail;
 }
+
+
+/* ts A61024 */
+int burn_track_set_byte_swap(struct burn_track *t, int swap_source_bytes)
+{
+	if(swap_source_bytes!=0 && swap_source_bytes!=1)
+		return 0;
+	t->swap_source_bytes = swap_source_bytes;
+	return 1;
+}
+
 
 void burn_track_set_isrc(struct burn_track *t, char *country, char *owner,
 			 unsigned char year, unsigned int serial)

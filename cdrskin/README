@@ -184,7 +184,7 @@ Anything except .wav files has to be converted into raw format first
     mppdec --raw-le /path/to/track5.mpc track05.cd
 
     cdrskin dev=1,1,0 blank=fast fs=0 -eject \
-           -audio track0[1-5].cd /path/to/track6.wav
+           -audio -swab track0[1-5].cd /path/to/track6.wav
 
 
            Usage example with  http://scdbackup.sourceforge.net
@@ -357,7 +357,7 @@ results with audio data files which are :
   44100 Hz sampling rate 
   16 bits per sample
   stereo (2 channels)
-  little-endian byte order
+  little-endian byte order with option -swab
 Files with name extension .wav get examined wether they are in Microsoft WAVE
 format with above parameters and eventually get extracted by cdrskin itself.
 All other formats (including SUN's format .au) are to be extracted by commands

@@ -41,6 +41,10 @@ struct burn_track
 	/** The track contains a postgap */
 	int postgap;
 	struct isrc isrc;
+
+	/* ts A61024 */
+	/** Byte swapping on source data stream : 0=none , 1=pairwise */
+	int swap_source_bytes;
 };
 
 struct burn_session
