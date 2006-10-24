@@ -2357,7 +2357,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->padding= 0.0;
  o->set_by_padsize= 0;
  o->track_type= BURN_MODE1;
- o->swap_audio_bytes= 0;   /* >>> ??? does this have to be 1 ? */
+ o->swap_audio_bytes= 1;   /* cdrecord default is big-endian (msb_first) */
  o->track_type_by_default= 1;
  for(i=0;i<Cdrskin_track_maX;i++)
    o->tracklist[i]= NULL;
