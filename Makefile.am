@@ -98,6 +98,7 @@ libinclude_HEADERS = \
 noinst_PROGRAMS = \
 	test/libburner \
 	test/dewav \
+	test/fake_au \
 	test/iso \
 	test/poll \
 	test/toc \
@@ -112,6 +113,9 @@ test_libburner_SOURCES = test/libburner.c
 test_dewav_CPPFLAGS = -Ilibburn
 test_dewav_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_dewav_SOURCES = test/dewav.c
+test_fake_au_CPPFLAGS = 
+test_fake_au_LDADD =
+test_fake_au_SOURCES = test/fake_au.c
 test_poll_CPPFLAGS = -Ilibburn
 test_poll_LDADD = $(libburn_libburn_la_OBJECTS) $(THREAD_LIBS)
 test_poll_SOURCES = test/poll.c
