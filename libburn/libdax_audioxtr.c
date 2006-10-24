@@ -41,10 +41,15 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag)
  o->data_size= 0;
  o->extract_count= 0;
 
- o->wav_num_channels= 0;
- o->wav_sample_rate= 0;
- o->wav_bits_per_sample= 0;
+ o->num_channels= 0;
+ o->sample_rate= 0;
+ o->bits_per_sample= 0;
+ o->msb_first= 0;
+
  o->wav_subchunk2_size= 0;
+
+ o->au_data_location= 0;
+ o->au_data_size= 0xffffffff;
 
  ret= libdax_audioxtr_open(o,0);
  if(ret<=0)
@@ -108,14 +113,19 @@ static int libdax_audioxtr_open(struct libdax_audioxtr *o, int flag)
 }
 
 
-static int libdax_audioxtr_identify(struct libdax_audioxtr *o, int flag)
+static int libdax_audioxtr_identify_wav(struct libdax_audioxtr *o, int flag)
 {
  int ret;
  char buf[45];
 
- /* currently this only works for MS WAVE files .wav */
+ /* check wether this is a MS WAVE file .wav */
  /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/ */
 
+ if(o->fd!=0) {
+   ret= lseek(o->fd,0,SEEK_SET);
+   if(ret==-1)
+     return(0);
+ }
  ret= read(o->fd, buf, 44);
  if(ret<44)
    return(0);
@@ -133,27 +143,99 @@ static int libdax_audioxtr_identify(struct libdax_audioxtr *o, int flag)
    return(0);
 
  strcpy(o->fmt,".wav");
- o->wav_num_channels=  libdax_audioxtr_to_int(o,(unsigned char *) buf+22,2,0);
- o->wav_sample_rate= libdax_audioxtr_to_int(o,(unsigned char *) buf+24,4,0);
- o->wav_bits_per_sample= libdax_audioxtr_to_int(o,(unsigned char *)buf+34,2,0);
+ o->msb_first= 0;
+ o->num_channels=  libdax_audioxtr_to_int(o,(unsigned char *) buf+22,2,0);
+ o->sample_rate= libdax_audioxtr_to_int(o,(unsigned char *) buf+24,4,0);
+ o->bits_per_sample= libdax_audioxtr_to_int(o,(unsigned char *)buf+34,2,0);
  sprintf(o->fmt_info,
          ".wav , num_channels=%d , sample_rate=%d , bits_per_sample=%d",
-         o->wav_num_channels,o->wav_sample_rate,o->wav_bits_per_sample);
+         o->num_channels,o->sample_rate,o->bits_per_sample);
  o->wav_subchunk2_size= libdax_audioxtr_to_int(o,(unsigned char *)buf+40,4,0);
  o->data_size= o->wav_subchunk2_size;
-
  return(1);
 }
 
 
+static int libdax_audioxtr_identify_au(struct libdax_audioxtr *o, int flag)
+{
+ int ret,encoding;
+ char buf[24];
+
+ /* Check wether this is a Sun Audio, .au file */
+ /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/ */
+
+ if(o->fd!=0) {
+   ret= lseek(o->fd,0,SEEK_SET);
+   if(ret==-1)
+     return(0);
+ }
+ ret= read(o->fd, buf, 24);
+ if(ret<24)
+   return(0);
+
+ if(strncmp(buf,".snd",4)!=0)
+   return(0);
+ strcpy(o->fmt,".au");
+ o->msb_first= 1;
+ o->au_data_location= libdax_audioxtr_to_int(o,(unsigned char *)buf+4,4,1);
+ o->au_data_size= libdax_audioxtr_to_int(o,(unsigned char *)buf+8,4,1);
+ encoding= libdax_audioxtr_to_int(o,(unsigned char *)buf+12,4,1);
+ if(encoding==2)
+   o->bits_per_sample= 8;
+ else if(encoding==3)
+   o->bits_per_sample= 16;
+ else if(encoding==4)
+   o->bits_per_sample= 24;
+ else if(encoding==5)
+   o->bits_per_sample= 32;
+ else
+   o->bits_per_sample= -encoding;
+ o->sample_rate= libdax_audioxtr_to_int(o,(unsigned char *)buf+16,4,1);
+ o->num_channels= libdax_audioxtr_to_int(o,(unsigned char *)buf+20,4,1);
+ if(o->au_data_size!=0xffffffff)
+   o->data_size= o->au_data_size;
+ else
+   o->data_size= 0;
+ sprintf(o->fmt_info,
+         ".au , num_channels=%d , sample_rate=%d , bits_per_sample=%d",
+         o->num_channels,o->sample_rate,o->bits_per_sample);
+
+ /* <<< for testing only */; 
+ return(1);
+
+ return(o->bits_per_sample>0); /* Audio format must be linear PCM */
+}
+
+
+static int libdax_audioxtr_identify(struct libdax_audioxtr *o, int flag)
+{
+ int ret;
+
+ ret= libdax_audioxtr_identify_wav(o, 0);
+ if(ret!=0)
+   return(ret);
+ if(o->fd==0) /* cannot rewind stdin */
+   return(0);
+ ret= libdax_audioxtr_identify_au(o, 0);
+ if(ret!=0)
+   return(ret);
+ return(0);
+}
+
+
+/* @param flag bit0=msb_first */
 static unsigned libdax_audioxtr_to_int(struct libdax_audioxtr *o,
                                       unsigned char *bytes, int len, int flag)
 {
  unsigned int ret= 0;
  int i;
 
- for(i= len-1; i>=0; i--)
-   ret= ret*256+bytes[i];
+ if(flag&1)
+   for(i= 0; i<len; i++)
+     ret= ret*256+bytes[i];
+ else
+   for(i= len-1; i>=0; i--)
+     ret= ret*256+bytes[i];
  return(ret);
 }
 
@@ -162,12 +244,18 @@ static int libdax_audioxtr_init_reading(struct libdax_audioxtr *o, int flag)
 {
  int ret;
 
- /* currently this only works for MS WAVE files .wav */;
+
+ /* currently this only works for MS WAVE files .wav and Sun .au*/;
  if(o->fd==0) /* stdin: hope no read came after libdax_audioxtr_identify() */
    return(1);
 
  o->extract_count= 0;
- ret= lseek(o->fd,44,SEEK_SET);
+ if(strcmp(o->fmt,".wav")==0)
+   ret= lseek(o->fd,44,SEEK_SET);
+ else if(strcmp(o->fmt,".au")==0)
+   ret= lseek(o->fd,o->au_data_location,SEEK_SET);
+ else
+   ret= -1;
  if(ret==-1)
    return(0);
 
@@ -178,28 +266,22 @@ static int libdax_audioxtr_init_reading(struct libdax_audioxtr *o, int flag)
 int libdax_audioxtr_get_id(struct libdax_audioxtr *o,
                      char **fmt, char **fmt_info,
                      int *num_channels, int *sample_rate, int *bits_per_sample,
-                     int flag)
+                     int *msb_first, int flag)
 {
  *fmt= o->fmt;
  *fmt_info= o->fmt_info;
- if(strcmp(o->fmt,".wav")==0) {
-   *num_channels= o->wav_num_channels;
-   *sample_rate= o->wav_sample_rate;
-   *bits_per_sample= o->wav_bits_per_sample;
- } else
-   *num_channels= *sample_rate= *bits_per_sample= 0;
+ *num_channels= o->num_channels;
+ *sample_rate= o->sample_rate;
+ *bits_per_sample= o->bits_per_sample;
+ *msb_first= o->msb_first;
  return(1);
 }
 
 
 int libdax_audioxtr_get_size(struct libdax_audioxtr *o, off_t *size, int flag)
 {
- if(strcmp(o->fmt,".wav")==0) {
-   *size= o->wav_subchunk2_size;
-   return(1);
- }
- *size= 0;
- return(0);
+ *size= o->data_size;
+ return(1);
 }
 
 
@@ -226,7 +308,7 @@ int libdax_audioxtr_detach_fd(struct libdax_audioxtr *o, int *fd, int flag)
 {
  if(o->fd<0)
    return(-1);
- if(strcmp(o->fmt,".wav")!=0)
+ if(strcmp(o->fmt,".wav")!=0 && strcmp(o->fmt,".au")!=0)
    return(0);
  if(flag&1) {
    *fd= o->fd;

@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
  /* Inquired source parameters */
  char *fmt, *fmt_info;
- int num_channels, sample_rate, bits_per_sample;
+ int num_channels, sample_rate, bits_per_sample, msb_first;
  off_t data_size;
 
  /* Auxiliary variables */
@@ -142,7 +142,7 @@ help:;
  }
  /* Obtain and print parameters of audio source */
  libdax_audioxtr_get_id(xtr, &fmt, &fmt_info,
-                        &num_channels, &sample_rate, &bits_per_sample, 0);
+                 &num_channels, &sample_rate, &bits_per_sample, &msb_first, 0);
  fprintf(stderr, "Detected format: %s\n", fmt_info);
  libdax_audioxtr_get_size(xtr, &data_size, 0);
  fprintf(stderr, "Data size      : %.f bytes\n", (double) data_size);

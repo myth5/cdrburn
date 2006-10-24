@@ -926,7 +926,7 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
 #ifdef Cdrskin_libburn_has_audioxtR
  struct libdax_audioxtr *xtr= NULL;
  char *fmt,*fmt_info;
- int num_channels,sample_rate,bits_per_sample,ret;
+ int num_channels,sample_rate,bits_per_sample,msb_first,ret;
 #endif 
 
  *fd= -1;
@@ -952,7 +952,7 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
  if(ret<=0)
    return(ret);
  libdax_audioxtr_get_id(xtr,&fmt,&fmt_info,
-                        &num_channels,&sample_rate,&bits_per_sample,0);
+                     &num_channels,&sample_rate,&bits_per_sample,&msb_first,0);
  if(strcmp(fmt,".wav")!=0 || 
     num_channels!=2 || sample_rate!=44100 || bits_per_sample!=16) {
    fprintf(stderr,"cdrskin: ( %s )\n",fmt_info);

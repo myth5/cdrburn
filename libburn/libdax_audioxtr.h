@@ -46,18 +46,19 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag);
 
 /** Obtain identification parameters of opened audio source.
     @param xtr Opaque handle to extractor
-    @param fmt Gets pointed to the audio file format id text: ".wav"
+    @param fmt Gets pointed to the audio file format id text: ".wav" , ".au"
     @param fmt_info Gets pointed to a format info text telling parameters
     @param num_channels     e.g. 1=mono, 2=stereo, etc
     @param sample_rate      e.g. 11025, 44100 
     @param bits_per_sample  e.g. 8= 8 bits per sample, 16= 16 bits ...
+    @param msb_first Byte order of samples: 0=Intel 1=Motorola 
     @param flag Bitfield for control purposes (unused yet, submit 0)
     @return >0 success, <=0 failure
 */
 int libdax_audioxtr_get_id(struct libdax_audioxtr *xtr,
                            char **fmt, char **fmt_info,
                            int *num_channels, int *sample_rate,
-                           int *bits_per_sample, int flag);
+                           int *bits_per_sample, int *msb_first, int flag);
 
 
 /** Obtain a prediction about the extracted size based on internal information
@@ -136,7 +137,7 @@ struct libdax_audioxtr {
  /* Source of the encoded audio data */
  char path[LIBDAX_AUDIOXTR_STRLEN];
 
- /* File descriptor to path */
+ /* File descriptor to path. Anything else than 0 must be lseek-able */
  int fd;
 
  /* Format identifier. E.g. ".wav" */
@@ -144,6 +145,18 @@ struct libdax_audioxtr {
 
  /* Format parameter info text */
  char fmt_info[LIBDAX_AUDIOXTR_STRLEN];
+
+ /* 1= mono, 2= stereo, etc. */
+ int num_channels;
+
+ /* 8000, 44100, etc. */
+ int sample_rate;
+
+ /* 8 bits = 8, 16 bits = 16, etc. */
+ int bits_per_sample;
+
+ /* Byte order of samples: 0=Intel 1=Motorola */
+ int msb_first;
 
  /* Number of bytes to extract (0= unknown/unlimited) */
  off_t data_size;
@@ -157,18 +170,19 @@ struct libdax_audioxtr {
  /* MS WAVE Format */
  /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/ */
 
- /* 1= mono, 2= stereo, etc. */
- int wav_num_channels;
-
- /* 8000, 44100, etc. */
- int wav_sample_rate;
-
- /* 8 bits = 8, 16 bits = 16, etc. */
- int wav_bits_per_sample;
-
  /* == NumSamples * NumChannels * BitsPerSample/8
     This is the number of bytes in the data. */
  unsigned wav_subchunk2_size;
+
+
+ /* Sun Audio, .au */
+ /* info used: http://www.opengroup.org/public/pubs/external/auformat.html */
+
+ /* Number of bytes in non-payload header part */
+ unsigned au_data_location;
+
+ /* Number of payload bytes or 0xffffffff */
+ unsigned au_data_size;
 
 };
 
@@ -186,8 +200,15 @@ static int libdax_audioxtr_open(struct libdax_audioxtr *o, int flag);
 */
 static int libdax_audioxtr_identify(struct libdax_audioxtr *o, int flag);
 
+/** Specialized identifier for .wav */
+static int libdax_audioxtr_identify_wav(struct libdax_audioxtr *o, int flag);
+/** Specialized identifier for .au */
+static int libdax_audioxtr_identify_au(struct libdax_audioxtr *o, int flag);
+
 
 /** Convert a byte string into a number (currently only little endian)
+    @param flag Bitfield for control purposes
+                bit0=msb_first
     @return The resulting number
 */
 static unsigned libdax_audioxtr_to_int(struct libdax_audioxtr *o,
