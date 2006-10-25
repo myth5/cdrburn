@@ -114,7 +114,7 @@ wishes as well as on the development of libburn.</DT>
 Option -audio is enabled but by default not advertised via option -help, 
 because no beheading of .au or .wav files takes place yet. 
 <BR>Note: In development version 0.2.3 there is automatic extraction of
-.wav files but not of .au.
+.wav and .au. So -audio is fully supported.
 </LI>
 <LI>
 Burns only a single closed session. No -multi option yet.
@@ -196,12 +196,13 @@ cdrskin_0.2.2-x86-suse9_0-static.tar.gz</A>, (250 KB), -static compiled,
  <LI>cdrecord compatibility with addresses of form [ATA:]Bus,Target,Lun.</LI>
  <LI>Drives adressable via links and device siblings (/dev/cdrom , /dev/scd0).
  </LI>
+ <LI>Automatic -audio extraction with .wav files and .au files.
+ <BR>&nbsp;$ cdrskin -v dev=1,1,0 track1.wav track2.au -audio -swab track3.raw
+ </LI>
  <LI>Comments and empty lines allowed in startup files.</LI>
  <LI>Options -scanbus and --devices print SORRY messages about busy drives.
  </LI>
- <LI>Track source files with ending .wav are checked for compliance and
-     extracted automatically.</LI>
- <LI>Drive buffer fill indicator reports are realistic percentage numbers.</LI>
+ <LI>Drive buffer fill indicator reports realistic percentage numbers.</LI>
  <LI>Option -toc is supported, drive firmware revision gets displayed.</LI>
  </UL></DD>
 <DD>&nbsp;</DD>
@@ -293,6 +294,18 @@ is a GUI frontend which uses cdrecord for CD burning.)
 <DD><KBD>scsibus2:</KBD></DD>
 <DD><KBD>&nbsp;&nbsp;&nbsp; 2,2,0 &nbsp;&nbsp; 1)&nbsp; 'LITE-ON' 'LTR-48125S' '?' Removable CD-ROM</KBD></DD>
 <DD>$ <KBD><B>export SCDBACKUP_SCSI_ADR="2,2,0"</B></KBD></DD>
+
+<!-- 0.2.4
+
+<DD><KBD>...</KBD></DD>
+<DD><KBD>&nbsp;&nbsp;&nbsp; 2,0,0 &nbsp;&nbsp; 0)&nbsp; 'TEAC' 'CD-ROM CD-532S' '?' Removable CD-ROM</KBD></DD>
+<DD>$ <KBD><B>cdrskin -scanbus dev=ATA</B></KBD></DD>
+<DD><KBD>...</KBD></DD>
+<DD><KBD>&nbsp;&nbsp;&nbsp; 1,0,0 &nbsp;&nbsp; 1)&nbsp; 'LITE-ON' 'LTR-48125S' '?' Removable CD-ROM</KBD></DD>
+<DD>$ <KBD><B>export SCDBACKUP_SCSI_ADR="ATA:1,0,0"</B></KBD></DD>
+
+-->
+
 <DD>$ <KBD><B>export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m"</B></KBD></DD>
 <DD>$ <KBD><B>scdbackup_home</B></KBD></DD>
 </DL>
@@ -317,6 +330,16 @@ and try again.
 <DD><KBD>&nbsp;&nbsp;&nbsp; 1,0,0 &nbsp;&nbsp; 0)&nbsp; 'TEAC' 'CD-ROM CD-532S' '?' Removable CD-ROM</KBD></DD>
 <DD><KBD>&nbsp;&nbsp;&nbsp; 2,2,0 &nbsp;&nbsp; 1)&nbsp; 'LITE-ON' 'LTR-48125S' '?' Removable CD-ROM</KBD></DD>
 <DD><KBD>------------------- end of SCSI device list</KBD></DD>
+
+<!-- 0.2.4
+
+<DD><KBD>&nbsp;&nbsp;&nbsp; 2,0,0 &nbsp;&nbsp; 0)&nbsp; 'TEAC' 'CD-ROM CD-532S' '?' Removable CD-ROM</KBD></DD>
+<DD><KBD> ------------------- end of SCSI device list</KBD></DD>
+<DD><KBD> ------------------- ATA devices. To be used like       ATA:0,0,0
+<DD><KBD>&nbsp;&nbsp;&nbsp; 1,0,0 &nbsp;&nbsp; 1)&nbsp; 'LITE-ON' 'LTR-48125S' '?' Removable CD-ROM</KBD></DD>
+
+-->
+
 <DD><KBD>...</KBD></DD>
 <DD><KBD>&nbsp;&nbsp;&nbsp; * Your cdrecord offers -driveropts=burnfree with your recorder.</KBD></DD>
 <DD><KBD>...</KBD></DD>

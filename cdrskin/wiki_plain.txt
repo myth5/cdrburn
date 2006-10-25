@@ -2,7 +2,7 @@
                        cdrskin Wiki - plain text copy
 --------------------------------------------------------------------------
 
-cdrskin is the cdrecord compatibility middleware of libburn.
+cdrskin-0.2.3 is the cdrecord compatibility middleware of libburn.
 
 Its paragon, cdrecord, is a powerful GPL'ed burn program included in Joerg
 Schilling's cdrtools. cdrskin strives to be a second source for the services
@@ -16,14 +16,8 @@ can be found in cdrskin/README .
 
 --------------------------------------------------------------------------
 
-cdrskin with CD media fails to match its paragon cdrecord on three major
-fields: convenient TAO burn mode, multi session, audio features.
-
-Audio features are the only topic where cdrskin did not yet exploit current
-libburn to the maximum. This is due to my own lack of audiophile motivation
-and due to the lack of sincere users who provide me with cdrecord use cases,
-help me to explore the original cdrecord behavior and serve as dedicated
-testers for eventual newly introduced cdrskin audio features.
+cdrskin with CD media fails to match its paragon cdrecord on two major
+fields: convenient TAO burn mode and multi session.
 
 cdrskin does not provide DVD burning yet. See advise to use dvd+rw-tools
 at the end of this text.
@@ -77,45 +71,6 @@ privileges, i.e. no superuser setuid. It is intended that the sysadmin
 controls drive accessability by rw-permissions of the drive rather than
 by x-permission of the burn binary. To be usable with cdrskin, the drive
 has to offer both, r- and w-permission.
-
---------------------------------------------------------------------------
-
-eject_device=<path> is needed to work around yet broken tray ejection of
-drives. cdrskin makes a bold shell call to program "eject" and regrettably
-this program does not like our addresses for SCSI devices.
-/dev/hdX work fine and /dev/sg0 is quite safely guess-translated to
-/dev/sr0 . /dev/sg1 et.al. need the user's help. <path> must work with eject.
-
---------------------------------------------------------------------------
-
-dev_translation=<sep><from><sep><to> is needed to foist cdrskin to frontend
-programs of cdrecord which do *not* ask cdrecord -scanbus but which make
-own assumptions and guesses about cdrecord's device addresses.
-cdrskin project - at least for now - refuses to try to provide a similar
-guesswork but uses own cdrecord style addresses which have a mere
-semi-automatic text mapping to real libburn addresses. See cdrskin/README,
-"Pseudo-SCSI Adresses".
-
-If you need to foist cdrskin under a frontend then you may be lucky and
-both ideas of an address coincide. Especially if the frontend has the
-decency to ask its "cdrecord" via option -scanbus for a list of drives.
-If not, look into the error protocol of the frontend, look at the output
-of a run of cdrskin --devices and give cdrskin the necessary hint.
-
-If your frontend insists in using "0,0,0" and --devices reported 
-dev='/dev/sg0' resp. cdrskin -scanbus reported "1,0,0" then this
-would be the appropriate translation
-
-dev_translation=+0,0,0+/dev/sg0
-
-The "+" character is a separator to be choosen by you.
-Currently i am not aware of the need to choose any other than "+"
-unless you get playful with custom translations like
-
-dev_translation=-"cd+dvd"-1,0,0
-
-See http://scdbackup.sourceforge.net/k3b_on_cdrskin.html
-for an illustrated example with K3b 0.10 .
 
 --------------------------------------------------------------------------
 
@@ -174,6 +129,35 @@ As in general with cdrskin tsize=# the data source does not have to provide
 the full annouced amount of data. Missing data will be padded up by 0-bytes.
 Surplus data is supposed to cause an error, though. The burn will then
 be a failure in any way.
+
+--------------------------------------------------------------------------
+
+dev_translation=<sep><from><sep><to> may be needed to foist cdrskin to
+frontend programs of cdrecord which do *not* ask cdrecord -scanbus but
+which make own assumptions and guesses about cdrecord's device addresses.
+
+Normally, cdrskin understands all addresses which are suitable for cdrecord
+under Linux. See cdrskin/README, "Pseudo-SCSI Adresses".
+This option is mainly for (yet unknown) exotic configurations or very
+stubborn frontend programs.
+
+If a frontend refuses to work with cdrskin, look into the error protocol
+of that frontend, look at the output of a run of cdrskin --devices and give
+cdrskin the necessary hint.
+Example: Your frontend insists in using "0,0,0" and --devices reported 
+dev='/dev/hdc' resp. cdrskin dev=ATA -scanbus reported "1,0,0" then this
+would be the appropriate translation:
+
+dev_translation=+0,0,0+/dev/hdc
+
+The "+" character is a separator to be choosen by you.
+Currently i am not aware of the need to choose any other than "+"
+unless you get playful with custom translations like
+
+dev_translation=-"cd+dvd"-1,0,0
+
+See http://scdbackup.sourceforge.net/k3b_on_cdrskin.html
+for an illustrated example with K3b 0.10 .
 
 --------------------------------------------------------------------------
 

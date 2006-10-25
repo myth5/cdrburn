@@ -46,9 +46,10 @@ protection against possible damages. You use this on your own risk.
 Don't blame me or other authors of libburn if anything goes wrong.
 
 I used it on my own risk with :
-SuSE 7.2, kernel 2.4.4,  ide-scsi emulation, LITE-ON LTR48125S CD burner
-SuSE 9.0, kernel 2.4.21, ide-scsi emulation, LG GSA-4082B CD/DVD burner
-RIP-14.4, kernel 2.6.14, no ide-scsi,        with both above burners
+SuSE 7.2, kernel 2.4.4,  ide-scsi emulation, LITE-ON LTR48125S CD burner, 2002
+SuSE 9.0, kernel 2.4.21, ide-scsi emulation, LG GSA-4082B CD/DVD burner, 2004
+                                             NEC ND-4570A CD/DVD burner, 2006
+RIP-14.4, kernel 2.6.14, no ide-scsi,        with all above burners
 
 It fails to compile or run on SuSE 6.4 (kernel 2.2.14).
 It does not find the IDE CD burner on SuSE 7.2 without ide-scsi.
@@ -124,16 +125,12 @@ On Linux 2.4 this would be some /dev/sgN and on 2.6. some /dev/hdX.
 
 The output of  cdrskin --devices  might look like
 
-    0  dev='/dev/sg0'  rwrwr- :  'TEAC'  'CD-ROM CD-532S'
-    1  dev='/dev/sg1'  rwrw-- :  'LITE-ON'  'LTR-48125S'
+    0  dev='/dev/sg0'  rwrwr- :  '_NEC'  'DVD_RW ND-4570A'
+    1  dev='/dev/sg1'  rwrw-- :  'HL-DT-ST'  'DVDRAM GSA-4082B'
 
 So full and insecure enabling of both for everybody would look like
 
     chmod a+rw /dev/sg0 /dev/sg1
-
-(The CD-ROM is in these examples only for demonstrating the presence of another
- SCSI device. This /dev/sg0 may be left as it is and stay invisible for normal
- users.)
 
 I strongly discourage to run cdrskin with setuid root or via sudo !
 It is not checked for the necessary degree of hacker safety.
@@ -147,7 +144,7 @@ Get an overview of cdrecord style addresses of available devices
 
 Note: Adresses reported with dev=ATA are to be used with prefix "ATA:". You may
       well use device file addresses as reported with --devices. Examples:
-        dev=1,1,0   dev=ATA:1,0,0   dev=/dev/hdc   dev=/dev/sg1
+        dev=0,1,0   dev=/dev/sg1  dev=ATA:1,0,0   dev=/dev/hdc
       See also "Drive Addressing".
 Note: Address numbers have changed since cdrskin-0.2.2 in order to become
       compatible with cdrecord numbers. To get the old number scheme, use
@@ -156,43 +153,44 @@ Note: Address numbers have changed since cdrskin-0.2.2 in order to become
 
 
 Obtain some info about the drive
-    cdrskin dev=1,1,0 -checkdrive 
+    cdrskin dev=0,1,0 -checkdrive 
 
 Obtain some info about the drive and the inserted media
-    cdrskin dev=1,1,0 -atip 
+    cdrskin dev=0,1,0 -atip 
 
 Thoroughly blank a CD-RW
-    cdrskin -v dev=1,1,0 blank=all -eject 
+    cdrskin -v dev=0,1,0 blank=all -eject 
 
 Blank CD-RW sufficiently for making it ready for overwrite
-    cdrskin -v dev=1,1,0 blank=fast -eject 
+    cdrskin -v dev=0,1,0 blank=fast -eject 
 
 Burn image file  my_image.iso  to CD
-    cdrskin -v dev=1,1,0 speed=12 fs=8m -sao driveropts=burnfree padsize=300k \
+    cdrskin -v dev=0,1,0 speed=12 fs=8m -sao driveropts=burnfree padsize=300k \
             -eject  my_image.iso 
 
 Burn a compressed afio archive to CD on-the-fly
-    find . | afio -oZ - | cdrskin -v dev=1,1,0 fs=32m speed=8 -sao \
+    find . | afio -oZ - | cdrskin -v dev=0,1,0 fs=32m speed=8 -sao \
                                   driveropts=burnfree padsize=300k tsize=650m - 
 
 Burn 6 audio tracks from files with different formats to CD.
-Anything except .wav files has to be converted into raw format first
+Anything except .wav or .au files has to be converted into raw format first.
+See below "Audio CD" for specifications.
     ogg123 -d raw -f track01.cd /path/to/track1.ogg
     oggdec -R -o track02.cd /path/to/track2.ogg
     lame --decode -t /path/to/track3.mp3 track03.cd   
     madplay -o raw:track04.cd /path/to/track4.mp3
     mppdec --raw-le /path/to/track5.mpc track05.cd
 
-    cdrskin dev=1,1,0 blank=fast fs=0 -eject \
+    cdrskin dev=0,1,0 blank=fast -eject speed=48 \
            -audio -swab track0[1-5].cd /path/to/track6.wav
 
 
            Usage example with  http://scdbackup.sourceforge.net
 
 Address may be a cdrecord-style  "scsibus,target,lun"  as listed with
-cdrskin -scanbus (but not as listed with cdrecord -scanbus) :
+cdrskin -scanbus (and hopefully as listed with cdrecord -scanbus) :
 
-    export SCDBACKUP_SCSI_ADR="1,1,0"
+    export SCDBACKUP_SCSI_ADR="0,1,0"
 
 or a device file address as listed by --devices with an accessible drive :
 
@@ -213,11 +211,6 @@ The convenient burn mode TAO is not available with libburn yet.
 Therefore it has to be defaulted to mode SAO which needs to know the track
 size in advance. non-cdrecord option  tao_to_sao_tsize=650m  causes each CD
 to get burned up to 650 MB regardless of the payload size.
-
-Audio features are incomplete in respect to cdrecord. Well prepaired track
-files should get burned flawlessly, thanks to Lorenzo Taylor.
-Builtin extraction of raw audio data from filetypes .au and .wav is not
-implemented yet. See chapter "Audio CD" for details.
 
 No multi session yet ... Please report your wishes.
 
@@ -253,7 +246,6 @@ It is possible to address a scsi(-emulated) drive via associated device files
 which are not listed by option --devices but point to the same SCSI addresses
 as listed device files. This addressing via e.g. /dev/sr0 or /dev/scd1 is
 compatible with generic read programs like dd and with write program growisofs.
-
 
                              Pseudo-SCSI Adresses
 
@@ -293,6 +285,7 @@ drive accessability.
 Further busses may emerge as libburn evolves. "prefix" and "lun" may get
 a meaning. To stay upward compatible, use addresses as printed by -scanbus.
 
+                  User Defined Device Address Translation
 
 Some programs or users have their own ideas about the address of their burner.
 K3b 0.10 for example derives cdrecord addresses by own examination of the
@@ -302,14 +295,14 @@ Standard mode will hopefully be fully compatible with their ideas.
 Old frontends which do not know dev=ATA or dev=ATAPI and which do ask their
 "cdrecord" via -scanbus may be well served with option  --old_pseudo_scsi_adr .
 
-To direct any stubborn callers to the appropriate drives, cdrskin allows to
-define device address aliases. Like
+To direct any remaining stubborn callers to the appropriate drives, cdrskin
+allows to define device address aliases. Like
   cdrskin dev_translation=+1,0,0+/dev/sg1 \
           dev_translation=+ATA:1,0,0+/dev/sg1 \
-          dev_translation=-"cd+dvd"-1,1,0 \
+          dev_translation=-"cd+dvd"-0,1,0 \
           ...
 Any of the addresses dev=1,0,0, dev=ATA:1,0,0, dev=cd+dvd will be mapped to
-/dev/sg1 resp. to its standard alias 1,1,0.
+/dev/sg1 resp. to 0,1,0.
 The first character after "dev_translation=" defines the character which
 separates the two parts of the translation pair. (Above: "+" and "-".)
 
@@ -353,17 +346,23 @@ fs=16m
 
 Lorenzo Taylor enabled option -audio in cdrskin (thanks !) and reports neat
 results with audio data files which are :
-  headerless PCM
+  headerless PCM (i.e. uncompressed)
   44100 Hz sampling rate 
   16 bits per sample
   stereo (2 channels)
-  little-endian byte order with option -swab
+  little-endian byte order with option -swab, or big-endian without -swab
+
 Files with name extension .wav get examined wether they are in Microsoft WAVE
 format with above parameters and eventually get extracted by cdrskin itself.
-Files with name extension .au get examined wether they are in SUN's audio 
-format with above parameters. Their big-endianness gets handled properly.
-Any other formats are to be extracted by commands like those given above under
-"Usage examples".
+In the same way files with name extension .au get examined wether they are
+in SUN's audio format. For both formats, track format -audio and eventual
+endianness option -swab are enabled automatically.
+
+Any other formats are to be converted to format .wav with above parameters
+or to be extracted as raw CD track data by commands like those given above
+under "Usage examples". Those raw files need option -audio and in most cases 
+option -swab to mark them as little-endian/Intel/LSB-first 16-bit data.
+Incorrect endianness setting results in random noise on CD.
 
 I myself am not into audio. So libburn-hackers@pykix.org might be the
 best address for suggestions, requests and bug reports.
