@@ -939,10 +939,10 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
    return(0);
  l= strlen(track->source_path);
  if(l>=4)
-   if(strcmp(track->source_path+l-4,".wav")!=0) 
+   if(strcmp(track->source_path+l-4,".wav")==0) 
      ok= 1;
  if(l>=3)
-   if(strcmp(track->source_path+l-3,".au")!=0)
+   if(strcmp(track->source_path+l-3,".au")==0)
      ok= 1;
  if(!ok)
    return(0);
