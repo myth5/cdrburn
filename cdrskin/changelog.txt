@@ -742,6 +742,7 @@ libburn/sg.h
 libburn/sg.c
 libburn/libdax_msgs.h
 cdrskin/cdrskin.c
+Disabled but did not discarded failed attempt to lock against growisofs
 
 2006.09.27.120656  [234]
 libburn/drive.h
@@ -934,14 +935,12 @@ libburn/transport.h
 cdrskin/cleanup.c
 Made libburn and cdrskin build on my Linux again
 
-
 2006.10.13.114554  [271]
 cdrskin/cdrskin.c
 libburn/write.c
 libburn/sg-linux.c
 libburn/libdax_msgs.h
 Removed bug in burn_disc_write_sync(): BURN_DRIVE_IDLE, then d->sync_cache()
-
 
 2006.10.14.105224  [272]
 libburn/sg.h
@@ -953,7 +952,6 @@ Introduced burn_drive_enumerator_t to allow more complete sg-freebsd implementat
 2006.10.15.133035  [274]
 cdrskin/cdrskin.c
 Changed ambigous include statement of libburn.h 
-
 
 15 Oct 2006 2006  [275]
 Makefile.am
@@ -1027,8 +1025,194 @@ cdrskin/cdrskin.c
 cdrskin/compile_cdrskin.sh
 Made cdrskin use libburn/cleanup.[oh] by default (not cdrskin/cleanup.[ch])
 
------------------------------------- cycled - cdrskin-0.2.3 - 2006.10.19
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.19.105730
 
+2006.10.19.162254  [294]
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+Updated documentation about cdrskin-0.2.3
+
+2006.10.19.164742  [295]
+cdrskin/cdrskin.c
+Corrected -help text
+
+2006.10.20.113421  [297]
+libburn/libburn.h
+libburn/mmc.c
+libburn/sg-linux.c
+libburn/sg-freebsd.c
+libburn/drive.c
+cdrskin/cdrskin.c
+Made cdrskin produce "ATIP start of lead" (on non-blank media for now)
+
+20 Oct 2006  [298]
+doc/comments
+Updated help text of libburner
+
+2006.10.20.151602  [299]
+libburn/libburn.h
+libburn/drive.c
+libburn/mmc.c
+libburn/libdax_msgs.h
+cdrskin/cdrskin.c
+Classified media with TOC read error as unsuitable (rather than as blank)
+
+2006.10.21.103352  [300]
+libburn/libburn.h
+libburn/transport.h
+libburn/drive.c
+libburn/mmc.c
+libburn/spc.c
+libburn/sg-linux.c
+libburn/sg-freebsd.c
+libburn/libdax_msgs.h
+cdrskin/cdrskin.c
+Implemented some ATIP functionality
+
+2006.10.21.103653  [301] [302]
+libburn/libburn.h
+Clarified relation of burn_disc_read_atip() and burn_drive_get_start_end_lba()
+
+2006.10.21.185102  [303]
+libburn/sg.h
+libburn/mmc.h
+libburn/mmc.c
+libburn/sbc.h
+libburn/sbc.c
+libburn/spc.h
+libburn/spc.c
+libburn/drive.h
+libburn/drive.c
+libburn/transport.h
+libburn/sg-linux.c
+libburn/sg-freebsd.c
+Split enumerate_common() into logic-layer, command-layer, transport-layer
+
+2006.10.22.130341  [304]
+libburn/libburn.h
+libburn/mmc.c
+libburn/drive.c
+libburn/cleanup.c
+cdrskin/cleanup.c
+cdrskin/cdrskin.c
+Implemented cdrskin -toc
+
+2006.10.22.131452  [305]
+cdrskin/cdrskin.c
+Regulated coexistence of options -toc and -atip
+
+23 Oct 2006  [306]
+libburn/mmc.c
+Made clarification in remark about atip speed conversion
+
+2006.10.23.074430  [307]
+cdrskin/cdrskin.c
+Made use of burn_drive_info.revision as firmware revision text
+
+2006.10.23.113116  [308]
+libburn/libburn.h
+libburn/transport.h
+libburn/mmc.h
+libburn/mmc.c
+libburn/write.c
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/README
+Made available drive buffer fill during write
+
+23 Oct 2006  [309]
+libburn/sg-freebsd.c
+Updated tangling of FreeBSD code with mmc.c :(
+
+
+2006.10.23.134719  [310]
+cdrskin/cdrskin.c
+Corrected -toc track counter and notified about "hidden" tracks
+
+2006.10.24.075039  [311]
+libburn/libdax_audioxtr.h
+libburn/libdax_audioxtr.c
+test/dewav.c
+cdrskin/cdrskin.c
+Introduced extraction of .au (but not its usage within cdrskin)
+
+2006.10.24.102107  [312]
+libburn/libburn.h
+libburn/structure.h
+libburn/structure.c
+libburn/sector.c
+cdrskin/cdrskin.c
+cdrskin/README
+Enabled byte swapping for audio track sources, added anti option -swab
+
+2006.10.24.130259  [313]
+test/dewav.c
+cdrskin/cdrskin.c
+cdrskin/README
+Enabled automatic extraction of .au
+
+24 Oct 2006  [314]
+Makefile.am
++ test/fake_au.c
+Introduced temporary test program to produce SUN .au files
+
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.24.144650
+
+2006.10.24.165427  [315]
+libburn/sector.c
+Closed some loopholes for byte swapping.
+
+
+2006.10.24.165610  [316]
+cdrskin/cdrskin.c
+Enabled audio byte swapping by default (to be disabled via option -swab)
+
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.24.173602
+
+25 Oct 2006  [317]
+cdrskin/README
+cdrskin/cdrskin_eng.html
+cdrskin/wiki_plain.txt
+Announced full -audio compatibility with cdrecord
+
+------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.25.160540
+
+  []
+- cdrskin/add_ts_changes_to_libburn_0_2_3
++ cdrskin/add_ts_changes_to_libburn_0_2_4
+cdrskin/README
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+README
+Preparing cdrskin version leap to cdrskin-0.2.4
+(To be committed to branch)
+
+
+------------------------------------ cycle  - cdrskin-0.2.5
+
+  []
+- cdrskin/add_ts_changes_to_libburn_0_2_3
++ cdrskin/add_ts_changes_to_libburn_0_2_4
++ cdrskin/add_ts_changes_to_libburn_0_2_5
+cdrskin/README
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+README
+Prepare cdrskin version leap to cdrskin-0.2.5
+(To be committed to trunk)
+
+
+
+
+
+2006  []
+-reset: ioctl(fd,CDROMRESET)  ioctl(fd,SG_SCSI_RESET,SG_SCSI_RESET_DEVICE)
+
+2006  []
+Try wether tao will work if finalized by mmc_close()
 
 2006  []
 Open O_EXCL all devices in address resolution chain
@@ -1041,6 +1225,7 @@ Convert burn_print() into libdax_msgs_submit()
 2006  []
 Test unlocking of all drives by burn_drive_info_free()
 Test unlocking of single drive by burn_drive_grab(), burn_drive_release()
+
 
 
 
