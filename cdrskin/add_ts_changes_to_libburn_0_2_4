@@ -33,9 +33,9 @@ original="./libburn_svn.tgz"
 # The top level directory in that snapshot is named
 intermediate="./libburn_pykix"
 
-# My changes are in libburn-0.2.4.ts.develop , mainly in ./cdrskin
+# My changes are in libburn-0.2.3.ts.develop , mainly in ./cdrskin
 
-changes="./libburn-0.2.4.ts.develop"
+changes="./libburn-0.2.3.ts.develop"
 skin_rev="0.2.4"
 
 # The result directory and the name of the result tarballs
