@@ -26,12 +26,12 @@ following possible.
 cdrskin. By Thomas Schmitt <scdbackup@gmx.net>
 Integrated sub project of libburn.pykix.org but also published via:
 http://scdbackup.sourceforge.net/cdrskin_eng.html
-http://scdbackup.sourceforge.net/cdrskin-0.2.3.tar.gz
+http://scdbackup.sourceforge.net/cdrskin-0.2.5.tar.gz
 Copyright (C) 2006 Thomas Schmitt
 
 ------------------------------------------------------------------------------
 
-On top of libburn there is implemented cdrskin 0.2.3, a limited cdrecord
+On top of libburn there is implemented cdrskin 0.2.5, a limited cdrecord
 compatibility wrapper which allows to use some libburn features from
 the command line.
 Interested users of cdrecord are invited to participate in the development
@@ -59,16 +59,16 @@ systems, including 64 bit systems. (Further reports are welcome.)
 
                    Compilation, First Glimpse, Installation
 
-Obtain cdrskin-0.2.3.tar.gz , take it to a directory of your choice and do:
+Obtain cdrskin-0.2.5.tar.gz , take it to a directory of your choice and do:
 
-    tar xzf cdrskin-0.2.3.tar.gz
-    cd cdrskin-0.2.3
+    tar xzf cdrskin-0.2.5.tar.gz
+    cd cdrskin-0.2.5
 
 Or obtain a libburn.pykix.org SVN snapshot,
 go into the toplevel directory of the snapshot (e.g.  cd libburn_pykix ),
 and execute the autotools script ./bootstrap . Use autools version >= 1.7 .
 
-Within that toplevel directory of either cdrskin-0.2.3 or libburn then execute:
+Within that toplevel directory of either cdrskin-0.2.5 or libburn then execute:
 
     ./configure
     make
@@ -181,7 +181,7 @@ See below "Audio CD" for specifications.
     madplay -o raw:track04.cd /path/to/track4.mp3
     mppdec --raw-le /path/to/track5.mpc track05.cd
 
-    cdrskin dev=0,1,0 blank=fast -eject speed=48 \
+    cdrskin dev=0,1,0 blank=fast -eject speed=48 -sao \
            -audio -swab track0[1-5].cd /path/to/track6.wav
 
 

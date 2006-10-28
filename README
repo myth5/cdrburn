@@ -152,6 +152,13 @@ Project history as far as known to me:
 
 - 16th September 2006 feature freeze for release of libburn-0.2.2 .
 
+- 20th September 2006 release of libburn-0.2.2 .
+
+- 26th October 2006 feature freeze for cdrskin-0.2.4 based on libburn-0.2.3 .
+  This version of cdrskin is much more cdrecord compatible in repect
+  to drive addressing and audio features.
+
+
 ------------------------------------------------------------------------------
 
     This program is free software; you can redistribute it and/or modify
