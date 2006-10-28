@@ -939,10 +939,10 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
    return(0);
  l= strlen(track->source_path);
  if(l>=4)
-   if(strcmp(track->source_path+l-4,".wav")!=0) 
+   if(strcmp(track->source_path+l-4,".wav")==0) 
      ok= 1;
  if(l>=3)
-   if(strcmp(track->source_path+l-3,".au")!=0)
+   if(strcmp(track->source_path+l-3,".au")==0)
      ok= 1;
  if(!ok)
    return(0);
@@ -1914,11 +1914,11 @@ set_dev:;
        " --ignore_signals   try to ignore any signals rather than to abort\n");
      printf(" --no_abort_handler  exit even if the drive is in busy state\n");
      printf(" --no_blank_appendable  refuse to blank appendable CD-RW\n");
-     printf(" --old_pseudo_scsi_adr  use and report literal Bus,Target,Lun\n");
-     printf("                    rather than real SCSI and pseudo ATA.\n");
      printf(" --no_convert_fs_adr  only literal translations of dev=\n");
      printf(
          " --no_rc            as first argument: do not read startup files\n");
+     printf(" --old_pseudo_scsi_adr  use and report literal Bus,Target,Lun\n");
+     printf("                    rather than real SCSI and pseudo ATA.\n");
      printf(
           " --single_track     accept only last argument as source_address\n");
      printf(
@@ -1930,8 +1930,7 @@ set_dev:;
      printf(
           "if they exist and are readable. The sequence is as listed here:\n");
      printf("  /etc/default/cdrskin  /etc/opt/cdrskin/rc  $HOME/.cdrskinrc\n");
-     printf(
-         "Each file line is a single argument. No remarks, no whitespace.\n");
+     printf("Each file line is a single argument. No whitespace.\n");
      printf(
          "By default any argument that does not match grep '^-.' or '=' is\n");
      printf(
