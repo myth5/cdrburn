@@ -215,5 +215,7 @@ EXTRA_DIST = \
 	cdrskin/changelog.txt \
 	cdrskin/cdrskin_eng.html \
 	cdrskin/wiki_plain.txt \
+	cdrskin/cleanup.h \
+	cdrskin/cleanup.c \
 	COPYING
 
