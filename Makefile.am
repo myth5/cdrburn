@@ -217,5 +217,9 @@ EXTRA_DIST = \
 	cdrskin/wiki_plain.txt \
 	cdrskin/cleanup.h \
 	cdrskin/cleanup.c \
+	libburn/sg-freebsd.c \
+	libburn/sg-freebsd.h \
+	libburn/sg-linux.c \
+	libburn/sg-linux.h \
 	COPYING
 
