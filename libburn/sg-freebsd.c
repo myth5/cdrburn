@@ -481,6 +481,7 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 	out.get_nwa = mmc_get_nwa;
 	out.close_disc = mmc_close_disc;
 	out.close_session = mmc_close_session;
+	out.close_track_session = mmc_close;
 	out.read_buffer_capacity = mmc_read_buffer_capacity;
 	out.idata = malloc(sizeof(struct burn_scsi_inquiry_data));
 	out.idata->valid = 0;

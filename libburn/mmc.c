@@ -824,6 +824,7 @@ int mmc_setup_drive(struct burn_drive *d)
 	d->get_nwa = mmc_get_nwa;
 	d->close_disc = mmc_close_disc;
 	d->close_session = mmc_close_session;
+	d->close_track_session = mmc_close;
 	d->read_buffer_capacity = mmc_read_buffer_capacity;
 
 	/* ts A61020 */
