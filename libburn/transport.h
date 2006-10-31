@@ -190,7 +190,7 @@ struct burn_drive
 	void (*close_session) ( struct burn_write_opts * o);
 
 	/* ts A61029 */
-	void (*close_track_session) ( struct burn_write_opts * o,
+	void (*close_track_session) ( struct burn_drive *d,
 				int session, int track);
 
 	int (*test_unit_ready) (struct burn_drive * d);

@@ -20,6 +20,15 @@
 #include "structure.h"
 #include "options.h"
 
+
+#ifdef Libburn_log_in_and_out_streaM
+/* <<< ts A61031 */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif /* Libburn_log_in_and_out_streaM */
+
+
 /* ts A61005 */
 #include "libdax_msgs.h"
 extern struct libdax_msgs *libdax_messenger;
@@ -158,14 +167,13 @@ void mmc_close(struct burn_drive *d, int session, int track)
 
 	mmc_function_spy("mmc_close");
 
-	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
-			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
-			   "HOW THAT ? mmc_close() was called", 0, 0);
-
 	c.retry = 1;
 	c.oplen = sizeof(MMC_CLOSE);
 	memcpy(c.opcode, MMC_CLOSE, sizeof(MMC_CLOSE));
-	c.opcode[2] = session | !!track;
+
+	/* ts A61030 : shifted !!session rather than or-ing plain session */
+	c.opcode[2] = ((!!session)<<1) | !!track;
+
 	c.opcode[4] = track >> 8;
 	c.opcode[5] = track & 0xFF;
 	c.page = NULL;
@@ -230,6 +238,14 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 	struct command c;
 	int len;
 
+#ifdef Libburn_log_in_and_out_streaM
+	/* <<< ts A61031 */
+	static int tee_fd= -1;
+	if(tee_fd==-1)
+		tee_fd= open("/tmp/libburn_sg_written",
+				O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR);
+#endif /* Libburn_log_in_and_out_streaM */
+
 	mmc_function_spy("mmc_write");
 	pthread_mutex_lock(&d->access_lock);
 	cancelled = d->cancel;
@@ -261,7 +277,12 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 	burn_print(12, "%d, %d, %d, %d\n", c->opcode[6], c->opcode[7], c->opcode[8], c->opcode[9]);
 */
 
-/*	write(fileno(stderr), c.page->data, c.page->bytes);*/
+#ifdef Libburn_log_in_and_out_streaM
+	/* <<< ts A61031 */
+	if(tee_fd!=-1) {
+		write(tee_fd,c.page->data,len*2048);
+	}
+#endif /* Libburn_log_in_and_out_streaM */
 
 	d->issue_command(d, &c);
 	return 0;

@@ -169,6 +169,7 @@ or
 #define Cdrskin_libburn_has_convert_scsi_adR 1
 #define Cdrskin_libburn_has_burn_msgS 1
 #define Cdrskin_libburn_has_burn_aborT 1
+#define Cdrskin_libburn_has_cleanup_handleR 1
 #define Cdrskin_libburn_has_audioxtR 1
 #define Cdrskin_libburn_has_get_start_end_lbA 1
 #define Cdrskin_libburn_has_burn_disc_unsuitablE 1
@@ -192,7 +193,7 @@ or
 #ifdef Cdrskin_new_api_tesT
 
 /* put macros under test caveat here */
-#define Cdrskin_libburn_has_cleanup_handleR 1
+#define Cdrskin_allow_libburn_taO 1
 
 #endif
 
@@ -4728,7 +4729,11 @@ set_padsize:;
        printf("cdrskin: write type : RAW/RAW96R\n");
 
    } else if(strcmp(argv[i],"-sao")==0 || strcmp(argv[i],"-dao")==0) {
+
+#ifndef Cdrskin_allow_libburn_taO
 set_sao:;
+#endif
+
      strcpy(skin->write_mode_name,"SAO");
      skin->write_type= BURN_WRITE_SAO;
      skin->block_type= BURN_BLOCK_SAO;
@@ -4765,6 +4770,17 @@ set_speed:;
      skin->swap_audio_bytes= 0;
 
    } else if(strcmp(argv[i],"-tao")==0) {
+
+#ifdef Cdrskin_allow_libburn_taO
+
+     strcpy(skin->write_mode_name,"TAO");
+     skin->write_type= BURN_WRITE_TAO;
+     skin->block_type= BURN_BLOCK_MODE1;
+     if(skin->verbosity>=Cdrskin_verbose_cmD)
+       printf("cdrskin: write type : TAO\n");
+
+#else /* Cdrskin_allow_libburn_taO */
+
      if(skin->tao_to_sao_tsize<=0.0) {
        fprintf(stderr,"cdrskin: FATAL : libburn does not support -tao yet.\n");
        fprintf(stderr,"cdrskin: HINT : Try option  tao_to_sao_tsize=650m\n");
@@ -4772,6 +4788,8 @@ set_speed:;
      }
      printf("cdrskin: NOTE : substituting mode -tao by mode -sao\n");
      goto set_sao;
+
+#endif /* Cdrskin_allow_libburn_taO */
 
    } else if(strncmp(argv[i],"tao_to_sao_tsize=",17)==0) {
      skin->tao_to_sao_tsize= Scanf_io_size(argv[i]+17,0);

@@ -585,18 +585,39 @@ int sg_release(struct burn_drive *d)
 	return 0;
 }
 
+
 int sg_issue_command(struct burn_drive *d, struct command *c)
 {
 	int done = 0, no_c_page = 0;
 	int err;
 	sg_io_hdr_t s;
 
-/* ts A60821
-   <<< debug: for tracing calls which might use open drive fds */
+#ifdef Libburn_log_sg_commandS
+	/* <<< ts A61030 */
+	static FILE *fp= NULL;
+	static int fpcount= 0;
+	int i;
+#endif /* Libburn_log_sg_commandS */
+
+	/* <<< ts A60821
+	   debug: for tracing calls which might use open drive fds */
 	char buf[161];
 	sprintf(buf,"sg_issue_command   d->fd= %d  d->released= %d\n",
 		d->fd,d->released);
 	mmc_function_spy(buf);
+
+#ifdef Libburn_log_sg_commandS
+	/* <<< ts A61030 */
+	if(fp==NULL) {
+		fp= fopen("/tmp/libburn_sg_command_log","a");
+		fprintf(fp,"\n-----------------------------------------\n");
+	}
+	for(i=0;i<10;i++)
+	  fprintf(fp,"%2.2x ", c->opcode[i]);
+	fprintf(fp,"\n");
+	fpcount++;
+#endif /* Libburn_log_sg_commandS */
+	  
 
 	/* ts A61010 : with no fd there is no chance to send an ioctl */
 	if (d->fd < 0) {
@@ -670,6 +691,11 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 		if (s.sb_len_wr) {
 			if (!c->retry) {
 				c->error = 1;
+
+				/* ts A61030 */
+				/* >>> to become  d->notify_error() */
+				scsi_notify_error(d, c, s.sbp, s.sb_len_wr, 0);
+
 				return 1;
 			}
 			switch (scsi_error(d, s.sbp, s.sb_len_wr)) {
@@ -687,6 +713,31 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 	} while (!done);
 	return 1;
 }
+
+
+/* ts A61030 */
+/* @param flag bit0=do also report TEST UNIT READY failures */
+int scsi_notify_error(struct burn_drive *d, struct command *c,
+                      unsigned char *sense, int senselen, int flag)
+{
+	int key, asc, ascq, ret;
+	char msg[160];
+
+	if (c->opcode[0] == 0) /* SPC : TEST UNIT READY command */
+		if(!(flag & 1))
+			return 1;
+
+	key = sense[2];
+	asc = sense[12];
+	ascq = sense[13];
+
+	sprintf(msg,"SCSI error condition on command %2.2Xh : ", c->opcode[0]);
+	sprintf(msg+strlen(msg), "key= %x  asc= %x ascq= %x\n", key,asc,ascq);
+	ret = libdax_msgs_submit(libdax_messenger, d->global_index, 0x0002010f,
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
+	return ret;
+}
+
 
 enum response scsi_error(struct burn_drive *d, unsigned char *sense,
 			 int senselen)

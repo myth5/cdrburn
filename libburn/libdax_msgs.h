@@ -303,7 +303,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020006 (FATAL,HIGH)   = Too many scsi siblings
  0x00020007 (NOTE,HIGH)    = Closed O_EXCL scsi siblings
            
- From the hunt on Assert:
+ General library operations:
 
  0x00020101 (WARNING,HIGH) = Cannot find given worker item
  0x00020102 (SORRY,HIGH)   = A drive operation is still going on
@@ -320,7 +320,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x0002010c (FATAL,HIGH)   = Failed to transfer command to drive
  0x0002010d (DEBUG,HIGH)   = Could not inquire TOC
  0x0002010e (FATAL,HIGH)   = Attempt to read ATIP from ungrabbed drive
- 0x0002010f
+ 0x0002010f (DEBUG,HIGH)   = SCSI error condition on command
  0x00020110 (FATAL,HIGH)   = Persistent drive address too long
  0x00020111 (FATAL,HIGH)   = Could not allocate new auxiliary object
  0x00020112 (SORRY,HIGH)   = Bad combination of write_type and block_type
@@ -329,6 +329,8 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020115 (SORRY,HIGH)   = Attempt to set track mode to unusable value
  0x00020116 (FATAL,HIGH)   = Track mode has unusable value
  0x00020117 (FATAL,HIGH)   = toc_entry of drive is already in use
+ 0x00020118 (DEBUG,HIGH)   = Closing track
+ 0x00020119 (DEBUG,HIGH)   = Closing session
 
  libdax_audioxtr:
  0x00020200 (SORRY,HIGH)   = Cannot open audio source file

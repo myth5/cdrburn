@@ -19,6 +19,15 @@
 #include "toc.h"
 #include "write.h"
 
+
+#ifdef Libburn_log_in_and_out_streaM
+/* <<< ts A61031 */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif /* Libburn_log_in_and_out_streaM */
+
+
 /*static unsigned char isrc[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";*/
 
 #define sector_common(X) d->alba++; d->rlba X;
@@ -81,6 +90,15 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 {
 	int valid, shortage, curr, i, tr;
 
+#ifdef Libburn_log_in_and_out_streaM 
+        /* <<< ts A61031 */
+        static int tee_fd= -1;
+        if(tee_fd==-1)
+                tee_fd= open("/tmp/libburn_sg_readin",
+                                O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR);
+#endif /* Libburn_log_in_and_out_streaM */
+
+
 /* no track pointer means we're just generating 0s */
 	if (!track) {
 		memset(data, 0, count);
@@ -111,6 +129,13 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 		track->eos = 1;
 		valid = 0;
 	}
+
+#ifdef Libburn_log_in_and_out_streaM
+	/* <<< ts A61031 */
+        if(tee_fd!=-1 && valid>0) {
+                write(tee_fd, data + curr, valid);
+        }
+#endif /* Libburn_log_in_and_out_streaM */
 
 	curr += valid;
 	shortage = count - curr;
@@ -622,6 +647,11 @@ int sector_headers_is_ok(struct burn_write_opts *o, int mode)
 		return 1;
 	if (o->write_type == BURN_WRITE_SAO)
 		return 1;
+
+	/* ts A61031 */
+	if (o->write_type == BURN_WRITE_TAO)
+		return 1;
+
 	if (mode & BURN_MODE1)
 		return 2;
 	return 0;
@@ -650,6 +680,11 @@ void sector_headers(struct burn_write_opts *o, unsigned char *out,
 		return;
 	if (o->write_type == BURN_WRITE_SAO)
 		return;
+
+	/* ts A61031 */
+	if (o->write_type == BURN_WRITE_TAO)
+		return 1;
+
 	if (mode & BURN_MODE1)
 		modebyte = 1;
 

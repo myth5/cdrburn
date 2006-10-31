@@ -115,6 +115,35 @@ int burn_write_flush(struct burn_write_opts *o)
 }
 
 
+/* ts A61030 */
+int burn_write_close_track(struct burn_write_opts *o, int tnum)
+{
+	char msg[81];
+
+	sprintf(msg, "Closing track %2.2d\n", tnum+1);
+	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
+
+	/* MMC-1 mentions track number 0xFF for "the incomplete track",
+	   MMC-3 does not. I tried both. 0xFF was in effect when other
+	   bugs finally gave up and made way for readable tracks. */
+	o->drive->close_track_session(o->drive, 0, 0xff); /* tnum+1); */
+	return 1;
+}
+
+
+/* ts A61030 */
+int burn_write_close_session(struct burn_write_opts *o)
+{
+	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
+			"Closing session", 0, 0);
+
+	o->drive->close_track_session(o->drive, 1, 0);
+	return 1;
+}
+
+
 /* ts A60819:
    This is unused since about Feb 2006, icculus.org/burn CVS.
    The compiler complains. We shall please our compiler.
@@ -488,6 +517,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 
         burn_print(12, "track %d is %d sectors long\n", tnum, sectors);
 
+	/* ts A61030 : this cannot happen. tnum is alsways < s-tracks */
 	if (tnum == s->tracks)
 		tmp = sectors > 150 ? 150 : sectors;
 
@@ -505,6 +535,11 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 		d->progress.sector++;
 	}
 	for (; i < sectors; i++) {
+
+		/* ts A61030: program execution never gets to this point */
+		fprintf(stderr,"LIBBURN_DEBUG: TNUM=%d  TRACKS=%d  TMP=%d\n",
+			tnum, s->tracks, tmp);
+
 		burn_print(1, "last track, leadout prep\n");
 
 		/* ts A61023 */
@@ -535,9 +570,14 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			d->buffer->sectors = 0;
 		}
 	}
-	if (o->write_type == BURN_WRITE_TAO)
+	if (o->write_type == BURN_WRITE_TAO) {
 		if (!burn_write_flush(o))
 			return 0;
+
+		/* ts A61030 */
+		if (burn_write_close_track(o, tnum) <= 0)
+			return 0;
+	}
 	return 1;
 }
 
@@ -570,6 +610,7 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	struct burn_track *lt;
 	int first = 1, i;
 	int res;
+	char msg[80];
 
 /* ts A60924 : libburn/message.c gets obsoleted
 	burn_message_clear_queue();
@@ -587,7 +628,15 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 return crap.  so we send the command, then ignore the result.
 */
 	res = d->get_nwa(d);
-/*	printf("ignored nwa: %d\n", res);*/
+
+	/* >>> ts A61031 : one should not ignore the "crap" but find out
+			when and why it occurs. Multi-session will hardly
+			work on base of flat guessing.
+	*/
+	sprintf(msg, "Ignored nwa: %d\n", res);
+	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00000002,
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			msg, 0, 0);
 
 	d->alba = d->start_lba;
 	d->nwa = d->alba;
@@ -636,8 +685,17 @@ return crap.  so we send the command, then ignore the result.
 				goto fail;
 		} else {
 			if (first) {
-				d->nwa = -150;
-				d->alba = -150;
+
+				/* ts A61030 : this made the burner take data */
+				if(o->write_type == BURN_WRITE_TAO)
+					d->nwa= d->alba= 0;
+				else {
+
+					d->nwa = -150;
+					d->alba = -150;
+
+				}
+
 			} else {
 				d->nwa += 4500;
 				d->alba += 4500;
@@ -652,8 +710,16 @@ return crap.  so we send the command, then ignore the result.
 			                        lt->mode))
 				goto fail;
 		} else {
-			if (!burn_write_flush(o))
-				goto fail;
+
+			/* ts A61030 */
+			if (o->write_type == BURN_WRITE_TAO) {
+				if (burn_write_close_session(o) <= 0)
+					goto fail;
+			} else
+
+				if (!burn_write_flush(o))
+					goto fail;
+
 			d->nwa += first ? 6750 : 2250;
 			d->alba += first ? 6750 : 2250;
 		}
@@ -665,15 +731,18 @@ return crap.  so we send the command, then ignore the result.
 		d->progress.start_sector = 0;
 		d->progress.sectors = 0;
 	}
-	if (o->write_type != BURN_WRITE_SAO)
+
+	/* ts A61030: extended skipping of flush to TAO: session is closed */
+	if (o->write_type != BURN_WRITE_SAO && o->write_type != BURN_WRITE_TAO)
 		if (!burn_write_flush(o))
 			goto fail;
+
 	sleep(1);
 
 	burn_print(1, "done\n");
 	d->busy = BURN_DRIVE_IDLE;
 
-	/* ts A61012 : This return was traditionally missing, a suspect this
+	/* ts A61012 : This return was traditionally missing. I suspect this
 			to have caused Cdrskin_eject() failures */
 	return;
 

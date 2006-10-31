@@ -64,5 +64,9 @@ int sg_release(struct burn_drive *);
 int sg_issue_command(struct burn_drive *, struct command *);
 enum response scsi_error(struct burn_drive *, unsigned char *, int);
 
+/* ts A61030 */
+/* @param flag bit0=do also report TEST UNIT READY failures */
+int scsi_notify_error(struct burn_drive *, struct command *c,
+                      unsigned char *sense, int senselen, int flag);
 
 #endif /* __SG */

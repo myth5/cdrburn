@@ -284,6 +284,13 @@ void spc_select_write_params(struct burn_drive *d,
 	/* ts A61007 : All current callers are safe. */
 	/* a ssert(o->drive == d); */
 
+	/* <<< A61030
+	fprintf(stderr,"libburn_debug: write_type=%d  multi=%d  control=%d\n",
+		o->write_type,o->multi,o->control);
+	fprintf(stderr,"libburn_debug: block_type=%d  spc_block_type=%d\n",
+		o->block_type,spc_block_type(o->block_type));
+	*/
+
 	memcpy(c.opcode, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
 	c.retry = 1;
 	c.oplen = sizeof(SPC_MODE_SELECT);
