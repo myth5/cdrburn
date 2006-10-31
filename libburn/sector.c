@@ -125,7 +125,7 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 		valid = track->source->read(track->source, data + curr, count - curr);
 	} else valid = 0;
 
-	if (valid == -1) {
+	if (valid <= 0) { /* ts A61031 : extended from (valid == -1) */
 		track->eos = 1;
 		valid = 0;
 	}
@@ -157,6 +157,12 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 	shortage -= valid;
 
 	if (!shortage)
+		goto ex;
+
+	/* ts A61031 */
+	if (shortage >= count)
+		track->track_data_done = 1;
+	if (track->open_ended)
 		goto ex;
 
 /* If we're still short, and there's a "next" pointer, we pull from that.
@@ -232,6 +238,32 @@ static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
 
 	return ret;
 }
+
+/* ts A61031 */
+/* Revoke the counting of the most recent sector handed out by get_sector() */
+static void unget_sector(struct burn_write_opts *opts, int inmode)
+{
+	struct burn_drive *d = opts->drive;
+	struct buffer *out = d->buffer;
+	int outmode;
+	int seclen;
+
+	outmode = get_outmode(opts);
+	if (outmode == 0)
+		outmode = inmode;
+
+	/* ts A61009 : react on eventual failure of burn_sector_length()
+			(should not happen if API tested properly).
+			Ensures out->bytes >= out->sectors  */
+	seclen = burn_sector_length(outmode);
+	if (seclen <= 0)
+		return NULL;
+	seclen += burn_subcode_length(outmode);
+
+	out->bytes -= seclen;
+	out->sectors--;
+}
+
 
 /* either inmode == outmode, or outmode == raw.  anything else is bad news */
 /* ts A61010 : changed type to int in order to propagate said bad news */
@@ -597,6 +629,12 @@ int sector_data(struct burn_write_opts *o, struct burn_track *t, int psub)
 	/* ts A61010 */
 	if (convert_data(o, t, t->mode, data) <= 0)
 		return 0;
+
+	/* ts A61031 */
+	if (t->open_ended && t->track_data_done) {
+		unget_sector(o, t->mode);
+		return 2;
+	}
 
 	if (!t->source->read_sub)
 		subcode_user(o, subs, t->entry->point,

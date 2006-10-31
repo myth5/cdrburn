@@ -31,6 +31,13 @@ struct burn_track
 	struct burn_source *source;
 	/** End of Source flag */
 	int eos;
+
+	/* ts A61031 */
+	/** Source is of undefined length */
+	int open_ended;
+	/** End of open ended track flag : offset+payload+tail are delivered */
+	int track_data_done;
+
 	/** The audio/data mode for the entry. Derived from control and
 	    possibly from reading the track's first sector. */
 	int mode;
@@ -70,5 +77,11 @@ struct burn_disc
 };
 
 int burn_track_get_shortage(struct burn_track *t);
+
+
+/* ts A61031 : might go to libburn.h */
+int burn_track_is_open_ended(struct burn_track *t);
+int burn_track_is_data_done(struct burn_track *t);
+
 
 #endif /* BURN__STRUCTURE_H */

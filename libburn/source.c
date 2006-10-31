@@ -22,6 +22,10 @@ enum burn_source_status burn_track_set_source(struct burn_track *t,
 		return BURN_SOURCE_FAILED;
 	s->refcount++;
 	t->source = s;
+
+	/* ts A61031 */
+	t->open_ended= (s->get_size(s) <= 0);
+
 	return BURN_SOURCE_OK;
 }
 

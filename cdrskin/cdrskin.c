@@ -995,7 +995,7 @@ ex:
 */
 int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 {
- int is_wav= 0;
+ int is_wav= 0, size_from_file= 0;
  off_t xtr_size= 0;
 
  if(track->source_path[0]=='-' && track->source_path[1]==0)
@@ -1027,10 +1027,21 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
        if(fstat(*fd,&stbuf)!=-1)
          track->fixed_size= stbuf.st_size;
      }
+     size_from_file= 1;
    }
  }
 
+#ifdef Cdrskin_allow_libburn_taO
+
+ if(track->fixed_size < Cdrtrack_minimum_sizE * track->sector_size
+    && (track->fixed_size>0 || size_from_file)) {
+
+#else
+
  if(track->fixed_size < Cdrtrack_minimum_sizE * track->sector_size) {
+
+#endif
+
    if(track->track_type == BURN_AUDIO) {
      /* >>> cdrecord: We differ in automatic padding with audio:
        Audio tracks must be at least 705600 bytes and a multiple of 2352.
@@ -1044,7 +1055,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
              "cdrskin: NOTE : Enforcing minimum track size of %.f bytes\n",
              Cdrtrack_minimum_sizE*track->sector_size);
      track->fixed_size= Cdrtrack_minimum_sizE*track->sector_size;
-  }
+   }
  }
  track->source_fd= *fd;
  return(*fd>=0);
@@ -4789,14 +4800,18 @@ set_speed:;
      printf("cdrskin: NOTE : substituting mode -tao by mode -sao\n");
      goto set_sao;
 
-#endif /* Cdrskin_allow_libburn_taO */
+#endif /* ! Cdrskin_allow_libburn_taO */
 
    } else if(strncmp(argv[i],"tao_to_sao_tsize=",17)==0) {
      skin->tao_to_sao_tsize= Scanf_io_size(argv[i]+17,0);
      if(skin->tao_to_sao_tsize>Cdrskin_tracksize_maX)
        goto track_too_large;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
+#ifdef Cdrskin_allow_libburn_taO
+       printf("cdrskin: size default for non-tao write modes: %.f\n",
+#else 
        printf("cdrskin: replace -tao by -sao with fixed size : %.f\n",
+#endif
               skin->tao_to_sao_tsize);
 
    } else if(strcmp(argv[i],"-toc")==0) {
@@ -4840,16 +4855,19 @@ track_too_large:;
          return(0);
        }
        skin->stdin_source_used= 1;
-       if(skin->write_type!=BURN_WRITE_TAO &&
-          skin->fixed_size<=0.0 && skin->tao_to_sao_tsize>0.0) {
-         skin->fixed_size= skin->tao_to_sao_tsize;
-         printf(
+       if(skin->fixed_size<=0.0) {
+         if(skin->write_type==BURN_WRITE_TAO) {
+           /* with TAO it is ok to have an undefined track length */;
+         } else if(skin->tao_to_sao_tsize>0.0) {
+           skin->fixed_size= skin->tao_to_sao_tsize;
+           printf(
         "cdrskin: NOTE : augmenting non-tao write mode by tao_to_sao_tsize\n");
-         printf("cdrskin: NOTE : fixed size : %.f\n",skin->fixed_size);
-       } else if(skin->fixed_size<=0) {
-         fprintf(stderr,
+           printf("cdrskin: NOTE : fixed size : %.f\n",skin->fixed_size);
+         } else {
+           fprintf(stderr,
  "cdrskin: FATAL : \"-\" (stdin) needs a fixed tsize= or tao_to_sao_tsize=\n");
-         return(0);
+           return(0);
+         }
        }
      } else if(skin->preskin->allow_fd_source==0 && 
                argv[i][0]=='#' && (argv[i][1]>='0' && argv[i][1]<='9')) {

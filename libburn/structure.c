@@ -115,6 +115,12 @@ struct burn_track *burn_track_create(void)
 	t->pad = 1;
 	t->entry = NULL;
 	t->source = NULL;
+
+	/* ts A61031 */
+	t->eos = 0;
+	t->open_ended = 0;
+	t->track_data_done = 0;
+
 	t->postgap = 0;
 	t->pregap1 = 0;
 	t->pregap2 = 0;
@@ -316,6 +322,18 @@ int burn_track_get_sectors(struct burn_track *t)
 		sectors++;
 	burn_print(1, "%d sectors of %d length\n", sectors, seclen);
 	return sectors;
+}
+
+/* ts A61031 */
+int burn_track_is_open_ended(struct burn_track *t)
+{
+	return !!t->open_ended;
+}
+
+/* ts A61031 */
+int burn_track_is_data_done(struct burn_track *t)
+{
+        return !!t->track_data_done;
 }
 
 int burn_track_get_shortage(struct burn_track *t)

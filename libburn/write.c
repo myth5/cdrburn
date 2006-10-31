@@ -469,7 +469,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 {
 	struct burn_track *t = s->track[tnum];
 	struct burn_drive *d = o->drive;
-	int i, tmp = 0;
+	int i, tmp = 0, open_ended = 0;
 	int sectors;
 
 	d->rlba = -150;
@@ -505,6 +505,11 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 
 /* user data */
 	sectors = burn_track_get_sectors(t);
+	open_ended = burn_track_is_open_ended(t);
+
+	/* <<< ts A61031 */
+	fprintf(stderr, "libburn_experimental: sectors= %d , open_ended= %d\n",
+		sectors,open_ended);
 
 	/* Update progress */
 	d->progress.start_sector = d->nwa;
@@ -521,7 +526,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	if (tnum == s->tracks)
 		tmp = sectors > 150 ? 150 : sectors;
 
-	for (i = 0; i < sectors - tmp; i++) {
+	for (i = 0; open_ended || i < sectors - tmp; i++) {
 
 		/* ts A61023 : http://libburn.pykix.org/ticket/14
                                From time to time inquire drive buffer */
@@ -530,6 +535,13 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 
 		if (!sector_data(o, t, 0))
 			return 0;
+
+		/* ts A61031 */
+		if (open_ended) {
+			d->progress.sectors = sectors = i;
+                        if (burn_track_is_data_done(t)) 
+	break;
+		}
 
 		/* update current progress */
 		d->progress.sector++;
