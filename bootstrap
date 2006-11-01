@@ -3,5 +3,8 @@
 aclocal
 libtoolize --copy --force
 autoconf
-autoheader
+
+# ts A61101 : libburn is not prepared for config.h
+# autoheader
+
 automake --foreign --add-missing --copy --include-deps
