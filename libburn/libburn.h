@@ -7,6 +7,7 @@
    expressing a file or stream size.
 
    XXX we should enforce 64-bitness for off_t
+   ts A61101 : this is usually done by the build system (if it is not broken)
 */
 #include <sys/types.h>
 
@@ -917,8 +918,17 @@ struct burn_source *burn_file_source_new(const char *path,
 */
 struct burn_source *burn_fd_source_new(int datafd, int subfd, off_t size);
 
-/** Tells how long a track will be on disc */
+/** Tells how long a track will be on disc
+    >>> NOTE: Not reliable with tracks of undefined length
+*/
 int burn_track_get_sectors(struct burn_track *);
+
+
+/* ts A61101 */
+/** Tells how many source bytes have been read and how many data bytes have
+    been written by the track during burn */
+int burn_track_get_counters(struct burn_track *t, 
+                            off_t *read_bytes, off_t *written_bytes);
 
 
 /** Sets drive read and write speed

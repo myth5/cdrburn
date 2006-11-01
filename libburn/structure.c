@@ -115,9 +115,13 @@ struct burn_track *burn_track_create(void)
 	t->pad = 1;
 	t->entry = NULL;
 	t->source = NULL;
+	t->eos = 0;
+
+	/* ts A61101 */
+	t->sourcecount = 0;
+	t->writecount = 0;
 
 	/* ts A61031 */
-	t->eos = 0;
 	t->open_ended = 0;
 	t->track_data_done = 0;
 
@@ -328,6 +332,19 @@ int burn_track_get_sectors(struct burn_track *t)
 int burn_track_is_open_ended(struct burn_track *t)
 {
 	return !!t->open_ended;
+}
+
+/* ts A61101 : API function */
+int burn_track_get_counters(struct burn_track *t, 
+                            off_t *read_bytes, off_t *written_bytes)
+{
+/*
+	fprintf(stderr, "libburn_experimental: sizeof(off_t)=%d\n",
+		sizeof(off_t));
+*/
+	*read_bytes = t->sourcecount;
+	*written_bytes = t->writecount;
+	return 1;
 }
 
 /* ts A61031 */

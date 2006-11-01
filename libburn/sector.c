@@ -129,6 +129,7 @@ static void get_bytes(struct burn_track *track, int count, unsigned char *data)
 		track->eos = 1;
 		valid = 0;
 	}
+	track->sourcecount += valid;
 
 #ifdef Libburn_log_in_and_out_streaM
 	/* <<< ts A61031 */
@@ -183,15 +184,6 @@ ex:;
 	if(shortage)
 		memset(data + curr, 0, shortage); /* this is old icculus.org */
 	if (track->swap_source_bytes == 1) {
-
-/*
-{ static int swapping_count= 0;
-		fprintf(stderr,"\rlibburn_debug: swapping #%d   \r",
-			swapping_count);
-		swapping_count++;
-}
-*/
-
 		for (i = 1; i < count; i += 2) {
 			tr = data[i];
 			data[i] = data[i-1];
@@ -202,7 +194,9 @@ ex:;
 
 /* ts A61009 : seems to hand out sector start pointer in opts->drive->buffer
 		and to count hand outs as well as reserved bytes */
-static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
+/* ts A61101 : added parameter track for counting written bytes */
+static unsigned char *get_sector(struct burn_write_opts *opts, 
+				struct burn_track *track, int inmode)
 {
 	struct burn_drive *d = opts->drive;
 	struct buffer *out = d->buffer;
@@ -227,6 +221,11 @@ static unsigned char *get_sector(struct burn_write_opts *opts, int inmode)
 		err = d->write(d, d->nwa, out);
 		if (err == BE_CANCELLED)
 			return NULL;
+
+		/* ts A61101 */
+		if(track != NULL)
+			track->writecount += out->bytes;
+
 		d->nwa += out->sectors;
 		out->bytes = 0;
 		out->sectors = 0;
@@ -257,7 +256,7 @@ static void unget_sector(struct burn_write_opts *opts, int inmode)
 			Ensures out->bytes >= out->sectors  */
 	seclen = burn_sector_length(outmode);
 	if (seclen <= 0)
-		return NULL;
+		return;
 	seclen += burn_subcode_length(outmode);
 
 	out->bytes -= seclen;
@@ -392,7 +391,7 @@ int sector_toc(struct burn_write_opts *o, int mode)
 	unsigned char *data;
 	unsigned char subs[96];
 
-	data = get_sector(o, mode);
+	data = get_sector(o, NULL, mode);
 	if (data == NULL)
 		return 0;
 	/* ts A61010 */
@@ -412,7 +411,7 @@ int sector_pregap(struct burn_write_opts *o,
 	unsigned char *data;
 	unsigned char subs[96];
 
-	data = get_sector(o, mode);
+	data = get_sector(o, NULL, mode);
 	if (data == NULL)
 		return 0;
 	/* ts A61010 */
@@ -432,7 +431,7 @@ int sector_postgap(struct burn_write_opts *o,
 	unsigned char subs[96];
 	unsigned char *data;
 
-	data = get_sector(o, mode);
+	data = get_sector(o, NULL, mode);
 	if (data == NULL)
 		return 0;
 	/* ts A61010 */
@@ -604,7 +603,7 @@ int sector_lout(struct burn_write_opts *o, unsigned char control, int mode)
 	unsigned char subs[96];
 	unsigned char *data;
 
-	data = get_sector(o, mode);
+	data = get_sector(o, NULL, mode);
 	if (!data)
 		return 0;
 	/* ts A61010 */
@@ -623,7 +622,7 @@ int sector_data(struct burn_write_opts *o, struct burn_track *t, int psub)
 	unsigned char subs[96];
 	unsigned char *data;
 
-	data = get_sector(o, t->mode);
+	data = get_sector(o, t, t->mode);
 	if (!data)
 		return 0;
 	/* ts A61010 */

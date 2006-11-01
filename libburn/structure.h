@@ -32,6 +32,10 @@ struct burn_track
 	/** End of Source flag */
 	int eos;
 
+	/* ts A61101 */
+	off_t sourcecount;
+	off_t writecount;
+
 	/* ts A61031 */
 	/** Source is of undefined length */
 	int open_ended;

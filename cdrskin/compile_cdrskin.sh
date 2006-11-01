@@ -6,6 +6,7 @@
 
 debug_opts=
 def_opts=
+largefile_opts="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1"
 libvers="-DCdrskin_libburn_0_2_3"
 cleanup_src_or_obj="libburn/cleanup.o"
 libdax_msgs_o="libburn/libdax_msgs.o"
@@ -50,6 +51,9 @@ do
   elif test "$i" = "-oldfashioned"
   then
     def_opts="$def_opts -DCdrskin_oldfashioned_api_usE"
+  elif test "$i" = "-no_largefile"
+  then
+    largefile_opts=	
   elif test "$i" = "-do_not_compile_cdrskin"
   then
     compile_cdrskin=0
@@ -76,6 +80,7 @@ do
     echo "  -cvs_A60220       set macro to match libburn-CVS of 20 Feb 2006."
     echo "  -libburn_0_2_2    set macro to match libburn-0.2.2."
     echo "  -libburn_0_2_3    set macro to match current libburn-SVN."
+    echo "  -no_largefile     do not use 64 bit off_t (must match libburn)."
     echo "  -do_not_compile_cdrskin  omit compilation of cdrskin/cdrskin."
     echo "  -experimental     use newly introduced libburn features."
     echo "  -oldfashioned     use pre-0.2.2 libburn features only."
@@ -99,7 +104,14 @@ echo "Build timestamp   :  $timestamp"
 if test "$compile_cdrskin"
 then
   echo "compiling program cdrskin/cdrskin.c $static_opts $debug_opts $libvers $def_opts $cleanup_src_or_obj"
-  cc $warn_opts -I. $static_opts $debug_opts $libvers $def_opts \
+  cc -I. \
+    $warn_opts \
+    $static_opts \
+    $debug_opts \
+    $libvers \
+    $largefile_opts \
+    $def_opts \
+    \
     -DCdrskin_build_timestamP='"'"$timestamp"'"' \
     \
     -o cdrskin/cdrskin \

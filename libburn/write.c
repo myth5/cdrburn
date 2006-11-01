@@ -99,7 +99,7 @@ void type_to_form(int mode, unsigned char *ctladr, int *form)
 		*form |= 0x40;
 }
 
-int burn_write_flush(struct burn_write_opts *o)
+int burn_write_flush(struct burn_write_opts *o, struct burn_track *track)
 {
 	struct burn_drive *d = o->drive;
 
@@ -108,7 +108,13 @@ int burn_write_flush(struct burn_write_opts *o)
 		err = d->write(d, d->nwa, d->buffer);
 		if (err == BE_CANCELLED)
 			return 0;
+		/* A61101 */
+		if(track != NULL)
+			track->writecount += d->buffer->bytes;
+
 		d->nwa += d->buffer->sectors;
+		d->buffer->bytes = 0;
+		d->buffer->sectors = 0;
 	}
 	d->sync_cache(d);
 	return 1;
@@ -331,8 +337,17 @@ XXX this is untested :)
 */
 		if (!tar[i]->pad) {
 			rem += burn_track_get_shortage(tar[i]);
-			if (i +1 != ntr)
-				tar[i]->source->next = tar[i+1]->source;
+
+			/* ts A61101 : I doubt that linking would yield a
+					desireable effect. With TAO it is
+					counterproductive in any way.
+			*/
+			if (o->write_type == BURN_WRITE_TAO)
+				tar[i]->source->next = NULL;
+			else
+
+				if (i +1 != ntr)
+					tar[i]->source->next = tar[i+1]->source;
 		} else if (rem) {
 			rem = 0;
 			runtime++;
@@ -507,10 +522,6 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	sectors = burn_track_get_sectors(t);
 	open_ended = burn_track_is_open_ended(t);
 
-	/* <<< ts A61031 */
-	fprintf(stderr, "libburn_experimental: sectors= %d , open_ended= %d\n",
-		sectors,open_ended);
-
 	/* Update progress */
 	d->progress.start_sector = d->nwa;
 	d->progress.sectors = sectors;
@@ -577,13 +588,17 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			err = d->write(d, d->nwa, d->buffer);
 			if (err == BE_CANCELLED)
 				return 0;
+
+			/* A61101 : probably this is not payload data */
+			/* t->writecount += d->buffer->bytes; */
+
 			d->nwa += d->buffer->sectors;
 			d->buffer->bytes = 0;
 			d->buffer->sectors = 0;
 		}
 	}
 	if (o->write_type == BURN_WRITE_TAO) {
-		if (!burn_write_flush(o))
+		if (!burn_write_flush(o, t))
 			return 0;
 
 		/* ts A61030 */
@@ -729,7 +744,7 @@ return crap.  so we send the command, then ignore the result.
 					goto fail;
 			} else
 
-				if (!burn_write_flush(o))
+				if (!burn_write_flush(o, NULL))
 					goto fail;
 
 			d->nwa += first ? 6750 : 2250;
@@ -746,7 +761,7 @@ return crap.  so we send the command, then ignore the result.
 
 	/* ts A61030: extended skipping of flush to TAO: session is closed */
 	if (o->write_type != BURN_WRITE_SAO && o->write_type != BURN_WRITE_TAO)
-		if (!burn_write_flush(o))
+		if (!burn_write_flush(o, NULL))
 			goto fail;
 
 	sleep(1);

@@ -206,14 +206,6 @@ or
 #endif /* Cdrskin_libburn_from_pykix_svN */
 
 
-#ifndef _LARGEFILE_SOURCE
-#define _LARGEFILE_SOURCE 1
-#endif
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 64
-#endif
-
-
 /* These macros activate cdrskin workarounds for deficiencies resp.
    problematic features of libburn which hopefully will change in
    future. */
@@ -279,7 +271,6 @@ or
 #include <errno.h>
 #include <sys/time.h>
 
-/* #include <libburn/libburn.h> */
 #include "../libburn/libburn.h"
 
 #ifdef Cdrskin_libburn_has_audioxtR
@@ -899,11 +890,33 @@ int Cdrtrack_set_track_type(struct CdrtracK *o, int track_type, int flag)
 }
 
 
+/** 
+    @param flag Bitfield for control purposes:
+                bit0= size returns number of actually processed source bytes
+                      rather than the predicted fixed_size (if available).
+                      padding returns the difference from number of written
+                      bytes.
+*/
 int Cdrtrack_get_size(struct CdrtracK *track, double *size, double *padding,
                       double *sector_size, int flag)
 {
+
  *size= track->fixed_size;
  *padding= track->padding;
+#ifdef Cdrskin_allow_libburn_taO
+ if((flag&1) && track->libburn_track!=NULL) {
+   off_t readcounter,writecounter;
+
+   burn_track_get_counters(track->libburn_track,&readcounter,&writecounter);
+   *size= readcounter;
+   *padding= writecounter-readcounter;
+/*
+   fprintf(stderr,"cdrskin_debug: sizeof(off_t)=%d\n",
+                  sizeof(off_t));
+*/
+ }
+
+#endif
  *sector_size= track->sector_size;
  return(1);
 }
@@ -3769,12 +3782,12 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
 
  if(old_track_idx>=0 && old_track_idx<skin->supposed_track_idx) {
    Cdrtrack_get_size(skin->tracklist[old_track_idx],&fixed_size,&padding,
-                     &sector_size,0);
+                     &sector_size,1);
    if(skin->verbosity>=Cdrskin_verbose_progresS)
      printf("\n");
    printf("%sTrack %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-          debug_mark,old_track_idx+1,fixed_size,fixed_size,
-          fixed_size/sector_size);
+          debug_mark,old_track_idx+1,fixed_size,fixed_size+padding,
+          (fixed_size+padding)/sector_size);
  }
 
  sector_size= 2048.0;
@@ -3975,6 +3988,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  double put_counter,get_counter,empty_counter,full_counter;
  double start_time,last_time;
  double total_count= 0.0,last_count= 0.0,size,padding,sector_size= 2048.0;
+ double sectors;
 
  printf("cdrskin: beginning to burn disk\n");
 
@@ -3997,7 +4011,8 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      return(0);
    }
    Cdrtrack_get_size(skin->tracklist[i],&size,&padding,&sector_size,0);
-   skin->fixed_size+= size+padding;
+   if(size>0)
+     skin->fixed_size+= size+padding;
  }
 
  ret= Cdrskin_grab_drive(skin,0);
@@ -4053,8 +4068,11 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      frac= (seconds-min*60-sec)*100;
      if(frac>99)
        frac= 99;
+     sectors= (int) (skin->fixed_size/sector_size);
+     if(sectors*sector_size != skin->fixed_size)
+       sectors++;
      printf("Total size:    %5d MB (%-2.2d:%-2.2d.%-2.2d) = %d sectors\n",
-             mb,min,sec,frac,(int) (skin->fixed_size/sector_size));
+             mb,min,sec,frac,(int) sectors);
      seconds+= 2;
      min= seconds/60.0;
      sec= seconds-min*60;
@@ -4062,7 +4080,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
      if(frac>99)
        frac= 99;
      printf("Lout start:    %5d MB (%-2.2d:%-2.2d/%-2.2d) = %d sectors\n",
-            mb,min,sec,frac,(int) (skin->fixed_size/sector_size));
+            mb,min,sec,frac,(int) sectors);
    }
  }
 
@@ -4173,14 +4191,14 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  skin->drive_is_busy= 0;
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    printf("\n");
- if(max_track<=0) {
+ if(max_track<0) {
    printf("Track 01: Total bytes read/written: %.f/%.f (%.f sectors).\n",
           total_count,total_count,total_count/sector_size);
  } else {
-   Cdrtrack_get_size(skin->tracklist[max_track],&size,&padding,&sector_size,0);
+   Cdrtrack_get_size(skin->tracklist[max_track],&size,&padding,&sector_size,1);
    printf(
          "Track %-2.2d: Total bytes read/written: %.f/%.f (%.f sectors).\n",
-         max_track+1,size,size,size/sector_size);
+         max_track+1,size,size+padding,(size+padding)/sector_size);
  }
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    printf("Writing  time:  %.3fs\n",Sfile_microtime(0)-start_time);
@@ -4622,7 +4640,12 @@ set_driveropts:;
      }
      strcpy(skin->eject_device,argv[i]+13);
      if(skin->verbosity>=Cdrskin_verbose_cmD)
+#ifdef Cdrskin_burn_drive_eject_brokeN
        printf("cdrskin: eject_device : %s\n",skin->eject_device);
+#else
+       printf("cdrskin: ignoring obsolete  eject_device=%s\n",
+              skin->eject_device);
+#endif
 
 
 #ifndef Cdrskin_extra_leaN
