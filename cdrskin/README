@@ -86,7 +86,7 @@ In order to surely get a standalone binary, execute
 
     cdrskin/compile_cdrskin.sh
 
-Version identification an help texts available afterwards:
+Version identification and help texts available afterwards:
     cdrskin/cdrskin -version
     cdrskin/cdrskin --help
     cdrskin/cdrskin -help
@@ -181,7 +181,7 @@ See below "Audio CD" for specifications.
     madplay -o raw:track04.cd /path/to/track4.mp3
     mppdec --raw-le /path/to/track5.mpc track05.cd
 
-    cdrskin dev=0,1,0 blank=fast -eject speed=48 -sao \
+    cdrskin -v dev=0,1,0 blank=fast -eject speed=48 -sao \
            -audio -swab track0[1-5].cd /path/to/track6.wav
 
 
@@ -207,10 +207,15 @@ Run a backup :
 
                                 Restrictions
 
-The convenient burn mode TAO is not available with libburn yet.
-Therefore it has to be defaulted to mode SAO which needs to know the track
+The convenient burn mode TAO is becoming available with libburn right now.
+First experiments have shown good results with a single track. Nevertheless
+the possible pitfalls still have to be explored.
+Therefore TAO is still defaulted to mode SAO which needs to know the track
 size in advance. non-cdrecord option  tao_to_sao_tsize=650m  causes each CD
 to get burned up to 650 MB regardless of the payload size.
+Compile with
+    cdrskin/compile_cdrskin.sh -experimental
+to enable explicit option -tao. (Note that -sao for now is default even then.)
 
 No multi session yet ... Please report your wishes.
 
