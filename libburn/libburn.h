@@ -217,7 +217,16 @@ enum burn_drive_status
 	/** The drive is erasing a disc */
 	BURN_DRIVE_ERASING,
 	/** The drive is being grabbed */
-	BURN_DRIVE_GRABBING
+	BURN_DRIVE_GRABBING,
+
+	/* ts A61102 */
+	/** The drive gets written zeroes before the track payload data */
+	BURN_DRIVE_WRITING_PREGAP,
+	/** The drive is told to close a track (TAO only) */
+	BURN_DRIVE_CLOSING_TRACK,
+	/** The drive is told to close a session (TAO only) */
+	BURN_DRIVE_CLOSING_SESSION
+
 };
 
 /** Information about a track on a disc - this is from the q sub channel of the

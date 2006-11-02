@@ -905,7 +905,7 @@ int Cdrtrack_get_size(struct CdrtracK *track, double *size, double *padding,
  *padding= track->padding;
 #ifdef Cdrskin_allow_libburn_taO
  if((flag&1) && track->libburn_track!=NULL) {
-   off_t readcounter,writecounter;
+   off_t readcounter= 0,writecounter= 0;
 
    burn_track_get_counters(track->libburn_track,&readcounter,&writecounter);
    *size= readcounter;
@@ -2315,7 +2315,8 @@ struct CdrskiN {
 
  /** Progress state info: wether libburn is actually processing payload data */
  int is_writing;
-
+ /** Previously detected drive state */
+ enum burn_drive_status previous_drive_status;
 
  /** abort parameters */
  int abort_max_wait;
@@ -2398,6 +2399,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->n_drives= 0;
  o->driveno= 0;
  o->is_writing= 0;
+ o->previous_drive_status = BURN_DRIVE_IDLE;
  o->abort_max_wait= 74*60;
  o->lib_is_initialized= (flag&1);
  o->control_pid= getpid();
@@ -3604,7 +3606,7 @@ int Cdrskin_wait_before_action(struct CdrskiN *skin, int flag)
    }
  }
  if(skin->verbosity>=Cdrskin_verbose_progresS)
-   printf(" Operation starts.\n");
+   {printf(" Operation starts.\n");fflush(stdout);} 
  return(1);
 }
 
@@ -3674,19 +3676,25 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
  start_time= Sfile_microtime(0);
  while(burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
    if(loop_counter>0)
-     if(skin->verbosity>=Cdrskin_verbose_progresS)
+     if(skin->verbosity>=Cdrskin_verbose_progresS) {
+       int percent= 50;
+
+       if(p.sectors>0) /* i want a display of 1 to 99 percent */
+         percent= 1.0+((double) p.sector+1.0)/((double) p.sectors)*98.0;
        fprintf(stderr,
-               "\rcdrskin: blanking sector %d   (%lu seconds elapsed)        ",
-               p.sector,(unsigned long) (Sfile_microtime(0)-start_time));
-   sleep(2);
+          "\rcdrskin: blanking ( done %2d%% , %lu seconds elapsed )          ",
+          percent,(unsigned long) (Sfile_microtime(0)-start_time));
+     }
+   sleep(1);
    loop_counter++;
  }
 blanking_done:;
  skin->drive_is_busy= 0;
  if(skin->verbosity>=Cdrskin_verbose_progresS) {
-   fprintf(stderr,"\n");
+   fprintf(stderr,
+    "\rcdrskin: blanking done                                             \n");
    printf("Blanking time:   %.3fs\n",Sfile_microtime(0)-start_time);
-   fprintf(stderr,"cdrskin: blanking done\n");
+   fflush(stdout);
  }
  Cdrskin_release_drive(skin,0);
  return(1);
@@ -3733,30 +3741,50 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  current_time= Sfile_microtime(0);
  elapsed_total_time= current_time-start_time;
  elapsed_time= current_time-*last_time;
- time_to_tell= (elapsed_time>=1.0);
+ time_to_tell= (elapsed_time>=1.0)&&(elapsed_total_time>=1.0);
 
  if(drive_status==BURN_DRIVE_WRITING) {
    ;
- } else if(drive_status==BURN_DRIVE_WRITING_LEADIN) {
+ } else if(drive_status==BURN_DRIVE_WRITING_LEADIN
+
+#ifdef Cdrskin_allow_libburn_taO
+           || drive_status==BURN_DRIVE_WRITING_PREGAP
+#endif
+
+           ) {
    if(time_to_tell || skin->is_writing) {
      if(skin->verbosity>=Cdrskin_verbose_progresS) {
        if(skin->is_writing)
          fprintf(stderr,"\n");
        fprintf(stderr,
-           "\rcdrskin: writing lead-in since %.f seconds                    ",
+           "\rcdrskin: working pre-track (burning since %.f seconds)         ",
            elapsed_total_time);
      }
      skin->is_writing= 0;
      advance_interval= 1;
    }
    {ret= 2; goto ex;}
- } else if(drive_status==BURN_DRIVE_WRITING_LEADOUT) {
+ } else if(drive_status==BURN_DRIVE_WRITING_LEADOUT
+
+#ifdef Cdrskin_allow_libburn_taO
+           || drive_status==BURN_DRIVE_CLOSING_TRACK
+           || drive_status==BURN_DRIVE_CLOSING_SESSION
+#endif
+
+          ) {
+
+#ifdef Cdrskin_allow_libburn_taO
+   if(drive_status==BURN_DRIVE_CLOSING_SESSION &&
+      skin->previous_drive_status!=drive_status)
+     {printf("\nFixating...\n"); fflush(stdout);}
+#endif
+
    if(time_to_tell || skin->is_writing) {
      if(skin->verbosity>=Cdrskin_verbose_progresS) {
        if(skin->is_writing)
          fprintf(stderr,"\n");
        fprintf(stderr,
-           "\rcdrskin: writing lead-out after %.f seconds                   ",
+           "\rcdrskin: working post-track (burning since %.f seconds)        ",
            elapsed_total_time);
      }
      skin->is_writing= 0;
@@ -3802,7 +3830,7 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
 
  if(written_total_bytes<1024*1024) {
 thank_you_for_patience:;
-   if(time_to_tell || skin->is_writing) {
+   if(time_to_tell || (skin->is_writing && elapsed_total_time>=1.0)) {
      if(skin->verbosity>=Cdrskin_verbose_progresS) {
        if(skin->is_writing)
          fprintf(stderr,"\n");
@@ -3810,9 +3838,9 @@ thank_you_for_patience:;
  "\rcdrskin: thank you for being patient since %.f seconds                   ",
            elapsed_total_time);
      }
-     skin->is_writing= 0;
      advance_interval= 1;
    }
+   skin->is_writing= 0;
    {ret= 2; goto ex;}
  }
  new_mb= written_total_bytes/(1024*1024);
@@ -3967,6 +3995,7 @@ ex:;
      *total_count= *last_count;
    *last_time= current_time;
  }
+ skin->previous_drive_status= drive_status;
  return(ret);
 }
 

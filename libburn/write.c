@@ -126,14 +126,21 @@ int burn_write_close_track(struct burn_write_opts *o, int tnum)
 {
 	char msg[81];
 
-	sprintf(msg, "Closing track %2.2d\n", tnum+1);
+	sprintf(msg, "Closing track %2.2d", tnum+1);
 	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
+
+	/* ts A61102 */
+	o->drive->busy = BURN_DRIVE_CLOSING_TRACK;
 
 	/* MMC-1 mentions track number 0xFF for "the incomplete track",
 	   MMC-3 does not. I tried both. 0xFF was in effect when other
 	   bugs finally gave up and made way for readable tracks. */
 	o->drive->close_track_session(o->drive, 0, 0xff); /* tnum+1); */
+
+	/* ts A61102 */
+	o->drive->busy = BURN_DRIVE_WRITING;
+
 	return 1;
 }
 
@@ -145,7 +152,14 @@ int burn_write_close_session(struct burn_write_opts *o)
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
 			"Closing session", 0, 0);
 
+	/* ts A61102 */
+	o->drive->busy = BURN_DRIVE_CLOSING_SESSION;
+
 	o->drive->close_track_session(o->drive, 1, 0);
+
+	/* ts A61102 */
+	o->drive->busy = BURN_DRIVE_WRITING;
+
 	return 1;
 }
 
@@ -491,6 +505,10 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 
 /* XXX for tao, we don't want the pregaps  but still want post? */
 	if (o->write_type != BURN_WRITE_TAO) {
+
+		/* ts A61102 */
+		d->busy = BURN_DRIVE_WRITING_PREGAP;
+
 		if (t->pregap1)
 			d->rlba += 75;
 		if (t->pregap2)
@@ -519,6 +537,10 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	}
 
 /* user data */
+
+	/* ts A61102 */
+	d->busy = BURN_DRIVE_WRITING;
+
 	sectors = burn_track_get_sectors(t);
 	open_ended = burn_track_is_open_ended(t);
 
@@ -660,7 +682,7 @@ return crap.  so we send the command, then ignore the result.
 			when and why it occurs. Multi-session will hardly
 			work on base of flat guessing.
 	*/
-	sprintf(msg, "Ignored nwa: %d\n", res);
+	sprintf(msg, "Ignored nwa: %d", res);
 	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00000002,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
 			msg, 0, 0);
