@@ -543,8 +543,9 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 {
 	struct burn_track *t = s->track[tnum];
 	struct burn_drive *d = o->drive;
-	int i, tmp = 0, open_ended = 0, ret;
+	int i, tmp = 0, open_ended = 0, ret, nwa;
 	int sectors;
+	char msg[80];
 
 	d->rlba = -150;
 
@@ -579,6 +580,16 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	} else {
 		o->control = t->entry->control;
 		d->send_write_parameters(d, o);
+	
+		/* ts A61103 */
+		nwa = d->get_nwa(d);
+		sprintf(msg, "pre-track %2.2d : get_nwa()= %d  , d->nwa= %d\n",
+			tnum+1, nwa, d->nwa);
+		libdax_msgs_submit(libdax_messenger, d->global_index, 0x000002,
+				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+				msg,0,0);
+		if (nwa > d->nwa)
+			d->nwa = nwa;
 	}
 
 /* user data */
@@ -711,7 +722,7 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	struct buffer buf;
 	struct burn_track *lt;
 	int first = 1, i;
-	int res;
+	int nwa;
 	char msg[80];
 
 /* ts A60924 : libburn/message.c gets obsoleted
@@ -729,16 +740,14 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 /* Apparently some drives require this command to be sent, and a few drives
 return crap.  so we send the command, then ignore the result.
 */
-	res = d->get_nwa(d);
-
+	nwa = d->get_nwa(d);
 	/* >>> ts A61031 : one should not ignore the "crap" but find out
 			when and why it occurs. Multi-session will hardly
 			work on base of flat guessing.
 	*/
-	sprintf(msg, "Ignored nwa: %d", res);
+	sprintf(msg, "Inquired nwa: %d", nwa);
 	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00000002,
-			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
-			msg, 0, 0);
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO, msg,0,0);
 
 	d->alba = d->start_lba;
 	d->nwa = d->alba;
@@ -788,10 +797,12 @@ return crap.  so we send the command, then ignore the result.
 		} else {
 			if (first) {
 
-				/* ts A61030 : this made the burner take data */
-				if(o->write_type == BURN_WRITE_TAO)
-					d->nwa= d->alba= 0;
-				else {
+				/* ts A61030 : 0 made the burner take data. */
+				/* ts A61103 : Meanwhile d->nwa is updated in
+						burn_write_track()  */
+				if(o->write_type == BURN_WRITE_TAO) {
+					d->nwa= d->alba = 0;
+				} else {
 
 					d->nwa = -150;
 					d->alba = -150;
