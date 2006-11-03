@@ -242,7 +242,8 @@ int libburner_aquire_by_driveno(int *driveno)
 int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 {
 	enum burn_disc_status disc_state;
-	struct burn_progress progress;
+	struct burn_progress p;
+	int percent = 1;
 
 	while (burn_drive_get_status(drive, NULL) != BURN_DRIVE_IDLE)
 		usleep(1001);
@@ -274,11 +275,13 @@ int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 	}
 	printf(
 	      "Beginning to %s-blank CD media.\n", (blank_fast?"fast":"full"));
-	printf(
-	      "Expect some garbage sector numbers and some zeros at first.\n");
 	burn_disc_erase(drive, blank_fast);
-	while (burn_drive_get_status(drive, &progress) != BURN_DRIVE_IDLE) {
-		printf("Blanking sector  %d\n", progress.sector);
+	sleep(1);
+	while (burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
+		if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
+			percent = 1.0 + ((double) p.sector+1.0)
+					 / ((double) p.sectors) * 98.0;
+		printf("Blanking  ( %d%% done )\n", percent);
 		sleep(1);
 	}
 	printf("Done\n");
