@@ -2576,11 +2576,6 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
 {
  int ret;
 
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,
-    "cdrskin_debug: Restarting libburn. flag= %d  driveno= %d  grabbed= %d \n",
-               flag,skin->driveno,skin->drive_is_grabbed));
-
  if(skin->drive_is_grabbed)
    Cdrskin_release_drive(skin,0);
  if(flag&1)
@@ -2591,42 +2586,19 @@ int Cdrskin_reinit_lib_with_adr(struct CdrskiN *skin, int flag)
            "cdrskin: FATAL : unable to determine persistent drive address\n");
    ret= 0; goto ex;
  }
-
-/* >>> A60827: this causes a SIGSEGV when releasing the re-initialized drive
-               skin->drives[skin->driveno].drive after burn (then as
-               skin->grabbed_drive, but already being 0xb0 in Cdrskin_grab) )
-
-*/
  burn_drive_info_free(skin->drives);
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,"cdrskin_debug: Finishing libburn.\n"));
-
  burn_finish();
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,"cdrskin_debug: Initializing libburn.\n"));
-
  if(!burn_initialize()) {
    fflush(stdout);
    fprintf(stderr,"cdrskin : FATAL : Re-initialization of libburn failed\n");
    {ret= -1; goto ex;}
  }
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,"cdrskin_debug: Grabbing drive.\n"));
-
  ret= Cdrskin_grab_drive(skin,1|(flag&2));/* uses burn_drive_scan_and_grab() */
  if(ret<=0)
    {ret=0; goto ex;}
 
  ret= 1;
 ex:
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,"cdrskin_debug: Restarting of libburn done. ret= %d\n",
-                      ret));
-
  return(ret);
 }
 
@@ -2679,28 +2651,15 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    restore_handler= 1;
  }
 
-#else
-
- if(skin->verbosity>=Cdrskin_verbose_debuG)   
-   ClN(fprintf(stderr,
-             "cdrskin_debug: Trusting in abortability of grabbing process\n"));
-
 #endif /* ! Cdrskin_grab_abort_brokeN */
 
 #ifndef Cdrskin_oldfashioned_api_usE
 
 
  if(flag&1) {
-   if(skin->verbosity>=Cdrskin_verbose_debuG)   
-     ClN(fprintf(stderr,
-        "cdrskin_debug: Cdrskin_grab_drive() from shutdown libburn\n"));
-
    ret= burn_drive_scan_and_grab(&(skin->drives),skin->preskin->device_adr,
                                  !(flag&2));
    if(ret<=0) {
-     if(skin->verbosity>=Cdrskin_verbose_debuG)   
-       ClN(fprintf(stderr,
-               "cdrskin_debug: burn_drive_scan_and_grab ret=%d\n",ret));
      if(!(flag&4))
        fprintf(stderr,"cdrskin: FATAL : unable to open drive '%s'\n",
                skin->preskin->device_adr);
@@ -2710,9 +2669,6 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
    drive= skin->drives[skin->driveno].drive;
    skin->grabbed_drive= drive;
  } else {
-   if(skin->verbosity>=Cdrskin_verbose_debuG)   
-     ClN(fprintf(stderr,
-                 "cdrskin_debug: Cdrskin_grab_drive() on active libburn\n"));
    if(strlen(skin->preskin->device_adr)<=0) {
 
 #define Cdrskin_drop_drives_by_forgeT 1
@@ -2775,10 +2731,6 @@ int Cdrskin_grab_drive(struct CdrskiN *skin, int flag)
                skin->driveno);
      goto ex;
    }
-#else
-   if(skin->verbosity>=Cdrskin_verbose_debuG)   
-     ClN(fprintf(stderr,
-        "cdrskin_debug: Trusting in burn_disc_erasable() after first grab\n"));
 #endif /* ! Cdrskin_is_erasable_on_load_is_brokeN */
 
  }
@@ -3592,8 +3544,9 @@ int Cdrskin_wait_before_action(struct CdrskiN *skin, int flag)
    else
      sprintf(speed_text,"%.f",skin->x_speed);
    printf(
-  "Starting to write CD/DVD at speed %s in real %s mode for single session.\n",
-          speed_text,(flag&1?"BLANK":skin->write_mode_name));
+  "Starting to write CD/DVD at speed %s in %s %s mode for single session.\n",
+          speed_text,(skin->dummy_mode?"dummy":"real"),
+          (flag&1?"BLANK":skin->write_mode_name));
    printf("Last chance to quit, starting real write in %3d seconds.",
           skin->gracetime);
    fflush(stdout);
@@ -4341,11 +4294,7 @@ int Cdrskin_eject(struct CdrskiN *skin, int flag)
  }
  if(ret>0) {
     ret= Cdrskin_release_drive(skin,1);
-    if(ret>0) {
-      if(skin->verbosity>=Cdrskin_verbose_debuG)
-        ClN(fprintf(stderr,
-                    "cdrskin_debug: supposing drive eject to have worked\n"));
-    } else
+    if(ret<=0)
       goto sorry_failed_to_eject;
  } else {
 sorry_failed_to_eject:;
@@ -4360,9 +4309,6 @@ sorry_failed_to_eject:;
    return(1);
  if(Cdrskin_grab_drive(skin,2)>0) {
     Cdrskin_release_drive(skin,1);
-    if(skin->verbosity>=Cdrskin_verbose_debuG)
-      ClN(fprintf(stderr,
-                  "cdrskin_debug: supposing drive eject to have worked\n"));
  } else {
    fprintf(stderr,"cdrskin: SORRY : Failed to finally eject tray.\n");
    return(0);
