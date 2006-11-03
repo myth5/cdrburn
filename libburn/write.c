@@ -109,8 +109,10 @@ int burn_write_flush(struct burn_write_opts *o, struct burn_track *track)
 		if (err == BE_CANCELLED)
 			return 0;
 		/* A61101 */
-		if(track != NULL)
+		if(track != NULL) {
 			track->writecount += d->buffer->bytes;
+			track->written_sectors += d->buffer->sectors;
+		}
 
 		d->nwa += d->buffer->sectors;
 		d->buffer->bytes = 0;
@@ -122,31 +124,68 @@ int burn_write_flush(struct burn_write_opts *o, struct burn_track *track)
 
 
 /* ts A61030 */
-int burn_write_close_track(struct burn_write_opts *o, int tnum)
+int burn_write_close_track(struct burn_write_opts *o, struct burn_session *s,
+				int tnum)
 {
 	char msg[81];
+	struct burn_drive *d;
+	struct burn_track *t;
+	int todo, step, cancelled, seclen;
+
+	d = o->drive;
+	t = s->track[tnum];
+
+	/* ts A61103 : pad up track to minimum size of 600 sectors */
+	if (t->written_sectors < 300) {
+		todo = 300 - t->written_sectors;
+		sprintf(msg,"Padding up track to minimum size (+ %d sectors)",
+			todo);
+		libdax_msgs_submit(libdax_messenger, o->drive->global_index,
+			0x0002011a,
+			LIBDAX_MSGS_SEV_NOTE, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
+		step = BUFFER_SIZE / 4096; /* shall fit any sector size */
+		if (step <= 0)
+			step = 1;
+		seclen = burn_sector_length(t->mode);
+		if (seclen <= 0)
+			seclen = 2048;
+		memset(d->buffer, 0, sizeof(struct buffer));
+		cancelled = d->cancel;
+		for (; todo > 0; todo -= step) {
+			if (step > todo)
+				step = todo;
+			d->buffer->bytes = step*seclen;
+			d->buffer->sectors = step;
+			d->cancel = 0;
+			d->write(d, d->nwa, d->buffer);
+			d->nwa += d->buffer->sectors;
+			t->writecount += d->buffer->bytes;
+			t->written_sectors += d->buffer->sectors;
+		}
+		d->cancel = cancelled;
+	}
+
+	/* ts A61102 */
+	d->busy = BURN_DRIVE_CLOSING_TRACK;
 
 	sprintf(msg, "Closing track %2.2d", tnum+1);
 	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
 
-	/* ts A61102 */
-	o->drive->busy = BURN_DRIVE_CLOSING_TRACK;
-
 	/* MMC-1 mentions track number 0xFF for "the incomplete track",
 	   MMC-3 does not. I tried both. 0xFF was in effect when other
 	   bugs finally gave up and made way for readable tracks. */
-	o->drive->close_track_session(o->drive, 0, 0xff); /* tnum+1); */
+	d->close_track_session(o->drive, 0, 0xff); /* tnum+1); */
 
 	/* ts A61102 */
-	o->drive->busy = BURN_DRIVE_WRITING;
+	d->busy = BURN_DRIVE_WRITING;
 
 	return 1;
 }
 
 
 /* ts A61030 */
-int burn_write_close_session(struct burn_write_opts *o)
+int burn_write_close_session(struct burn_write_opts *o, struct burn_session *s)
 {
 	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
@@ -475,7 +514,7 @@ int burn_write_session(struct burn_write_opts *o, struct burn_session *s)
 {
 	struct burn_drive *d = o->drive;
 	struct burn_track *prev = NULL, *next = NULL;
-	int i;
+	int i, ret;
 
 	d->rlba = 0;
 	burn_print(1, "    writing a session\n");
@@ -488,9 +527,15 @@ int burn_write_session(struct burn_write_opts *o, struct burn_session *s)
 			next = NULL;
 
 		if (!burn_write_track(o, s, i))
-			return 0;
+			{ ret = 0; goto ex; }
 	}
-	return 1;
+
+	/* ts A61103 */
+	ret = 1;
+ex:;
+	if (o->write_type == BURN_WRITE_TAO)
+		burn_write_close_session(o, s);
+	return ret;
 }
 
 int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
@@ -498,7 +543,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 {
 	struct burn_track *t = s->track[tnum];
 	struct burn_drive *d = o->drive;
-	int i, tmp = 0, open_ended = 0;
+	int i, tmp = 0, open_ended = 0, ret;
 	int sectors;
 
 	d->rlba = -150;
@@ -524,13 +569,13 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			for (i = 0; i < 75; i++)
 				if (!sector_pregap(o, t->entry->point,
 					           pt->entry->control, pt->mode))
-					return 0;
+					{ ret = 0; goto ex; }
 		}
 		if (t->pregap2)
 			for (i = 0; i < 150; i++)
 				if (!sector_pregap(o, t->entry->point,
 					           t->entry->control, t->mode))
-					return 0;
+					{ ret = 0; goto ex; }
 	} else {
 		o->control = t->entry->control;
 		d->send_write_parameters(d, o);
@@ -567,7 +612,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			d->read_buffer_capacity(d);
 
 		if (!sector_data(o, t, 0))
-			return 0;
+			{ ret = 0; goto ex; }
 
 		/* ts A61031 */
 		if (open_ended) {
@@ -592,7 +637,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			d->read_buffer_capacity(d);
 
 		if (!sector_data(o, t, 1))
-			return 0;
+			{ ret = 0; goto ex; }
 
 		/* update progress */
 		d->progress.sector++;
@@ -602,14 +647,14 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 		for (i = 0; i < 150; i++)
 			if (!sector_postgap(o, t->entry->point, t->entry->control,
 				            t->mode))
-				return 0;
+				{ ret = 0; goto ex; }
 	i = t->offset;
 	if (o->write_type == BURN_WRITE_SAO) {
 		if (d->buffer->bytes) {
 			int err;
 			err = d->write(d, d->nwa, d->buffer);
 			if (err == BE_CANCELLED)
-				return 0;
+				{ ret = 0; goto ex; }
 
 			/* A61101 : probably this is not payload data */
 			/* t->writecount += d->buffer->bytes; */
@@ -619,15 +664,23 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			d->buffer->sectors = 0;
 		}
 	}
+
+	/* ts A61103 */
+	ret = 1;
+ex:;
 	if (o->write_type == BURN_WRITE_TAO) {
+
+		/* ts A61103 */
+		/* >>> if cancelled: ensure that at least 600 kB get written */
+
 		if (!burn_write_flush(o, t))
-			return 0;
+			ret = 0;
 
 		/* ts A61030 */
-		if (burn_write_close_track(o, tnum) <= 0)
-			return 0;
+		if (burn_write_close_track(o, s, tnum) <= 0)
+			ret = 0;
 	}
-	return 1;
+	return ret;
 }
 
 /* ts A61009 */
@@ -761,10 +814,7 @@ return crap.  so we send the command, then ignore the result.
 		} else {
 
 			/* ts A61030 */
-			if (o->write_type == BURN_WRITE_TAO) {
-				if (burn_write_close_session(o) <= 0)
-					goto fail;
-			} else
+			if (o->write_type != BURN_WRITE_TAO)
 
 				if (!burn_write_flush(o, NULL))
 					goto fail;

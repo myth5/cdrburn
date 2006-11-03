@@ -120,6 +120,7 @@ struct burn_track *burn_track_create(void)
 	/* ts A61101 */
 	t->sourcecount = 0;
 	t->writecount = 0;
+	t->written_sectors = 0;
 
 	/* ts A61031 */
 	t->open_ended = 0;

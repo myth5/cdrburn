@@ -223,8 +223,10 @@ static unsigned char *get_sector(struct burn_write_opts *opts,
 			return NULL;
 
 		/* ts A61101 */
-		if(track != NULL)
+		if(track != NULL) {
 			track->writecount += out->bytes;
+			track->written_sectors += out->sectors;
+		}
 
 		d->nwa += out->sectors;
 		out->bytes = 0;

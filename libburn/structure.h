@@ -35,6 +35,7 @@ struct burn_track
 	/* ts A61101 */
 	off_t sourcecount;
 	off_t writecount;
+	off_t written_sectors;
 
 	/* ts A61031 */
 	/** Source is of undefined length */
