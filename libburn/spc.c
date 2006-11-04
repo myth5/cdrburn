@@ -274,6 +274,11 @@ void spc_sense_write_params(struct burn_drive *d)
 	mmc_read_disc_info(d);
 }
 
+/* remark ts A61104 :
+Although command MODE SELECT is SPC, the content of the
+Write Parameters Mode Page (05h) is MMC (Table 108 in MMC-1). 
+Thus the filling of the mode page should be done by a mmc_ function.
+*/
 void spc_select_write_params(struct burn_drive *d,
 			     const struct burn_write_opts *o)
 {
@@ -316,6 +321,12 @@ void spc_select_write_params(struct burn_drive *d,
 		+ o->write_type;
 	c.page->data[11] = (o->multi << 6) | o->control;
 	c.page->data[12] = spc_block_type(o->block_type);
+
+	/* ts A61104 */
+	if(!(o->control&4)) /* audio (MMC-1 table 61) */
+		if(o->write_type == BURN_WRITE_TAO) /* ??? for others too ? */
+			c.page->data[12] = 0; /* Data Block Type: Raw Data */
+
 	c.page->data[22] = 0;
 	c.page->data[23] = 150;	/* audio pause length */
 /*XXX need session format! */

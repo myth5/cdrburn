@@ -53,7 +53,8 @@ static void uncook_subs(unsigned char *dest, unsigned char *source)
 int sector_get_outmode(enum burn_write_types write_type,
 		    enum burn_block_types block_type)
 {
-	if (write_type == BURN_WRITE_SAO)
+	/* ts A61103 : extended SAO condition to TAO */
+	if (write_type == BURN_WRITE_SAO || write_type == BURN_WRITE_TAO)
 		return 0;
 	else
 		switch (block_type) {
@@ -722,7 +723,7 @@ void sector_headers(struct burn_write_opts *o, unsigned char *out,
 
 	/* ts A61031 */
 	if (o->write_type == BURN_WRITE_TAO)
-		return 1;
+		return;
 
 	if (mode & BURN_MODE1)
 		modebyte = 1;
