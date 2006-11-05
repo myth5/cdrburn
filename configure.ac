@@ -7,7 +7,11 @@ AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
-AM_CONFIG_HEADER(config.h)
+dnl A61101 This breaks Linux build (makes 32 bit off_t)
+dnl        http://sourceware.org/autobook/autobook/autobook_96.html says
+dnl        one must include some config.h and this was a pitfall.
+dnl        So why dig the pit at all ?
+dnl AM_CONFIG_HEADER(config.h)
 
 dnl Making releases:
 dnl   BURN_MICRO_VERSION += 1;

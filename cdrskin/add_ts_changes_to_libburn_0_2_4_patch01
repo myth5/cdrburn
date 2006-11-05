@@ -1,0 +1,193 @@
+#!/bin/sh
+
+set -x
+
+# This script was used for producing cdrskin-0.2.4.pl01 from
+# the svn snapshot made for cdrskin-0.2.4.pl00 and some changes
+# in a patch directory.
+#
+# Script results are a source tarball and two binaries
+# one dynamic and one static in respect to system libs.
+# Both binaries are static in respect to libburn.
+#
+# The script is to be run in the directory above the toplevel
+# directory of libburn resp. cdrskin development.
+#
+# libburn version used:  http://libburn.pykix.org
+# Downloaded by:
+#  $ svn co http://libburn-svn.pykix.org/trunk libburn_pykix
+# packed up in a tarball just to save it from inadverted changes by
+#  $ tar czf libburn_svn.tgz libburn_pykix
+# Then it went through cdrskin/add_ts_changes_to_libburn_0_2_4 where
+# the following svn snapshot emerged.
+original="./cdrskin-0.2.4.svn.tar.gz"
+
+# The top level directory in that snapshot is named
+intermediate="./cdrskin-0.2.4"
+
+# My changes are in 
+changes="./cdrskin-0.2.4.patch01"
+
+# Version parameters
+skin_release="0.2.4"
+patch_level=".pl01"
+skin_rev="$skin_release""$patch_level"
+
+# The result directory and the name of the result tarballs
+target="./cdrskin-${skin_release}"
+cdrskin_tarball="./cdrskin-${skin_rev}.tar.gz"
+cdrskin_tarball_svn="./cdrskin-${skin_rev}.svn.tar.gz"
+
+# Where to work
+compile_dir="$target"
+compile_cmd="./cdrskin/compile_cdrskin.sh"
+compile_static_opts="-static"
+compile_result="cdrskin/cdrskin"
+
+bintarget_dynamic="cdrskin_${skin_rev}-x86-suse9_0"
+bintarget_static="$bintarget_dynamic"-static
+
+if test -d "$changes"
+then
+  dummy=dummy
+else
+  echo "$0 : FATAL : no directory $changes" >&2
+  exit 1
+fi
+
+for i in "$target" "$intermediate"
+do
+  if test -e "$i"
+  then
+    echo "$0 : FATAL : already existing $i" >&2
+    exit 2
+  fi
+done
+
+if test -f "$original"
+then
+ dummy=dummy
+else
+  echo "$0 : FATAL : no file $original" >&2
+  exit 3
+fi
+
+
+# Unpack SVN snapshot.
+tar xzf "$original"
+
+
+# Rename the directory to the cdrskin name
+if test "$intermediate" = "$target"
+then
+  dummy=dummy
+else
+  mv "$intermediate" "$target"
+fi
+
+
+# Copy the changes from the patch tree
+# 
+cdrskin_dir="$changes"/cdrskin
+libburn_dir="$changes"/libburn
+test_dir="$changes"/test
+cdrskin_target="$target"/cdrskin
+libburn_target="$target"/libburn
+test_target="$target"/test
+
+# Create version timestamp
+timestamp="$(date -u '+%Y.%m.%d.%H%M%S')"
+echo "$timestamp"
+echo '#define Cdrskin_timestamP "'"$timestamp"' (pl01)"' \
+     >"$cdrskin_dir"/cdrskin_timestamp.h
+
+#
+# Do the repair of patch01
+#
+# configure.ac used macro AM_CONFIG_HEADER() and thus disabled all
+# other compile time configure macros. Among them were those which
+# enabled 64 bit off_t in libburn. They were always set in cdrskin
+# so that there was a 64<>32 bit mess-up.
+# Negative consequences are to be expected at least with big-endian
+# processors (i.e non-Intel compatible, MSB-first) on systems with
+# 32 bit off_t default.
+#
+# bootstrap called a program named autoheader which is obsolete
+# without the AM_CONFIG_HEADER macro.
+#
+cp -a "$changes"/bootstrap "$target"
+cp -a "$changes"/configure.ac "$target"
+
+# Unlike cdrskin, libburner is not depending on 64 bit off_t
+# so the according code part has been removed. A similar remedy in
+# cdrskin took place in version 0.2.5. Its consequences are wider
+# than would be appropriate for this patch.
+cp -a "$test_dir"/libburner.c "$test_target"
+
+# Mention changed tarball name
+cp -a "$cdrskin_dir"/README "$cdrskin_target"
+
+# Fetch this script
+cp -a "$cdrskin_dir"/add_ts_changes_to_libburn_0_2_4_patch01 "$cdrskin_target"
+
+# Mark the patch
+cp -a "$cdrskin_dir"/cdrskin_timestamp.h "$cdrskin_target"
+
+#
+# end of repair for patch01
+#
+
+
+# Make SVN state tarball for the libburn team
+tar czf "$cdrskin_tarball_svn" "$target"
+
+
+# Get over dependecy on autotools. Rely only on cc, make et. al.
+# This is not the same as "make dist" but i can do it without
+# having to evaluate the quality of said "make dist"
+#
+( cd "$target" ; ./bootstrap )
+
+# Remove unwanted stuff after bootstrap
+for i in "$target"/autom4te.cache
+do
+  if echo "$i" | grep '\*' >/dev/null
+  then
+    dummy=dummy
+  else
+    if test -e "$i"
+    then
+      rm -rf "$i"
+    fi
+  fi
+done
+
+
+# Pack it up to the new libburn+cdrskin-tarball
+tar czf "$cdrskin_tarball" "$target"
+
+# Produce a static and a dynamic binary
+(
+ cd "$compile_dir" || exit 1
+ ./configure
+ make
+ $compile_cmd -do_strip
+ cp "$compile_result" "../$bintarget_dynamic"
+ if test -n "$compile_static_opts"
+ then
+   $compile_cmd $compile_static_opts -do_strip
+   cp "$compile_result" "../$bintarget_static"
+ fi
+)
+
+# Remove the build area
+# Disable this for debugging the merge process
+rm -rf "$target"
+
+# Show the result
+./"$bintarget_dynamic" -version
+./"$bintarget_static" -version
+ls -l "$cdrskin_tarball"
+ls -l "$bintarget_dynamic"
+ls -l "$bintarget_static"
+
