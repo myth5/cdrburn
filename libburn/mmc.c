@@ -312,6 +312,7 @@ void mmc_read_toc(struct burn_drive *d)
 	if (c.error) {
 
 		/* ts A61020 : this snaps on non-blank DVD media */
+		/* ts A61106 : also snaps on CD with unclosed track/session */
 		/* Very unsure wether this old measure is ok.
 		   Obviously higher levels do not care about this.
 		   DVD+RW burns go on after passing through here.

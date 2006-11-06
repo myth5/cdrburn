@@ -1176,6 +1176,16 @@ int burn_disc_pretend_blank(struct burn_drive *d)
 	return 1;
 }
 
+/* ts A61106 API function */
+int burn_disc_pretend_full(struct burn_drive *d)
+{
+	if (d->status != BURN_DISC_UNREADY && 
+	    d->status != BURN_DISC_UNSUITABLE)
+		return 0;
+	d->status = BURN_DISC_FULL;
+	return 1;
+}
+
 /* ts A61021: new API function */
 int burn_disc_read_atip(struct burn_drive *d)
 {

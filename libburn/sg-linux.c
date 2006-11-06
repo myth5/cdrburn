@@ -692,11 +692,8 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 			if (!c->retry) {
 				c->error = 1;
 
-				/* ts A61030 */
-				/* >>> to become  d->notify_error() */
-				scsi_notify_error(d, c, s.sbp, s.sb_len_wr, 0);
-
-				return 1;
+				/* A61106: rather than : return 1 */
+				goto ex;
 			}
 			switch (scsi_error(d, s.sbp, s.sb_len_wr)) {
 			case RETRY:
@@ -711,6 +708,13 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 			done = 1;
 		}
 	} while (!done);
+
+	/* ts A61106 */
+ex:;
+	if (c->error) {
+		/* >>> to become  d->notify_error() */
+		scsi_notify_error(d, c, s.sbp, s.sb_len_wr, 0);
+	}
 	return 1;
 }
 
@@ -727,12 +731,17 @@ int scsi_notify_error(struct burn_drive *d, struct command *c,
 		if(!(flag & 1))
 			return 1;
 
-	key = sense[2];
-	asc = sense[12];
-	ascq = sense[13];
 
-	sprintf(msg,"SCSI error condition on command %2.2Xh : ", c->opcode[0]);
-	sprintf(msg+strlen(msg), "key= %x  asc= %x ascq= %x\n", key,asc,ascq);
+	sprintf(msg,"SCSI error condition on command %2.2Xh :", c->opcode[0]);
+	if (senselen > 2) {
+		key = sense[2];
+		sprintf(msg+strlen(msg), " key=%xh", key);
+	}
+	if (senselen > 13) {
+		asc = sense[12];
+		ascq = sense[13];
+		sprintf(msg+strlen(msg), " asc=%xh ascq=%xh", asc, ascq);
+	}
 	ret = libdax_msgs_submit(libdax_messenger, d->global_index, 0x0002010f,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
 	return ret;

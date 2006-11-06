@@ -658,6 +658,15 @@ enum burn_disc_status burn_disc_get_status(struct burn_drive *drive);
 int burn_disc_pretend_blank(struct burn_drive *drive);
 
 
+/* ts A61106 */
+/** WARNING: This overrides the safety measures against unsuitable media.
+    Sets the drive status to BURN_DISC_FULL if it is BURN_DISC_UNREADY
+    or BURN_DISC_UNSUITABLE. Thus marking media as blankable which actually
+    failed to declare themselves either blank or (partially) filled.
+*/
+int burn_disc_pretend_full(struct burn_drive *drive);
+
+
 /* ts A61021 */
 /** Reads ATIP information from inserted media. To be obtained via
     burn_drive_get_write_speed(), burn_drive_get_min_write_speed(),

@@ -175,6 +175,7 @@ or
 #define Cdrskin_libburn_has_burn_disc_unsuitablE 1
 #define Cdrskin_libburn_has_read_atiP 1
 #define Cdrskin_libburn_has_buffer_progresS 1
+#define Cdrskin_libburn_has_pretend_fulL 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -2020,6 +2021,8 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-toc\t\tretrieve and print TOC/PMA data\n");
      fprintf(stderr,
              "\t-atip\t\tretrieve media state, print \"Is *erasable\"\n");
+     fprintf(stderr,
+ "\t-force\t\tforce to continue on some errors to allow blanking bad disks\n");
 #ifdef Cdrskin_allow_libburn_taO
      fprintf(stderr,"\t-tao\t\tWrite disk in TAO mode.\n");
 #endif
@@ -2256,6 +2259,7 @@ struct CdrskiN {
  double x_speed;
  int gracetime;
  int dummy_mode;
+ int force_is_set;
  int single_track;
 
  int do_devices;
@@ -2378,6 +2382,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->x_speed= -1.0;
  o->gracetime= 0;
  o->dummy_mode= 0;
+ o->force_is_set= 0;
  o->single_track= 0;
  o->do_devices= 0;
  o->do_scanbus= 0;
@@ -3608,7 +3613,7 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
  enum burn_disc_status s;
  struct burn_progress p;
  struct burn_drive *drive;
- int ret,loop_counter= 0;
+ int ret,loop_counter= 0,hint_force= 0;
  double start_time;
 
  start_time= Sfile_microtime(0); /* will be refreshed later */
@@ -3623,6 +3628,19 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
    usleep(100002);
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,0);
+
+#ifdef Cdrskin_libburn_has_pretend_fulL
+ if(s==BURN_DISC_UNSUITABLE) {
+   if(skin->force_is_set) {
+     fprintf(stderr,
+             "cdrskin: NOTE : -force blank=... : Treating unsuitable media as burn_disc_full\n");
+     ret= burn_disc_pretend_full(drive);
+     s= burn_disc_get_status(drive);
+   } else
+     hint_force= 1;
+ }
+#endif /* Cdrskin_libburn_has_pretend_fulL */
+
  if(s!=BURN_DISC_FULL && 
     (s!=BURN_DISC_APPENDABLE || skin->no_blank_appendable)) {
    Cdrskin_release_drive(skin,0);
@@ -3636,6 +3654,9 @@ int Cdrskin_blank(struct CdrskiN *skin, int flag)
    } else {
      fprintf(stderr,
              "cdrskin: FATAL : blank=... : no blankworthy disc found\n");
+     if(hint_force)
+       fprintf(stderr,
+    "cdrskin: HINT : If you are certain to have a CD-RW, try option -force\n");
    }
    return(0);
  }
@@ -4427,7 +4448,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
    "-d", "-Verbose", "-V", "-silent", "-s", "-setdropts", "-prcap", "-inq",
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo", "-format", "-load",
    "-lock", "-msinfo", "-fix", "-nofix", "-waiti",
-   "-immed", "-force", "-raw", "-raw96p", "-raw16",
+   "-immed", "-raw", "-raw96p", "-raw16",
    "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
    "-scms", "-shorttrack", "-noshorttrack", "-packet", "-noclose",
@@ -4677,6 +4698,9 @@ set_driveropts:;
 
    } else if(strcmp(argv[i],"--fifo_per_track")==0) {
      skin->fifo_per_track= 1;
+
+   } else if(strcmp(argv[i],"-force")==0) {
+     skin->force_is_set= 1;
 
    } else if(strncmp(argv[i],"-fs=",4)==0) {
      value_pt= argv[i]+4;

@@ -7,6 +7,13 @@
 /* #include <a ssert.h> */
 
 
+/* ts A61106 : Deliberate defect provocation macros
+               DO NOT DEFINE THESE IF YOU WANT SUCCESSFUL TAO !
+#define Libburn_experimental_no_close_tracK 1
+#define Libburn_experimental_no_close_sessioN 1
+*/
+
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -132,6 +139,11 @@ int burn_write_close_track(struct burn_write_opts *o, struct burn_session *s,
 	struct burn_track *t;
 	int todo, step, cancelled, seclen;
 
+	/* ts A61106 */
+#ifdef Libburn_experimental_no_close_tracK
+	return 1;
+#endif
+
 	d = o->drive;
 	t = s->track[tnum];
 
@@ -187,6 +199,12 @@ int burn_write_close_track(struct burn_write_opts *o, struct burn_session *s,
 /* ts A61030 */
 int burn_write_close_session(struct burn_write_opts *o, struct burn_session *s)
 {
+
+	/* ts A61106 */
+#ifdef Libburn_experimental_no_close_sessioN
+	return 1;
+#endif
+
 	libdax_msgs_submit(libdax_messenger, o->drive->global_index,0x00020119,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
 			"Closing session", 0, 0);
