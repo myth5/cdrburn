@@ -129,6 +129,10 @@ struct burn_drive
 	enum burn_disc_status status;
 	int erasable;
 	volatile int released;
+
+	/* ts A61106 */
+	int silent_on_scsi_error;
+
 	int nwa;		/* next writeable address */
 	int alba;		/* absolute lba */
 	int rlba;		/* relative lba in section */

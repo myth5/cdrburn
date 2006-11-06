@@ -598,7 +598,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 	} else {
 		o->control = t->entry->control;
 		d->send_write_parameters(d, o);
-	
+
 		/* ts A61103 */
 		nwa = d->get_nwa(d);
 		sprintf(msg, "pre-track %2.2d : get_nwa()= %d  , d->nwa= %d\n",
@@ -758,20 +758,23 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 /* Apparently some drives require this command to be sent, and a few drives
 return crap.  so we send the command, then ignore the result.
 */
-	nwa = d->get_nwa(d);
-	/* >>> ts A61031 : one should not ignore the "crap" but find out
-			when and why it occurs. Multi-session will hardly
-			work on base of flat guessing.
-	*/
-	sprintf(msg, "Inquired nwa: %d", nwa);
-	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00000002,
-			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO, msg,0,0);
-
+	/* ts A61107 : moved up send_write_parameters because LG GSA-4082B
+			 seems to dislike get_nwa() in advance */
 	d->alba = d->start_lba;
 	d->nwa = d->alba;
+	if (o->write_type == BURN_WRITE_TAO) {
+		nwa = 0; /* get_nwa() will be called in burn_track() */
+	} else {
 
-	if (o->write_type != BURN_WRITE_TAO)
 		d->send_write_parameters(d, o);
+
+		nwa = d->get_nwa(d);
+		sprintf(msg, "Inquired nwa: %d", nwa);
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+				0x00000002,
+				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+				msg,0,0);
+	}
 
 	/* init progress before showing the state */
 	d->progress.session = 0;

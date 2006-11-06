@@ -727,6 +727,8 @@ int scsi_notify_error(struct burn_drive *d, struct command *c,
 	int key, asc, ascq, ret;
 	char msg[160];
 
+	if (d->silent_on_scsi_error)
+		return 1;
 	if (c->opcode[0] == 0) /* SPC : TEST UNIT READY command */
 		if(!(flag & 1))
 			return 1;
@@ -735,12 +737,12 @@ int scsi_notify_error(struct burn_drive *d, struct command *c,
 	sprintf(msg,"SCSI error condition on command %2.2Xh :", c->opcode[0]);
 	if (senselen > 2) {
 		key = sense[2];
-		sprintf(msg+strlen(msg), " key=%xh", key);
+		sprintf(msg+strlen(msg), " key=%Xh", key);
 	}
 	if (senselen > 13) {
 		asc = sense[12];
 		ascq = sense[13];
-		sprintf(msg+strlen(msg), " asc=%xh ascq=%xh", asc, ascq);
+		sprintf(msg+strlen(msg), " asc=%2.2Xh ascq=%2.2Xh", asc, ascq);
 	}
 	ret = libdax_msgs_submit(libdax_messenger, d->global_index, 0x0002010f,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);

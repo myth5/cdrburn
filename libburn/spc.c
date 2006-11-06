@@ -382,7 +382,10 @@ void spc_probe_write_modes(struct burn_drive *d)
 		c.page->data[12] = try_block_type;
 		c.page->data[23] = 150;
 		c.dir = TO_DRIVE;
+
+		d->silent_on_scsi_error = 1;
 		d->issue_command(d, &c);
+		d->silent_on_scsi_error = 0;
 
 		key = c.sense[2];
 		asc = c.sense[12];
@@ -490,6 +493,10 @@ int burn_scsi_setup_drive(struct burn_drive *d, int bus_no, int host_no,
 	d->id = target_no;
 	d->channel = channel_no;
 	d->lun = lun_no;
+
+	/* ts A61106 */
+	d->silent_on_scsi_error = 0;
+
 
 	d->idata = malloc(sizeof(struct burn_scsi_inquiry_data));
 	d->idata->valid = 0;

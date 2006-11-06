@@ -115,6 +115,14 @@ int mmc_get_nwa(struct burn_drive *d)
 	c.dir = FROM_DRIVE;
 	d->issue_command(d, &c);
 	data = c.page->data;
+
+	/* ts A61106 : >>> MMC-1 Table 142 : NWA_V = NWA Valid Flag
+			What to do if this is not 1 ? */
+	if (!(data[7]&1))
+		libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			   "mmc_get_nwa: Track Info Block: NWA_V == 0", 0, 0);
+
 	return (data[12] << 24) + (data[13] << 16)
 		+ (data[14] << 8) + data[15];
 }
@@ -656,8 +664,12 @@ void mmc_read_sectors(struct burn_drive *d,
 	len >>= 8;
 	c.opcode[6] = len & 0xFF;
 	req = 0xF8;
+
+	/* ts A61106 : LG GSA-4082B dislikes this. key=5h asc=24h ascq=00h
+
 	if (d->busy == BURN_DRIVE_GRABBING || o->report_recovered_errors)
 		req |= 2;
+	*/
 
 	c.opcode[10] = 0;
 /* always read the subcode, throw it away later, since we don't know
