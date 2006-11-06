@@ -3342,11 +3342,13 @@ ex:;
 
 
 /** Perform -toc under control of Cdrskin_atip().
+    @param flag Bitfield for control purposes:
+                bit0= do not list sessions separately (do it cdrecord style)
     @return <=0 error, 1 success
 */
 int Cdrskin_toc(struct CdrskiN *skin, int flag)
 {
- int num_sessions= 0,num_tracks= 0,lba;
+ int num_sessions= 0,num_tracks= 0,lba,track_count= 0,total_tracks= 0;
  int session_no, track_no;
  struct burn_drive *drive;
  struct burn_disc *disc= NULL;
@@ -3362,17 +3364,26 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
  sessions= burn_disc_get_sessions(disc,&num_sessions);
  if(disc==NULL)
    goto cannot_read;
+ if(flag&1) {
+   for(session_no= 0; session_no<num_sessions; session_no++) {
+     tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
+     total_tracks+= num_tracks;
+   }
+   printf("first: 1 last %d\n",total_tracks);
+ }
  for(session_no= 0; session_no<num_sessions; session_no++) {
    tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
    if(tracks==NULL)
  continue;
-   printf("first: 1 last %d\n",num_tracks);
+   if(!(flag&1))
+     printf("first: %d last %d\n",track_count+1,track_count+num_tracks);
    for(track_no= 0; track_no<num_tracks; track_no++) {
+     track_count++;
      burn_track_get_entry(tracks[track_no], &toc_entry);
      lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
      if(track_no==0 && burn_session_get_hidefirst(sessions[session_no]))
        printf("cdrskin: NOTE : first track is marked as \"hidden\".\n");
-     printf("track:  %2d lba: %9d (%9d) %2.2u:%2.2u:%2.2u",track_no+1,
+     printf("track:  %2d lba: %9d (%9d) %2.2u:%2.2u:%2.2u",track_count,
             lba,4*lba,toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
      printf(" adr: %d control: %d",toc_entry.adr,toc_entry.control);
 
@@ -3385,6 +3396,8 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
      printf(" mode: %d\n",((toc_entry.control&7)<4?0:1));
 
    }
+   if((flag&1) && session_no<num_sessions-1)
+ continue;
    burn_session_get_leadout_entry(sessions[session_no],&toc_entry);
    lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
    printf("track:lout lba: %9d (%9d) %2.2u:%2.2u:%2.2u",
@@ -3538,7 +3551,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed_min,x_speed_max);
  ret= 1;
  if(flag&1)
-   ret= Cdrskin_toc(skin,0);
+   ret= Cdrskin_toc(skin,1);
 ex:;
  Cdrskin_release_drive(skin,0);
  return(ret);
