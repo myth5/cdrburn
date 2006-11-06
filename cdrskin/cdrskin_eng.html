@@ -127,7 +127,8 @@ Burns only a single closed session. No -multi option yet.
 </LI>
 <LI>
 No TAO mode and therefore no writing on-the-fly without a predefined 
-source size.
+source size.<BR>
+Note: Development version 0.2.5 experimentally offers TAO now. See below.
 </LI>
 <LI>
 cdrskin -scanbus or --devices hangs for quite a while if there is 
@@ -149,7 +150,7 @@ rw-permissions and retry the bus scan as non-superuser.
 <P>
 <DL>
 <DT>Download as source code (see README):</DT>
-<DD><A HREF="cdrskin-0.2.4.tar.gz">cdrskin-0.2.4.tar.gz</A>
+<DD><A HREF="cdrskin-0.2.4.pl01.tar.gz">cdrskin-0.2.4.pl01.tar.gz</A>
 (510 KB).
 </DD>
 <DD>
@@ -160,14 +161,14 @@ cdrskin is part of libburn - full libburn is provided with cdrskin releases.
 </DD>
 <DD>&nbsp;</DD>
 <DT>Download as single x86 binaries (untar and move to /usr/bin/cdrskin):</DT>
-<DD><A HREF="cdrskin_0.2.4-x86-suse9_0.tar.gz">
-cdrskin_0.2.4-x86-suse9_0.tar.gz</A>, (60 KB),
+<DD><A HREF="cdrskin_0.2.4.pl01-x86-suse9_0.tar.gz">
+cdrskin_0.2.4.pl01-x86-suse9_0.tar.gz</A>, (60 KB),
 <DL>
 <DD>runs on SuSE 9.0 (2.4.21) , RIP-14.4 (2.6.14) ,
  Gentoo (2.6.15 x86_64 Athlon).</DD>
 </DL>
-<DD><A HREF="cdrskin_0.2.4-x86-suse9_0-static.tar.gz">
-cdrskin_0.2.4-x86-suse9_0-static.tar.gz</A>, (260 KB), -static compiled,
+<DD><A HREF="cdrskin_0.2.4.pl01-x86-suse9_0-static.tar.gz">
+cdrskin_0.2.4.pl01-x86-suse9_0-static.tar.gz</A>, (260 KB), -static compiled,
 <DL>
 <DD>runs on SuSE 7.2 (2.4.4), and on the systems above.</DD>
 </DL>
@@ -218,7 +219,10 @@ Enhancements towards previous stable version cdrskin-0.2.2:
 <DD>&nbsp;</DD>
 <DD>Enhancements towards stable version 0.2.4:
  <UL>
- <LI>-none for now-</LI>
+ <LI>If compiled by <KBD>cdrskin/compile_cdrskin.sh -experimental</KBD>
+     option <KBD><B>-tao</B></KBD> is accepted for piping without a fixed size.
+     Tests with single data tracks went well. Audio tests are still pending.
+ </LI>
  </UL>
 </DD>
 <DD>&nbsp;</DD>

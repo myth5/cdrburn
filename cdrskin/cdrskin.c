@@ -1946,10 +1946,21 @@ set_dev:;
      printf("                    rather than real SCSI and pseudo ATA.\n");
      printf(
           " --single_track     accept only last argument as source_address\n");
+
+#ifdef Cdrskin_allow_libburn_taO
+     printf(
+          " tao_to_sao_tsize=<num>  use num as fixed track size if in a\n");
+     printf(
+          "                    non-TAO mode track data are read from \"-\"\n");
+     printf(
+          "                    and no tsize= was specified.\n");
+#else
      printf(
           " tao_to_sao_tsize=<num>  substitute -tao by -sao and eventually\n");
      printf("                    augment input from \"-\" by tsize=<num>\n");
      printf("                    (set tao_to_sao_tsize=0 to disable it)\n");
+#endif
+
      printf(
         "Preconfigured arguments are read from the following startup files\n");
      printf(
@@ -2008,9 +2019,12 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-toc\t\tretrieve and print TOC/PMA data\n");
      fprintf(stderr,
              "\t-atip\t\tretrieve media state, print \"Is *erasable\"\n");
-     fprintf(stderr,"\t-raw96r\t\tWrite disk in RAW/RAW96R mode\n");
+#ifdef Cdrskin_allow_libburn_taO
+     fprintf(stderr,"\t-tao\t\tWrite disk in TAO mode.\n");
+#endif
      fprintf(stderr,"\t-dao\t\tWrite disk in SAO mode.\n");
      fprintf(stderr,"\t-sao\t\tWrite disk in SAO mode.\n");
+     fprintf(stderr,"\t-raw96r\t\tWrite disk in RAW/RAW96R mode\n");
      fprintf(stderr,"\ttsize=#\t\tannounces exact size of source data\n");
      fprintf(stderr,"\tpadsize=#\tAmount of padding\n");
      fprintf(stderr,"\t-audio\t\tSubsequent tracks are CD-DA audio tracks\n");

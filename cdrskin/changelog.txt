@@ -1178,7 +1178,7 @@ Announced full -audio compatibility with cdrecord
 
 ------------------------------------ cycled - cdrskin-0.2.3 - 2006.10.25.160540
 
-2006.10.27.114326  [319]
+2006.10.27.114326  [319 branch]
 - cdrskin/add_ts_changes_to_libburn_0_2_3
 + cdrskin/add_ts_changes_to_libburn_0_2_4
 cdrskin/README
@@ -1187,18 +1187,14 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 README
 Performed cdrskin version leap to cdrskin-0.2.4
-(To be committed to branch)
 
-
-2006.10.28.093922  [320]
+2006.10.28.093922  [320 branch]
 cdrskin/cdrskin_timestamp.h
 Set final timestamp 2006.10.28.093922
 
-
 ------------------------------------ cycled - cdrskin-0.2.4 - 2006.10.28.093922
 
-
-  []
+2006.10.28.115213  [321 trunk] [322 trunk]
 - cdrskin/add_ts_changes_to_libburn_0_2_3
 + cdrskin/add_ts_changes_to_libburn_0_2_4
 + cdrskin/add_ts_changes_to_libburn_0_2_5
@@ -1207,21 +1203,168 @@ cdrskin/cdrskin.c
 cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 README
-Prepare cdrskin version leap to cdrskin-0.2.5
-(To be committed to trunk)
+Performed cdrskin version leap to cdrskin-0.2.5
+
+28 Oct 2006  [323 branch]
+- cdrskin/add_ts_changes_to_libburn_0_2_3
+cdrskin/add_ts_changes_to_libburn_0_2_4
+Corrected misnaming of my development directory
+
+28 Oct 2006  [324 trunk]
+cdrskin/add_ts_changes_to_libburn_0_2_4
+cdrskin/add_ts_changes_to_libburn_0_2_5
+Corrected misnaming of my development directory
+
+2006.10.28.132532  [325 branch]
+cdrskin/cdrskin.c
+Corrected last-minute bug which made every track from file an audio track
+
+2006.10.28.151521  [326 trunk]
+cdrskin/cdrskin.c
+Corrected bug which made every track from file an audio track
+
+29 Oct 2006  [327 branch] [328 trunk]
++ CONTRIBUTORS
+Copied missing file from libburn-0.2.2
+
+29 Oct 2006  [329 branch] [330 trunk]
+Makefile.am
+Added to EXTRA_DIST cdrskin/cleanup.[ch]
+
+29 Oct 2006  [331 branch] [332 trunk]
+Makefile.am
+Added to EXTRA_DIST libburn/sg-*.[ch]
+
+29 Oct 2006  [333 branch] [334 trunk]
+Makefile.am
+Deleted from to EXTRA_DIST libburn/sg-*.h
+
+30 Oct 2006  [337]
+libburn/transport.h
+libburn/mmc.c
+libburn/sg-freebsd.c
+Made MMC command CLOSE TRACK/SESSION available to struct burn_drive
+
+2006.10.31.115606  [338]
+libburn/transport.h
+libburn/spc.c
+libburn/mmc.c
+libburn/write.h
+libburn/write.c
+libburn/sector.c
+libburn/libdax_msgs.h
+libburn/sg.h
+libburn/sg-linux.c
+cdrskin/cdrskin.c
+Made single track TAO work (sector i/o still wants fixed size, though)
+
+2006.10.31.184736  [339]
+libburn/sector.c
+libburn/source.c
+libburn/structure.h
+libburn/structure.c
+libburn/write.c
+cdrskin/cdrskin.c
+Made single track TAO work without fixed size (compile -experimental)
+
+2006.11.01.163934  [340]
+libburn/libburn.h
+libburn/source.c
+libburn/write.h
+libburn/write.c
+libburn/structure.c
+libburn/structure.h
+libburn/sector.c
+cdrskin/cdrskin.c
+cdrskin/compile_cdrskin.sh
+Adapted cdrskin pacifier to possibly unknown track size
+
+2006.11.01.172004  [341]
+configure.ac
+bootstrap
+test/libburner.c
+Repaired broken macro settings during Linux build
+
+2 Nov 2006  [342]
+cdrskin/README
+Mentioned -tao and experimental compile
+
+2006.11.02.211816  [343]
+libburn/libburn.h
+libburn/write.c
+cdrskin/cdrskin.c
+Installed status communications about closing session ("Fixating")
+
+3 Nov 2006  [344]
+test/libburner.c
+Changed status report during blanking (there are no "sectors")
+
+2006.11.03.063307  [345]
+cdrskin/cdrskin.c
+Removed some obsolete debugging messages
 
 
------------------------------------- cycled  - cdrskin-0.2.5
+2006.11.03.151137  [346]
+libburn/structure.h
+libburn/structure.c
+libburn/write.h
+libburn/write.c
+libburn/sector.c
+libburn/libdax_msgs.h
+Installed decent abort behavior with TAO
+
+2006.11.03.202403  [347]
+libburn/write.c
+Enabled TAO for multiple -data tracks (-audio still ends after 0 bytes)
 
 
-2006  []
-(k3b_on_cdrskin.html)
+2006.11.04.092909  [348]
+libburn/spc.c
+libburn/sector.c
+Enabled audio tracks with TAO
+
+2006.11.02.140329 (pl01)  [351]
+../cdrskin-0.2.4.patch01/configure.ac
+../cdrskin-0.2.4.patch01/bootstrap
+../cdrskin-0.2.4.patch01/cdrskin/README
+../cdrskin-0.2.4.patch01/cdrskin/add_ts_changes_to_libburn_0_2_4_patch01
+../cdrskin-0.2.4.patch01/cdrskin/cdrskin_timestamp.h
+../cdrskin-0.2.4.patch01/test/libburner.c
+Revoked autotools aspect of revision 290
+
+
+  []
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+Adapted documentation to reflect experimental TAO mode
+
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.06       
+
+
+  []
+Have others test TAO with audio tracks
+
+
+  []
+Test empty input behavior with TAO
+
+
+  []
+Make CD with unclosed track blankable
+
+
+  []
+Allow -tao in cdrskin for 0.2.3 by default
+
+
+  []
+Liberate generic SCSI code from sg-linux.c (scsi_notify_error(), scsi_error())
+
 
 2006  []
 -reset: ioctl(fd,CDROMRESET)  ioctl(fd,SG_SCSI_RESET,SG_SCSI_RESET_DEVICE)
-
-2006  []
-Try wether tao will work if finalized by mmc_close()
 
 2006  []
 Open O_EXCL all devices in address resolution chain
