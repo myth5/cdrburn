@@ -152,6 +152,14 @@ void burn_write_opts_set_mediacatalog(struct burn_write_opts *opts,
 	memcpy(opts->mediacatalog, &mediacatalog, 13);
 }
 
+/* ts A61106 */
+void burn_write_opts_set_multi(struct burn_write_opts *opts, int multi)
+{
+	opts->multi = !!multi;
+}
+
+
+
 void burn_read_opts_set_raw(struct burn_read_opts *opts, int raw)
 {
 	opts->raw = raw;
@@ -198,3 +206,4 @@ void burn_read_opts_set_hardware_error_retries(struct burn_read_opts *opts,
 {
 	opts->hardware_error_retries = hardware_error_retries;
 }
+

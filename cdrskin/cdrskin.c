@@ -194,6 +194,7 @@ or
 
 /* put macros under test caveat here */
 #define Cdrskin_allow_libburn_taO 1
+#define Cdrskin_libburn_has_multI 1
 
 #endif
 
@@ -2275,6 +2276,7 @@ struct CdrskiN {
  /** The write mode (like SAO or RAW96/R). See libburn. */
  enum burn_write_types write_type;
  int block_type;
+ int multi;
 
  int do_eject;
  char eject_device[Cdrskin_strleN];
@@ -2388,6 +2390,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  strcpy(o->write_mode_name,"SAO");
  o->write_type= BURN_WRITE_SAO;
  o->block_type= BURN_BLOCK_SAO;
+ o->multi= 0;
  o->burnfree= 0;
  o->do_eject= 0;
  o->eject_device[0]= 0;
@@ -3327,7 +3330,11 @@ int Cdrskin_checkdrive(struct CdrskiN *skin, int flag)
  printf("Identifikation : '%s'\n",drive_info->product);
  printf("Revision       : '%s'\n",drive_info->revision);
  printf("Driver flags   : %s\n","BURNFREE");
+#ifdef Cdrskin_allow_libburn_taO
+ printf("Supported modes: %s\n","TAO SAO RAW/R96R");
+#else
  printf("Supported modes: %s\n","SAO RAW/R96R");
+#endif
  ret= 1;
 ex:;
  return(ret);
@@ -4093,6 +4100,13 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  o= burn_write_opts_new(drive);
  burn_write_opts_set_perform_opc(o, 0);
 
+#ifdef Cdrskin_libburn_has_multI
+ if(skin->multi)
+   fprintf(stderr,
+           "cdrskin: NOTE : Option -multi set. Media will be appendable.\n");
+ burn_write_opts_set_multi(o,skin->multi);
+#endif
+
  burn_write_opts_set_write_type(o,skin->write_type,skin->block_type);
  if(skin->dummy_mode) {
    fprintf(stderr,
@@ -4399,7 +4413,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
  static char ignored_full_options[][41]= {
    "-d", "-Verbose", "-V", "-silent", "-s", "-setdropts", "-prcap", "-inq",
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo", "-format", "-load",
-   "-lock", "-msinfo", "-multi", "-fix", "-nofix", "-waiti",
+   "-lock", "-msinfo", "-fix", "-nofix", "-waiti",
    "-immed", "-force", "-raw", "-raw96p", "-raw16",
    "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
@@ -4707,6 +4721,13 @@ gracetime_equals:;
    } else if(strcmp(argv[i],"--ignore_signals")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
+   } else if(strcmp(argv[i],"-multi")==0) {
+#ifdef Cdrskin_libburn_has_multI
+     skin->multi= 1;
+#else
+     fprintf(stderr,"cdrskin: SORRY : Option -multi is not available yet.\n");
+#endif
+
    } else if(strcmp(argv[i],"--no_abort_handler")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
@@ -4716,9 +4737,6 @@ gracetime_equals:;
    } else if(strcmp(argv[i],"--no_convert_fs_adr")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
-   } else if(strcmp(argv[i],"--old_pseudo_scsi_adr")==0) {
-     /* is handled in Cdrpreskin_setup() */;
-
    } else if(strcmp(argv[i],"--no_rc")==0) {
      /* is handled in Cdrpreskin_setup() */;
 
@@ -4726,6 +4744,9 @@ gracetime_equals:;
      skin->padding= 0.0;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
        printf("cdrskin: padding : off\n");
+
+   } else if(strcmp(argv[i],"--old_pseudo_scsi_adr")==0) {
+     /* is handled in Cdrpreskin_setup() */;
 
    } else if(strcmp(argv[i],"-pad")==0) {
      skin->padding= 15*2048;

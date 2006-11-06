@@ -319,7 +319,10 @@ void spc_select_write_params(struct burn_drive *d,
 	c.page->data[10] = (bufe << 6)
 		+ (sim << 4)
 		+ o->write_type;
-	c.page->data[11] = (o->multi << 6) | o->control;
+
+	/* ts A61106 : MMC-1 table 110 : multi==0 or multi==3 */
+	c.page->data[11] = ((3 * !!o->multi) << 6) | o->control;
+
 	c.page->data[12] = spc_block_type(o->block_type);
 
 	/* ts A61104 */

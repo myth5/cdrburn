@@ -1004,6 +1004,15 @@ void burn_write_opts_set_has_mediacatalog(struct burn_write_opts *opts, int has_
 
 void burn_write_opts_set_mediacatalog(struct burn_write_opts *opts, unsigned char mediacatalog[13]);
 
+
+/* ts A61106 */
+/* Sets the multi flag which eventually marks the emerging session as not being
+   the last one and thus creating a BURN_DISC_APPENDABLE media.
+     @param multi 1=media will be appendable, 0=media will be closed (default) 
+*/
+void burn_write_opts_set_multi(struct burn_write_opts *opts, int multi);
+
+
 /** Sets whether to read in raw mode or not
     @param opts The read opts to change
     @param raw_mode If non-zero, reading will be done in raw mode, so that everything in the data tracks on the
