@@ -1976,9 +1976,7 @@ set_dev:;
      printf(
          "By default any argument that does not match grep '^-.' or '=' is\n");
      printf(
-         "used as track source. If it is \"-\" then stdin is used. In this\n");
-     printf("case the total byte count of the source must be announced via\n");
-     printf("tsize= previous to the source address.\n");
+         "used as track source. If it is \"-\" then stdin is used.\n");
      printf("cdrskin  : http://scdbackup.sourceforge.net/cdrskin_eng.html\n");
      printf("           mailto:scdbackup@gmx.net  (Thomas Schmitt)\n");
      printf("libburn  : http://libburn.pykix.org\n");
@@ -2026,7 +2024,7 @@ see_cdrskin_eng_html:;
      fprintf(stderr,
              "\t-atip\t\tretrieve media state, print \"Is *erasable\"\n");
      fprintf(stderr,
- "\t-force\t\tforce to continue on some errors to allow blanking bad disks\n");
+           "\t-force\t\tforce to continue on some errors to allow blanking\n");
 #ifdef Cdrskin_allow_libburn_taO
      fprintf(stderr,"\t-tao\t\tWrite disk in TAO mode.\n");
 #endif
@@ -2039,20 +2037,19 @@ see_cdrskin_eng_html:;
      fprintf(stderr,
             "\t-data\t\tSubsequent tracks are CD-ROM data mode 1 (default)\n");
      fprintf(stderr,"\t-pad\t\tpadsize=30k\n");
-     fprintf(stderr,"\t-nopad\t\tDo not pad (default)\n");
+     fprintf(stderr,
+        "\t-nopad\t\tDo not pad (default, but applies only to data tracks)\n");
      fprintf(stderr,
        "\t-swab\t\tAudio data source is byte-swapped (little-endian/Intel)\n");
      fprintf(stderr,"\t-help\t\tprint this text to stderr and exit\n");
      fprintf(stderr,
-         "Option -audio does automatic extraction of .wav but not of .au .\n");
+             "Without option -data, .wav and .au files are extracted and burned as -audio.\n");
      fprintf(stderr,
     "By default any argument that does not match grep '^-.' or '=' is used\n");
      fprintf(stderr,
-         "as track source address. Address \"-\" means stdin. In this case\n");
+         "as track source address. Address \"-\" means stdin.\n");
      fprintf(stderr,
-        "the total byte count of the source must be announced via tsize=#.\n");
-     fprintf(stderr,
-        "cdrskin will ensure that the announced tsize= is written even if\n");
+        "cdrskin will ensure that an announced tsize= is written even if\n");
      fprintf(stderr,
         "the source delivers fewer bytes. But 0 bytes from stdin with fifo\n");
      fprintf(stderr,

@@ -10,6 +10,8 @@ Deliberate deviations of cdrskin from cdrecord compatibility:
 
 + -sao is default for multi-track sessions with all track lengths defined
 
++ premature end of source is not an error and leads to full announced tracksize
+
 ------------------------------------------------------------------------------
                                   Changelog
 ------------------------------------------------------------------------------
@@ -1386,15 +1388,18 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Prepared next cdrskin-0.2.5 upload cycle
 
------------------------------------- cycle  - cdrskin-0.2.5 - 2006.11.07.131746
-
-  []
+7 Nov 2006  [359]
 cdrskin/changelog.txt
 cdrskin/README
 cdrskin/wiki_plain.txt
 Updated documentation about TAO
 
------------------------------------- cycle  - cdrskin-0.2.5 - 2006.11.07.131746
+2006.11.07.152018  []
+cdrskin/cdrskin.c
+cdrskin/changelog.txt
+Updated documentation about TAO
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.07.152018
 
 
 
