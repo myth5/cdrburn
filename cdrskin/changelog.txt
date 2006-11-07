@@ -1317,13 +1317,12 @@ Installed decent abort behavior with TAO
 libburn/write.c
 Enabled TAO for multiple -data tracks (-audio still ends after 0 bytes)
 
-
 2006.11.04.092909  [348]
 libburn/spc.c
 libburn/sector.c
 Enabled audio tracks with TAO
 
-2006.11.02.140329 (pl01)  [351]
+2006.11.02.140329 (pl01)  [351 tags/CdrskinZeroTwoFourPlZeroOne]
 ../cdrskin-0.2.4.patch01/configure.ac
 ../cdrskin-0.2.4.patch01/bootstrap
 ../cdrskin-0.2.4.patch01/cdrskin/README
@@ -1332,31 +1331,56 @@ Enabled audio tracks with TAO
 ../cdrskin-0.2.4.patch01/test/libburner.c
 Revoked autotools aspect of revision 290
 
-
-  []
+2006.11.06.073810  [352]
 cdrskin/cdrskin.c
 cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Adapted documentation to reflect experimental TAO mode
 
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.06.085056
 
------------------------------------- cycle  - cdrskin-0.2.5 - 2006.11.06       
+2006.11.06.114159  [353]
+libburn/libburn.h
+libburn/spc.c
+libburn/options.c
+cdrskin/cdrskin.c
+New API burn_write_opts_set_multi(). (But libburn cannot burn next session yet)
+
+2006.11.06.121409  [354]
+cdrskin/cdrskin.c
+Made -toc on multiple sessions more compatible
+
+2006.11.06.155237  [355]
+libburn/libburn.h
+libburn/drive.c
+libburn/write.c
+libburn/mmc.c
+libburn/sg-linux.c
+cdrskin/cdrskin.c
+Made CD with unclosed track blankable (by -force)
+
+2006.11.06.195743  [356]
+libburn/transport.h
+libburn/mmc.c
+libburn/spc.c
+libburn/write.c
+libburn/sg-linux.c
+Cared for some SCSI error conditions which were ignored up to now
+
+2006.11.07.114514  [357]
+cdrskin/cdrskin.c
+Made -tao default for single track or stdin, -sao for any other multi-track
+
+  []
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+Prepared next cdrskin-0.2.5 upload cycle
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.07.
 
 
   []
-Have others test TAO with audio tracks
-
-
-  []
-Test empty input behavior with TAO
-
-
-  []
-Make CD with unclosed track blankable
-
-
-  []
-Allow -tao in cdrskin for 0.2.3 by default
+Check desired write and block type with burn_drive_info.*_block_types
 
 
   []
