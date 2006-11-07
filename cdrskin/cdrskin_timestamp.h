@@ -1,1 +1,1 @@
-#define Cdrskin_timestamP "2006.11.06.195743"
+#define Cdrskin_timestamP "2006.11.07.114514"
