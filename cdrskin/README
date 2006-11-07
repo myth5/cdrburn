@@ -169,8 +169,8 @@ Burn image file  my_image.iso  to CD
             -eject  my_image.iso 
 
 Burn a compressed afio archive to CD on-the-fly
-    find . | afio -oZ - | cdrskin -v dev=0,1,0 fs=32m speed=8 -sao \
-                                  driveropts=burnfree padsize=300k tsize=650m - 
+    find . | afio -oZ - | cdrskin -v dev=0,1,0 fs=32m speed=8 -tao \
+                                  driveropts=burnfree padsize=300k - 
 
 Burn 6 audio tracks from files with different formats to CD.
 Anything except .wav or .au files has to be converted into raw format first.
@@ -198,7 +198,7 @@ or a device file address as listed by --devices with an accessible drive :
 
 Set usage of cdrskin with appropriate options rather than cdrecord :
 
-    export SCDBACKUP_CDRECORD="cdrskin -v -v tao_to_sao_tsize=650m"
+    export SCDBACKUP_CDRECORD="cdrskin -v -v"
 
 Run a backup :
 
@@ -207,17 +207,10 @@ Run a backup :
 
                                 Restrictions
 
-The convenient burn mode TAO is becoming available with libburn right now.
-First experiments have shown good results with a single track. Nevertheless
-the possible pitfalls still have to be explored.
-Therefore TAO is still defaulted to mode SAO which needs to know the track
-size in advance. non-cdrecord option  tao_to_sao_tsize=650m  causes each CD
-to get burned up to 650 MB regardless of the payload size.
-Compile with
-    cdrskin/compile_cdrskin.sh -experimental
-to enable explicit option -tao. (Note that -sao for now is default even then.)
+No multi session yet.
 
-No multi session yet ... Please report your wishes.
+Please report your wishes about other not yet supported options.
+
 
 
                            Inspiration and Standard

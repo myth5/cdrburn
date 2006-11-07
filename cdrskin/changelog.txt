@@ -1,6 +1,16 @@
 ------------------------------------------------------------------------------
             libburn.pykix.org    scdbackup.sourceforge.net/cdrskin
 ------------------------------------------------------------------------------
+
+Deliberate deviations of cdrskin from cdrecord compatibility:
+
++ gracetime=0 is allowed and set by default
+
++ -pad is always set for audio tracks
+
++ -sao is default for multi-track sessions with all track lengths defined
+
+------------------------------------------------------------------------------
                                   Changelog
 ------------------------------------------------------------------------------
 
@@ -1371,12 +1381,21 @@ Cared for some SCSI error conditions which were ignored up to now
 cdrskin/cdrskin.c
 Made -tao default for single track or stdin, -sao for any other multi-track
 
-  []
+7 Nov 2006  [358]
 cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Prepared next cdrskin-0.2.5 upload cycle
 
------------------------------------- cycle  - cdrskin-0.2.5 - 2006.11.07.
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.07.131746
+
+  []
+cdrskin/changelog.txt
+cdrskin/README
+cdrskin/wiki_plain.txt
+Updated documentation about TAO
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.07.131746
+
 
 
   []
