@@ -685,8 +685,9 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 			if (err == BE_CANCELLED)
 				{ ret = 0; goto ex; }
 
-			/* A61101 : probably this is not payload data */
-			/* t->writecount += d->buffer->bytes; */
+			/* A61101 : probably this is not all payload data */
+			/* A61108 : but audio count is short without this */
+			t->writecount += d->buffer->bytes;
 
 			d->nwa += d->buffer->sectors;
 			d->buffer->bytes = 0;
