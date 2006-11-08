@@ -4,6 +4,8 @@
 
 Deliberate deviations of cdrskin from cdrecord compatibility:
 
++ cdrskin does drive operations (on its drive 0) without a dev= option
+
 + gracetime=0 is allowed and set by default
 
 + -pad is always set for audio tracks
@@ -1394,13 +1396,36 @@ cdrskin/README
 cdrskin/wiki_plain.txt
 Updated documentation about TAO
 
-2006.11.07.152018  []
+2006.11.07.152018  [360]
 cdrskin/cdrskin.c
 cdrskin/changelog.txt
 Updated documentation about TAO
 
 ------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.07.152018
+* Enabled TAO
 
+
+2006.11.08.165648  [361]
+cdrskin/cdrfifo.h
+cdrskin/cdrfifo.c
+cdrskin/cdrskin.c
+Avoided error message and nonzero exit with trailing trash on .wav
+
+8 Nov 2006  [362]
+cdrskin/cdrskin_eng.html
+Mentioned bug fix about trailing trash
+
+2006.11.08.172918  [363]
+libburn/write.c
+Made track write counter of SAO count rather too much than too few bytes
+
+8 Nov 2006  []
+cdrskin/changelog.txt
+Prepared next cdrskin-0.2.5 upload cycle
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.08.
+* Bug fixed: Trailing trash appended to .wav files caused error message
+  and, if exceeding fifo size, could even stall a burn.
 
 
   []
