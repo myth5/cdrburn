@@ -772,16 +772,27 @@ struct CdrtracK {
  int track_type_by_default;
  int swap_audio_bytes;
 
+ /* wether the data source is a container of defined size with possible tail */
+ int extracting_container;
+
  /** Optional fifo between input fd and libburn. It uses a pipe(2) to transfer
      data to libburn. 
  */
  int fifo_enabled;
- /** The fifo object knows the real input fd and the fd[1] of the pipe. */
+
+ /** The eventual own fifo object managed by this track object. */
  struct CdrfifO *fifo;
+
  /** fd[0] of the fifo pipe. This is from where libburn reads its data. */
  int fifo_outlet_fd;
  int fifo_size;
  int fifo_start_empty;
+
+ /** The possibly external fifo object which knows the real input fd and
+     the fd[1] of the pipe. */
+ struct CdrfifO *ff_fifo;
+ /** The index number if fifo follow up fd item, -1= own fifo */
+ int ff_idx;
 
  struct burn_track *libburn_track;
 
@@ -828,11 +839,14 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->sector_size= 2048.0;
  o->track_type_by_default= 1;
  o->swap_audio_bytes= 0;
+ o->extracting_container= 0;
  o->fifo_enabled= 0;
  o->fifo= NULL;
  o->fifo_outlet_fd= -1;
  o->fifo_size= 0;
  o->fifo_start_empty= 0;
+ o->ff_fifo= NULL;
+ o->ff_idx= -1;
  o->libburn_track= NULL;
  ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),&(o->padding),
                          &(o->set_by_padsize),&(skin_track_type),
@@ -989,6 +1003,7 @@ int Cdrtrack_extract_audio(struct CdrtracK *track, int *fd, off_t *xtr_size,
  if(ret<=0)
    {ret= -1*!!ret; goto ex;}
  track->swap_audio_bytes= !!msb_first;
+ track->extracting_container= 1;
  fprintf(stderr,"cdrskin: NOTE : %.f %saudio bytes in '%s'\n",
                 (double) *xtr_size, (msb_first ? "" : "(-swab) "),
                 track->source_path);
@@ -1087,6 +1102,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
                 bit0= Debugging verbosity
                 bit1= Do not create and attach a new fifo 
                       but attach new follow-up fd pair to previous_fifo
+                bit2= Do not enforce fixed_size if not container extraction
     @return <=0 error, 1 success
 */
 int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd, 
@@ -1108,7 +1124,9 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
  if(flag&2) {
    ret= Cdrfifo_attach_follow_up_fds(previous_fifo,source_fd,pipe_fds[1],0);
    if(ret<=0)
-    return(ret);
+     return(ret);
+   track->ff_fifo= previous_fifo;
+   track->ff_idx= ret-1;
  } else {
 
    /* >>> ??? obtain track sector size and use instead of 2048 ? */
@@ -1118,9 +1136,14 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
      return(ret);
    if(previous_fifo!=NULL)
      Cdrfifo_attach_peer(previous_fifo,ff,0);
-   track->fifo= ff;
+   track->fifo= track->ff_fifo= ff;
+   track->ff_idx= -1;
  }
  track->fifo_outlet_fd= pipe_fds[0];
+
+ if((track->extracting_container || !(flag&4)) && track->fixed_size>0)
+   Cdrfifo_set_fd_in_limit(track->ff_fifo,track->fixed_size,track->ff_idx,0);
+
  if(flag&1)
    printf(
         "cdrskin_debug: track %d fifo replaced source_address '%s' by '#%d'\n",
@@ -2524,6 +2547,8 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
  skin->fifo= NULL;
  for(i=0;i<skin->track_counter;i++) {
    hflag= (skin->verbosity>=Cdrskin_verbose_debuG);
+   if(i==skin->track_counter-1)
+     hflag|= 4;
    if(skin->verbosity>=Cdrskin_verbose_cmD) {
      if(skin->fifo_per_track)
        printf("cdrskin: track %d establishing fifo of %d bytes\n",

@@ -15,7 +15,7 @@
 
 
 /** The fifo buffer which will smoothen the data stream from data provider
-    to data consumer. Although this is not a mandatory lifesavier for modern
+    to data consumer. Although this is not a mandatory lifesaver for modern
     burners any more, a fifo can speed up burning of data which is delivered
     with varying bandwidths (e.g. compressed archives created on the fly
     or mkisofs running at its speed limit.).
@@ -64,6 +64,16 @@ int Cdrfifo_get_sizes(struct CdrfifO *o, int *chunk_size, int *buffer_size,
 int Cdrfifo_set_speed_limit(struct CdrfifO *o, double bytes_per_second,
                             int flag);
 
+/** Set a fixed size for input in order to cut off any unwanted tail
+    @param o The fifo object
+    @param idx index for fds attached via Cdrfifo_attach_follow_up_fds(),
+               first attached is 0,  <0 directs limit to active fd limit 
+               (i.e. first track is -1, second track is 0, third is 1, ...)
+*/
+int Cdrfifo_set_fd_in_limit(struct CdrfifO *o, double fd_in_limit, int idx,
+                            int flag);
+
+
 int Cdrfifo_set_fds(struct CdrfifO *o, int source_fd, int dest_fd, int flag);
 int Cdrfifo_get_fds(struct CdrfifO *o, int *source_fd, int *dest_fd, int flag);
 
@@ -72,6 +82,7 @@ int Cdrfifo_get_fds(struct CdrfifO *o, int *source_fd, int *dest_fd, int flag);
     fifo buffer when its predecessors are exhausted. Reading will start as
     soon as reading of the predecessor encounters EOF. Writing will start
     as soon as all pending predecessor data are written.
+    @return index number of new item + 1, <=0 indicates error
 */
 int Cdrfifo_attach_follow_up_fds(struct CdrfifO *o, int source_fd, int dest_fd,
                                  int flag);

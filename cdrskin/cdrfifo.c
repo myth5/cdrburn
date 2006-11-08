@@ -48,6 +48,9 @@ struct CdrfifO {
  int source_fd;
  double in_counter;
 
+ double fd_in_counter;
+ double fd_in_limit;
+
  char *buffer;
  int buffer_size;
  int buffer_is_full;
@@ -72,16 +75,26 @@ struct CdrfifO {
  double empty_counter;
  double full_counter;
 
+
  /* (sequential) fd chaining */
+ /* fds: 0=source, 1=dest  */
  int follow_up_fds[Cdrfifo_ffd_maX][2];
+
  /* index of first byte in buffer which does not belong to predecessor fd */
  int follow_up_eop[Cdrfifo_ffd_maX];
+
  /* index of first byte in buffer which belongs to [this] fd pair */
  int follow_up_sod[Cdrfifo_ffd_maX];
+
+ /* values for fd_in_limit */
+ double follow_up_in_limits[Cdrfifo_ffd_maX];
+
  /* number of defined follow-ups */
  int follow_up_fd_counter;
+
  /* index of currently active (i.e. reading) follow-up */
  int follow_up_fd_idx;
+
 
  /* (simultaneous) peer chaining */
  struct CdrfifO *next;
@@ -117,6 +130,8 @@ int Cdrfifo_new(struct CdrfifO **ff, int source_fd, int dest_fd,
    buffer_size+= chunk_size-(buffer_size%chunk_size);
  o->source_fd= source_fd;
  o->in_counter= 0.0;
+ o->fd_in_counter= 0;
+ o->fd_in_limit= -1.0;
  o->buffer= NULL;
  o->buffer_is_full= 0;
  o->buffer_size= buffer_size;
@@ -140,6 +155,7 @@ int Cdrfifo_new(struct CdrfifO **ff, int source_fd, int dest_fd,
  for(i= 0; i<Cdrfifo_ffd_maX; i++) {
    o->follow_up_fds[i][0]= o->follow_up_fds[i][1]= -1;
    o->follow_up_eop[i]= o->follow_up_sod[i]= -1;
+   o->follow_up_in_limits[i]= -1.0;
  }
  o->follow_up_fd_counter= 0;
  o->follow_up_fd_idx= -1;
@@ -224,6 +240,26 @@ int Cdrfifo_set_speed_limit(struct CdrfifO *o, double bytes_per_second,
 }
 
 
+/** Set a fixed size for input in order to cut off any unwanted tail
+    @param o The fifo object
+    @param idx index for fds attached via Cdrfifo_attach_follow_up_fds(), 
+               first attached is 0,  <0 directs limit to active fd limit
+               (i.e. first track is -1, second track is 0, third is 1, ...)
+*/
+int Cdrfifo_set_fd_in_limit(struct CdrfifO *o, double fd_in_limit, int idx,
+                            int flag)
+{
+ if(idx<0) {
+   o->fd_in_limit= fd_in_limit;
+   return(1);
+ }
+ if(idx >= o->follow_up_fd_counter)
+   return(0);
+ o->follow_up_in_limits[idx]= fd_in_limit;
+ return(1);
+}
+
+
 int Cdrfifo_set_fds(struct CdrfifO *o, int source_fd, int dest_fd, int flag)
 {
  o->source_fd= source_fd;
@@ -244,6 +280,7 @@ int Cdrfifo_get_fds(struct CdrfifO *o, int *source_fd, int *dest_fd, int flag)
     fifo buffer when its predecessors are exhausted. Reading will start as
     soon as reading of the predecessor encounters EOF. Writing will start
     as soon as all pending predecessor data are written.
+    @return index number of new item + 1, <=0 indicates error
 */
 int Cdrfifo_attach_follow_up_fds(struct CdrfifO *o, int source_fd, int dest_fd,
                                  int flag)
@@ -253,7 +290,7 @@ int Cdrfifo_attach_follow_up_fds(struct CdrfifO *o, int source_fd, int dest_fd,
   o->follow_up_fds[o->follow_up_fd_counter][0]= source_fd;
   o->follow_up_fds[o->follow_up_fd_counter][1]= dest_fd;
   o->follow_up_fd_counter++;
-  return(1);
+  return(o->follow_up_fd_counter);
 }
 
 
@@ -567,7 +604,12 @@ after_write:;
      can_read= o->chunk_size;
    if(o->write_idx<o->read_idx && o->write_idx+can_read > o->read_idx)
      can_read= o->read_idx - o->write_idx;
-   ret= read(o->source_fd,o->buffer+o->write_idx,can_read);
+   if(o->fd_in_limit>=0.0)
+     if(can_read > o->fd_in_limit - o->fd_in_counter)
+       can_read= o->fd_in_limit - o->fd_in_counter;
+   ret= 0;
+   if(can_read>0)
+     ret= read(o->source_fd,o->buffer+o->write_idx,can_read);
    if(ret==-1) {
 
      /* >>> handle input error */;
@@ -599,6 +641,8 @@ after_write:;
          sod= 0;
        o->follow_up_sod[idx]= sod;
        o->write_idx= sod;
+       o->fd_in_counter= 0;
+       o->fd_in_limit= o->follow_up_in_limits[idx];
        if(Cdrfifo_debuG || (flag&1))
          fprintf(stderr,"\ncdrfio: new fifo source fd : %d\n",o->source_fd);
      } else {
@@ -608,6 +652,7 @@ after_write:;
      did_work= 1;
      o->put_counter++;
      o->in_counter+= ret;
+     o->fd_in_counter+= ret;
      o->write_idx+= ret;
      if(o->write_idx>=o->buffer_size)
        o->write_idx= 0;
