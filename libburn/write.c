@@ -334,11 +334,20 @@ struct cue_sheet *burn_create_toc_entries(struct burn_write_opts *o,
 	/* ts A61009 */
 	/* a ssert(d->toc_entry == NULL); */
 	if (d->toc_entry != NULL) {
+
+		/* ts A61109 : this happens with appendable CDs 
+			>>> Open question: is the existing TOC needed ? */
+
+		/* ts A61109 : for non-SAO, this sheet is thrown away later */
+		free((char *) d->toc_entry);
+
+		/*
 		libdax_msgs_submit(libdax_messenger,
 			d->global_index, 0x00020117,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
 			"toc_entry of drive is already in use", 0, 0);
 		goto failed;
+		*/
 	}
 
 	d->toc_entry = calloc(d->toc_entries, sizeof(struct burn_toc_entry));

@@ -740,6 +740,7 @@ void burn_read_opts_free(struct burn_read_opts *opts);
 */
 void burn_disc_erase(struct burn_drive *drive, int fast);
 
+/* ts A61109 : this is defunct */
 /** Read a disc from the drive and write it to an fd pair. The drive must be
     grabbed successfully BEFORE calling this function. Always ensure that the
     drive reports a status of BURN_DISC_FULL before calling this function.
@@ -748,10 +749,9 @@ void burn_disc_erase(struct burn_drive *drive, int fast);
 */
 void burn_disc_read(struct burn_drive *drive, const struct burn_read_opts *o);
 
-/** Write a disc in the drive. The drive must be grabbed successfully BEFORE
+/** Write a disc in the drive. The drive must be grabbed successfully before
     calling this function. Always ensure that the drive reports a status of
-    BURN_DISC_BLANK or BURN_STATUS_FULL (to append a new session to the
-    disc) before calling this function.
+    BURN_DISC_BLANK before calling this function.
     @param o The options for the writing operation.
     @param disc The struct burn_disc * that described the disc to be created
 */

@@ -3374,9 +3374,9 @@ int Cdrskin_checkdrive(struct CdrskiN *skin, int flag)
  /* <<< */ 
  if(skin->verbosity>=Cdrskin_verbose_debuG)
    ClN(fprintf(stderr,
- "cdrskin_debug: block_types: tao=%4.4X  sao=%4.4X  raw=%4.4X  packet=%4.4X\n",
+ "cdrskin_debug: block_types: tao=%4.4X  sao=%4.4X  raw=%4.4X\n",
            drive_info->tao_block_types,drive_info->sao_block_types,
-           drive_info->raw_block_types,drive_info->packet_block_types));
+           drive_info->raw_block_types));
 
  printf("Supported modes:");
  if((drive_info->tao_block_types & (BURN_BLOCK_MODE1|BURN_BLOCK_RAW0))
@@ -4119,7 +4119,11 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,0);
 
+#ifdef Cdrskin_libburn_has_multI
+ if (s != BURN_DISC_BLANK && s != BURN_DISC_APPENDABLE) {
+#else
  if (s != BURN_DISC_BLANK) {
+#endif
    Cdrskin_release_drive(skin,0);
    fprintf(stderr,"cdrskin: FATAL : no blank media detected.\n");
    return(0);
