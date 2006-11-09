@@ -719,31 +719,42 @@ ex:;
 }
 
 
-/* ts A61030 */
-/* @param flag bit0=do also report TEST UNIT READY failures */
+/* ts A61030 - A61109 */
+/* @param flag bit0=do report conditions which are considered not an error */
 int scsi_notify_error(struct burn_drive *d, struct command *c,
                       unsigned char *sense, int senselen, int flag)
 {
-	int key, asc, ascq, ret;
+	int key= -1, asc= -1, ascq= -1, ret;
 	char msg[160];
 
 	if (d->silent_on_scsi_error)
 		return 1;
-	if (c->opcode[0] == 0) /* SPC : TEST UNIT READY command */
-		if(!(flag & 1))
-			return 1;
 
-
-	sprintf(msg,"SCSI error condition on command %2.2Xh :", c->opcode[0]);
-	if (senselen > 2) {
+	if (senselen > 2)
 		key = sense[2];
-		sprintf(msg+strlen(msg), " key=%Xh", key);
-	}
 	if (senselen > 13) {
 		asc = sense[12];
 		ascq = sense[13];
-		sprintf(msg+strlen(msg), " asc=%2.2Xh ascq=%2.2Xh", asc, ascq);
 	}
+
+	if(!(flag & 1)) {
+		/* SPC : TEST UNIT READY command */
+		if (c->opcode[0] == 0)
+			return 1;
+		/* MMC : READ DISC INFORMATION command */
+		if (c->opcode[0] == 0x51)
+			if (key == 0x2 && asc == 0x3A &&
+			    ascq>=0 && ascq <= 0x02) /* MEDIUM NOT PRESENT */
+				return 1;
+	}
+
+	sprintf(msg,"SCSI error condition on command %2.2Xh :", c->opcode[0]);
+	if (key>=0)
+		sprintf(msg+strlen(msg), " key=%Xh", key);
+	if (asc>=0)
+		sprintf(msg+strlen(msg), " asc=%2.2Xh", asc);
+	if (ascq>=0)
+		sprintf(msg+strlen(msg), " ascq=%2.2Xh", ascq);
 	ret = libdax_msgs_submit(libdax_messenger, d->global_index, 0x0002010f,
 			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH, msg,0,0);
 	return ret;
