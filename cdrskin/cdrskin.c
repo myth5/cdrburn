@@ -3931,6 +3931,8 @@ thank_you_for_patience:;
  }
  if(elapsed_time>0.0)
    measured_speed= written_bytes/elapsed_time;
+ else if(written_bytes>0.0)
+   measured_speed= 99.91*Cdrskin_cd_speed_factoR;
  if(measured_speed<=0.0 && written_total_bytes>=skin->fixed_size && 
     skin->fixed_size>0) {
    if(!skin->is_writing)
@@ -4207,7 +4209,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  burn_disc_write(o, disc);
  if(skin->preskin->abort_handler==-1)
    Cleanup_set_handlers(skin,(Cleanup_app_handler_T) Cdrskin_abort_handler,4);
- start_time= Sfile_microtime(0);
+ last_time= start_time= Sfile_microtime(0);
 
  burn_write_opts_free(o);
 
