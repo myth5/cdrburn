@@ -3370,7 +3370,24 @@ int Cdrskin_checkdrive(struct CdrskiN *skin, int flag)
  printf("Revision       : '%s'\n",drive_info->revision);
  printf("Driver flags   : %s\n","BURNFREE");
 #ifdef Cdrskin_allow_libburn_taO
- printf("Supported modes: %s\n","TAO SAO RAW/R96R");
+
+ /* <<< */ 
+ if(skin->verbosity>=Cdrskin_verbose_debuG)
+   ClN(fprintf(stderr,
+ "cdrskin_debug: block_types: tao=%4.4X  sao=%4.4X  raw=%4.4X  packet=%4.4X\n",
+           drive_info->tao_block_types,drive_info->sao_block_types,
+           drive_info->raw_block_types,drive_info->packet_block_types));
+
+ printf("Supported modes:");
+ if((drive_info->tao_block_types & (BURN_BLOCK_MODE1|BURN_BLOCK_RAW0))
+    == (BURN_BLOCK_MODE1|BURN_BLOCK_RAW0))
+   printf(" TAO");
+ if(drive_info->sao_block_types & BURN_BLOCK_SAO)
+   printf(" SAO");
+ if(drive_info->raw_block_types & BURN_BLOCK_RAW96R)
+   printf(" RAW/RAW96R");
+ printf("\n");
+
 #else
  printf("Supported modes: %s\n","SAO RAW/R96R");
 #endif
@@ -4457,6 +4474,71 @@ sorry_failed_to_eject:;
 }
 
 
+int Cdrskin_activate_write_mode(struct CdrskiN *skin, int flag)
+{
+ int ok;
+ struct burn_drive_info *drive_info;
+
+ if(strcmp(skin->preskin->write_mode_name,"DEFAULT")==0)
+   if(skin->track_counter>1)
+     strcpy(skin->preskin->write_mode_name,"SAO");
+ if(strcmp(skin->preskin->write_mode_name,"RAW/RAW96R")==0) {
+   skin->write_type= BURN_WRITE_RAW;
+   skin->block_type= BURN_BLOCK_RAW96R;
+
+#ifdef Cdrskin_allow_libburn_taO
+ } else if(strcmp(skin->preskin->write_mode_name,"SAO")==0) {
+#else
+ } else {
+   strcpy(skin->preskin->write_mode_name,"SAO");
+#endif
+
+   skin->write_type= BURN_WRITE_SAO;
+   skin->block_type= BURN_BLOCK_SAO;
+
+#ifdef Cdrskin_allow_libburn_taO
+ } else {
+   strcpy(skin->preskin->write_mode_name,"TAO");
+   skin->write_type= BURN_WRITE_TAO;
+   skin->block_type= BURN_BLOCK_MODE1;
+#endif /* Cdrskin_allow_libburn_taO */
+
+ }
+
+ /* check wether desired type combination is available with drive */
+ if(skin->driveno<0 || skin->driveno>skin->n_drives) {
+   if(skin->verbosity>=Cdrskin_verbose_debuG)
+     ClN(printf("cdrskin_debug: WARNING : No drive selected with Cdrskin_activate_write_mode\n"));
+   goto it_is_done;
+ }
+
+ drive_info= skin->drives+skin->driveno;
+ ok= 0;
+ if(skin->write_type==BURN_WRITE_RAW)
+   ok= !!(drive_info->raw_block_types & BURN_BLOCK_RAW96R);
+ else if(skin->write_type==BURN_WRITE_SAO)
+   ok= !!(drive_info->sao_block_types & BURN_BLOCK_SAO);
+ else if(skin->write_type==BURN_WRITE_TAO)
+   ok= ((drive_info->tao_block_types & (BURN_BLOCK_MODE1|BURN_BLOCK_RAW0))
+        == (BURN_BLOCK_MODE1|BURN_BLOCK_RAW0));
+ if(!ok) {
+   fprintf(stderr,
+           "cdrskin: %s : Drive indicated refusal for write mode %s.\n",
+           (skin->force_is_set?"WARNING":"FATAL"),
+           skin->preskin->write_mode_name);
+   if(! skin->force_is_set) {
+     fprintf(stderr,
+  "cdrskin: HINT : If you are certain, the drive will do, ry option -force\n");
+     return(0);
+   }
+ }
+it_is_done:;
+ if(skin->verbosity>=Cdrskin_verbose_cmD)
+   printf("cdrskin: write type : %s\n", skin->preskin->write_mode_name);
+ return(1);
+}
+
+
 /** Interpret all arguments of the program after libburn has been initialized
     and drives have been scanned. This call reports to stderr any valid 
     cdrecord options which are not implemented yet.
@@ -5013,34 +5095,6 @@ ignore_unknown:;
  if(flag&1) /* no finalizing yet */
    return(1);
 
- if(strcmp(skin->preskin->write_mode_name,"DEFAULT")==0)
-   if(skin->track_counter>1)
-     strcpy(skin->preskin->write_mode_name,"SAO");
- if(strcmp(skin->preskin->write_mode_name,"RAW/RAW96R")==0) {
-   skin->write_type= BURN_WRITE_RAW;
-   skin->block_type= BURN_BLOCK_RAW96R;
-
-#ifdef Cdrskin_allow_libburn_taO
- } else if(strcmp(skin->preskin->write_mode_name,"SAO")==0) {
-#else
- } else {
-   strcpy(skin->preskin->write_mode_name,"SAO");
-#endif
-
-   skin->write_type= BURN_WRITE_SAO;
-   skin->block_type= BURN_BLOCK_SAO;
-
-#ifdef Cdrskin_allow_libburn_taO
- } else {
-   strcpy(skin->preskin->write_mode_name,"TAO");
-   skin->write_type= BURN_WRITE_TAO;
-   skin->block_type= BURN_BLOCK_MODE1;
-#endif /* Cdrskin_allow_libburn_taO */
-
- }
- if(skin->verbosity>=Cdrskin_verbose_cmD)
-   printf("cdrskin: write type : %s\n", skin->preskin->write_mode_name);
-
  if(skin->verbosity>=Cdrskin_verbose_cmD) {
    if(skin->preskin->abort_handler==1)
      printf("cdrskin: installed abort handler.\n");
@@ -5093,6 +5147,13 @@ ignore_unknown:;
    Cdrskin_release_drive(skin,0);
  }
      
+ ret= Cdrskin_activate_write_mode(skin,0);
+ if(ret<=0) {
+   fprintf(stderr,
+           "cdrskin: FATAL : Cannot activate the desired write mode\n");
+   return(0);
+ }
+
  if(skin->track_counter>0) {
    skin->do_burn= 1;
 
