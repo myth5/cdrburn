@@ -197,6 +197,11 @@ or
 /* put macros under test caveat here */
 #define Cdrskin_libburn_has_multI 1
 
+/* could be i repaired this with getting -atip minimum speed */
+#ifdef Cdrskin_libburn_has_read_atiP
+#define Cdrskin_atip_speed_is_oK 1
+#endif
+
 #endif
 
 #ifdef Cdrskin_oldfashioned_api_usE
@@ -219,7 +224,9 @@ or
 #endif
 
 /** Work around the fact that after loading media speed report is wrong */
+#ifndef Cdrskin_atip_speed_is_oK
 #define Cdrskin_atip_speed_brokeN 1
+#endif
 
 /** Work around the fact that burn_drive_get_status() always reports to do
     track 0 in icculus.org/burn */
@@ -2306,6 +2313,7 @@ struct CdrskiN {
  int do_checkdrive;
 
  int do_atip;
+ int msinfo_fd; /* <<< provisory */
 
  int do_blank;
  int blank_fast;
@@ -2425,6 +2433,7 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->do_scanbus= 0;
  o->do_checkdrive= 0;
  o->do_atip= 0;
+ o->msinfo_fd= -1; /* <<< provisory */
  o->do_blank= 0;
  o->blank_fast= 0;
  o->no_blank_appendable= 0;
@@ -3404,12 +3413,14 @@ ex:;
 /** Perform -toc under control of Cdrskin_atip().
     @param flag Bitfield for control purposes:
                 bit0= do not list sessions separately (do it cdrecord style)
+                bit1= perform -msinfo
     @return <=0 error, 1 success
 */
 int Cdrskin_toc(struct CdrskiN *skin, int flag)
 {
- int num_sessions= 0,num_tracks= 0,lba,track_count= 0,total_tracks= 0;
- int session_no, track_no;
+ int num_sessions= 0,num_tracks= 0,lba= 0,track_count= 0,total_tracks= 0, ret;
+ int session_no, track_no, nwa, offset, lout_lba;
+ char msg[80];
  struct burn_drive *drive;
  struct burn_disc *disc= NULL;
  struct burn_session **sessions;
@@ -3422,8 +3433,40 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
  if(disc==NULL)
    goto cannot_read;
  sessions= burn_disc_get_sessions(disc,&num_sessions);
- if(disc==NULL)
-   goto cannot_read;
+
+ /* <<< provisory -msinfo : should get an own function with no verbosity */
+ if(flag&2) {
+   if(num_sessions<=0) {
+     fprintf(stderr,
+             "cdrskin: FATAL : No sessions found on disk (for -msinfo)\n");
+     {ret= 0; goto ex;}
+   }
+   for(session_no= 0; session_no<num_sessions; session_no++) {
+     tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
+     if(num_tracks<=0)
+   continue;
+     burn_track_get_entry(tracks[num_tracks-1],&toc_entry);
+     lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+   }
+   burn_session_get_leadout_entry(sessions[num_sessions-1],&toc_entry);
+   lout_lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+
+   if(num_sessions>0)
+     offset= 6900;
+   else
+     offset= 11400;
+   /* >>> need an API call for mmc_get_nwa() */
+     /* >>> need to check wether result is plausible */
+     /* >>> need a non-cdrecord option to define offset */
+   
+   nwa= lout_lba+offset;
+   if(skin->msinfo_fd>=0) {
+     sprintf(msg,"%d,%d\n",lba,nwa);
+     write(skin->msinfo_fd,msg,strlen(msg));
+   }
+   {ret= 1; goto ex;}
+ }
+
  if(flag&1) {
    for(session_no= 0; session_no<num_sessions; session_no++) {
      tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
@@ -3465,10 +3508,11 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
    printf(" adr: %d control: %d",toc_entry.adr,toc_entry.control);
    printf(" mode: -1\n");
  }
-
+ ret= 1;
+ex:
  if(disc!=NULL)
    burn_disc_free(disc);
- return(1);
+ return(ret);
 cannot_read:;
  fprintf(stderr,"cdrecord_emulation: Cannot read TOC header\n");
  fprintf(stderr,"cdrecord_emulation: Cannot read TOC/PMA\n");
@@ -3479,6 +3523,7 @@ cannot_read:;
 /** Perform -atip .
     @param flag Bitfield for control purposes:
                 bit0= perform -toc
+                bit1= perform -msinfo
     @return <=0 error, 1 success
 */
 int Cdrskin_atip(struct CdrskiN *skin, int flag)
@@ -3610,8 +3655,8 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
 
  printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed_min,x_speed_max);
  ret= 1;
- if(flag&1)
-   ret= Cdrskin_toc(skin,1);
+ if(flag&(1|2))
+   ret= Cdrskin_toc(skin,1|(flag&2));
 ex:;
  Cdrskin_release_drive(skin,0);
  return(ret);
@@ -4573,7 +4618,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
  static char ignored_full_options[][41]= {
    "-d", "-Verbose", "-V", "-silent", "-s", "-setdropts", "-prcap", "-inq",
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo", "-format", "-load",
-   "-lock", "-msinfo", "-fix", "-nofix", "-waiti",
+   "-lock", "-fix", "-nofix", "-waiti",
    "-immed", "-raw", "-raw96p", "-raw16",
    "-clone", "-text", "-mode2", "-xa", "-xa1", "-xa2", "-xamix",
    "-cdi", "-isosize", "-preemp", "-nopreemp", "-copy", "-nocopy",
@@ -4889,6 +4934,14 @@ gracetime_equals:;
      skin->multi= 1;
 #else
      fprintf(stderr,"cdrskin: SORRY : Option -multi is not available yet.\n");
+#endif
+
+   } else if(strcmp(argv[i],"-msinfo")==0) {
+#ifdef Cdrskin_libburn_has_multI
+     skin->do_atip= 3;
+#else
+     fprintf(stderr,"cdrskin: SORRY : Option -msinfo is not available yet.\n");
+     return(0);
 #endif
 
    } else if(strcmp(argv[i],"--no_abort_handler")==0) {
@@ -5277,7 +5330,7 @@ int Cdrskin_run(struct CdrskiN *skin, int *exit_value, int flag)
  if(skin->do_atip) {
    if(skin->n_drives<=0)
      {*exit_value= 7; goto no_drive;}
-   ret= Cdrskin_atip(skin,!!(skin->do_atip>1));
+   ret= Cdrskin_atip(skin,(skin->do_atip>=2)|((skin->do_atip==3)<<1));
    if(ret<=0)
      {*exit_value= 7; goto ex;}
  }
@@ -5305,7 +5358,7 @@ no_drive:;
 
 int main(int argc, char **argv)
 {
- int ret,exit_value= 0,lib_initialized= 0;
+ int ret,exit_value= 0,lib_initialized= 0,i,result_fd;
  struct CdrpreskiN *preskin= NULL;
  struct CdrskiN *skin= NULL;
  char *lean_id= "";
@@ -5313,6 +5366,16 @@ int main(int argc, char **argv)
  lean_id= ".lean";
 #endif
 
+ /* For -msinfo: Redirect normal stdout to stderr */
+ for(i=1; i<argc; i++)
+   if(strcmp(argv[i],"-msinfo")==0)
+ break;
+ if(i<argc) {
+   result_fd= dup(1);
+   close(1);
+   dup2(2,1);
+ }
+ 
  printf("cdrskin %s%s : limited cdrecord compatibility wrapper for libburn\n",
         Cdrskin_prog_versioN,lean_id);
  fflush(stdout);
@@ -5367,6 +5430,9 @@ int main(int argc, char **argv)
    ClN(fprintf(stderr,"cdrskin_debug: Compiled with option -experimental\n"));
 #endif
  }
+
+ /* <<< provisory unclean */
+ skin->msinfo_fd= result_fd;
 
  Cdrskin_run(skin,&exit_value,0);
 
