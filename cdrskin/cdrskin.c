@@ -3449,7 +3449,7 @@ int Cdrskin_toc(struct CdrskiN *skin, int flag)
      tracks= burn_session_get_tracks(sessions[session_no],&num_tracks);
      if(num_tracks<=0)
    continue;
-     burn_track_get_entry(tracks[num_tracks-1],&toc_entry);
+     burn_track_get_entry(tracks[0],&toc_entry);
      lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
    }
    burn_session_get_leadout_entry(sessions[num_sessions-1],&toc_entry);
