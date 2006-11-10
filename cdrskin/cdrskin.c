@@ -2046,6 +2046,10 @@ see_cdrskin_eng_html:;
      fprintf(stderr,"\t-toc\t\tretrieve and print TOC/PMA data\n");
      fprintf(stderr,
              "\t-atip\t\tretrieve media state, print \"Is *erasable\"\n");
+#ifdef Cdrskin_libburn_has_multI
+     fprintf(stderr,
+             "\t-multi\t\tgenerate a TOC that allows multi session\n");
+#endif
      fprintf(stderr,
            "\t-force\t\tforce to continue on some errors to allow blanking\n");
 #ifdef Cdrskin_allow_libburn_taO
