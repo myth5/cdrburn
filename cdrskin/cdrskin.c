@@ -1034,6 +1034,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 {
  int is_wav= 0, size_from_file= 0;
  off_t xtr_size= 0;
+ struct stat stbuf;
 
  if(track->source_path[0]=='-' && track->source_path[1]==0)
    *fd= 0;
@@ -1057,14 +1058,17 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
      return(0);
    }
    if(track->fixed_size<=0) {
-     if(xtr_size>0)
+     if(xtr_size>0) {
        track->fixed_size= xtr_size;
-     else {
-       struct stat stbuf;
-       if(fstat(*fd,&stbuf)!=-1)
-         track->fixed_size= stbuf.st_size;
+       size_from_file= 1;
+     } else {
+       if(fstat(*fd,&stbuf)!=-1) {
+         if((stbuf.st_mode&S_IFMT)==S_IFREG) {
+           track->fixed_size= stbuf.st_size;
+           size_from_file= 1;
+         } /* all other types are assumed of open ended size */
+       }
      }
-     size_from_file= 1;
    }
  }
 
@@ -4604,9 +4608,10 @@ it_is_done:;
 */
 int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
 {
- int i,k,ret;
+ int i,k,ret,source_has_size=0;
  double value,grab_and_wait_value= -1.0;
  char *cpt,*value_pt,adr[Cdrskin_adrleN];
+ struct stat stbuf;
 
  /* cdrecord 2.01 options which are not scheduled for implementation, yet */
  static char ignored_partial_options[][41]= {
@@ -5076,6 +5081,7 @@ track_too_large:;
                sizeof(skin->source_path)-1,strlen(argv[i]));
        return(0);
      }
+     source_has_size= 0;
      strcpy(skin->source_path,argv[i]);
      if(strcmp(skin->source_path,"-")==0) {
        if(skin->stdin_source_used) {
@@ -5084,6 +5090,30 @@ track_too_large:;
          return(0);
        }
        skin->stdin_source_used= 1;
+     } else if(argv[i][0]=='#' && (argv[i][1]>='0' && argv[i][1]<='9')) {
+       if(skin->preskin->allow_fd_source==0) { 
+         fprintf(stderr,
+              "cdrskin: SORRY : '%s' is a reserved source path with cdrskin\n",
+              argv[i]);
+         fprintf(stderr,
+      "cdrskin: SORRY : which would use an open file descriptor as source.\n");
+         fprintf(stderr,
+            "cdrskin: SORRY : Its usage is dangerous and disabled for now.\n");
+         return(0);
+       }
+     } else {
+       if(stat(skin->source_path,&stbuf)!=-1) {
+         if((stbuf.st_mode&S_IFMT)==S_IFREG)
+           source_has_size= 1;
+         else if((stbuf.st_mode&S_IFMT)==S_IFDIR) {
+           fprintf(stderr,
+                   "cdrskin: FATAL : source address is a directory: '%s'\n",
+                   skin->source_path);
+           return(0);
+         }
+       }
+     }
+     if(! source_has_size) {
        if(skin->fixed_size<=0.0) {
          if(strcmp(skin->preskin->write_mode_name,"TAO")==0) {
            /* with TAO it is ok to have an undefined track length */;
@@ -5101,25 +5131,15 @@ track_too_large:;
          } else {
            fprintf(stderr,
 #ifdef Cdrskin_allow_libburn_taO
- "cdrskin: FATAL : \"-\" (stdin) needs -tao or tsize= or tao_to_sao_tsize=\n");
+           "cdrskin: FATAL : '%s' needs -tao or tsize= or tao_to_sao_tsize=\n",
 #else
- "cdrskin: FATAL : \"-\" (stdin) needs a fixed tsize= or tao_to_sao_tsize=\n");
+           "cdrskin: FATAL : '%s' needs a fixed tsize= or tao_to_sao_tsize=\n",
 #endif
+                   skin->source_path);
            return(0);
          }
        }
-     } else if(skin->preskin->allow_fd_source==0 && 
-               argv[i][0]=='#' && (argv[i][1]>='0' && argv[i][1]<='9')) {
-       fprintf(stderr,
-              "cdrskin: SORRY : '%s' is a reserved source path with cdrskin\n",
-              argv[i]);
-       fprintf(stderr,
-      "cdrskin: SORRY : which would use an open file descriptor as source.\n");
-       fprintf(stderr,
-            "cdrskin: SORRY : Its usage is dangerous and disabled for now.\n");
-       return(0);
      }
-
      if(skin->track_counter>=Cdrskin_track_maX) {
        fprintf(stderr,"cdrskin: FATAL : too many tracks given. (max %d)\n",
                Cdrskin_track_maX);
