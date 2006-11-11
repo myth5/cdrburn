@@ -3455,9 +3455,15 @@ int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
    usleep(100002);
  while ((s= burn_disc_get_status(drive)) == BURN_DISC_UNREADY)
    usleep(100002);
+ if(s!=BURN_DISC_APPENDABLE) {
+   Cdrskin_report_disc_status(skin,s,0);
+   fprintf(stderr,
+ "cdrskin: FATAL : -msinfo can only operate on appendable (i.e. -multi) CD\n");
+   {ret= 0; goto ex;}
+ }
  disc= burn_drive_get_disc(drive);
  if(disc==NULL) {
-   fprintf(stderr,"cdrskin: SORRY : Cannot obtain info about CD content\n");
+   fprintf(stderr,"cdrskin: FATAL : Cannot obtain info about CD content\n");
    {ret= 0; goto ex;}
  }
  sessions= burn_disc_get_sessions(disc,&num_sessions);
@@ -3469,7 +3475,7 @@ int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
    lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
  }
  if(lba==-123456789) {
-   fprintf(stderr,"cdrskin: SORRY : Cannot find any track on CD\n");
+   fprintf(stderr,"cdrskin: FATAL : Cannot find any track on CD\n");
    {ret= 0; goto ex;}
  }
 
@@ -3510,7 +3516,7 @@ ex:;
  if(skin->verbosity>=Cdrskin_verbose_debuG)
    ClN(fprintf(stderr,"cdrskin_debug: doing extra release-grab cycle\n"));
  Cdrskin_release_drive(skin,0);
- ret= Cdrskin_grab_drive(skin,0);
+ Cdrskin_grab_drive(skin,0);
 
  if(o!=NULL)
    burn_write_opts_free(o);
