@@ -176,6 +176,7 @@ or
 #define Cdrskin_libburn_has_read_atiP 1
 #define Cdrskin_libburn_has_buffer_progresS 1
 #define Cdrskin_libburn_has_pretend_fulL 1
+#define Cdrskin_libburn_has_multI 1
 #endif
 
 #ifndef Cdrskin_libburn_versioN
@@ -195,7 +196,6 @@ or
 #ifdef Cdrskin_new_api_tesT
 
 /* put macros under test caveat here */
-#define Cdrskin_libburn_has_multI 1
 
 /* could be i repaired this with getting -atip minimum speed */
 #ifdef Cdrskin_libburn_has_read_atiP
