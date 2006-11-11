@@ -14,6 +14,9 @@ Deliberate deviations of cdrskin from cdrecord compatibility:
 
 + premature end of source is not an error and leads to full announced tracksize
 
++ -msinfo pushes all other messages to stderr. It works independent of
+  other options which would prevent it with cdrecord (-atip, -scanbus, ...)
+
 ------------------------------------------------------------------------------
                                   Changelog
 ------------------------------------------------------------------------------
@@ -1317,7 +1320,6 @@ Changed status report during blanking (there are no "sectors")
 cdrskin/cdrskin.c
 Removed some obsolete debugging messages
 
-
 2006.11.03.151137  [346]
 libburn/structure.h
 libburn/structure.c
@@ -1419,21 +1421,100 @@ Mentioned bug fix about trailing trash
 libburn/write.c
 Made track write counter of SAO count rather too much than too few bytes
 
-8 Nov 2006  []
+8 Nov 2006  [364]
 cdrskin/changelog.txt
 Prepared next cdrskin-0.2.5 upload cycle
 
------------------------------------- cycle  - cdrskin-0.2.5 - 2006.11.08.
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.08.181016
 * Bug fixed: Trailing trash appended to .wav files caused error message
   and, if exceeding fifo size, could even stall a burn.
 
+2006.11.09.112832  [365]
+cdrskin/cdrskin.c
+Check desired write and block type with burn_drive_info.*_block_types
+
+2006.11.09.113729  [366]
+libburn/sg-linux.c
+Silenced SCSI error (debugging) messages about missing media
+
+2006.11.09.151431  [367]
+cdrskin/cdrskin.c
+Corrected first speed measurement report in TAO mode (which was random)
+
+2006.11.09.193030  [368]
+libburn/libburn.h
+libburn/write.c
+cdrskin/cdrskin.c
+Experimentally enabled burning to BURN_DISC_APPENDABLE (tested with TAO only)
+
+2006.11.10.093843  [369]
+cdrskin/cdrskin.c
+doc/comments
+Expressing more self-confidence
+
+2006.11.10.172212  [370]
+cdrskin/cdrskin.c
+Provisory -msinfo (very verbous on stderr)
+
+2006.11.10.184047  [371]
+cdrskin/cdrskin.c
+Made it work with fifos and other non-plain files as track sources
+
+2006.11.10.185209  [372]
+cdrskin/cdrskin.c
+Read -msinfo from first track of last session and not from last track
+
+2006.11.11.122402  [373]
+libburn/libburn.h
+libburn/transport.h
+libburn/mmc.h
+libburn/mmc.c
+libburn/write.c
+libburn/drive.c
+libburn/libdax_msgs.h
+New API function burn_disc_track_lba_nwa()
+
+2006.11.11.122907  [374] [375]
+cdrskin/cdrskin.c
+Implemented not so provisory -msinfo 
+
+2006.11.11.124020  [376] [377]
+cdrskin/cdrskin.c
+Reacted on some warnings of gcc -O2
+
+2006.11.11.134752  [378]
+cdrskin/cdrskin.c
+Implemented handling of unsuitable disk states with -msinfo
+
+2006.11.11.152037  [379]
+cdrskin/cdrskin.c
+Demanded (for now) -tao for writing to appendable CDs
+
+2006.11.11.152748  [380]
+cdrskin/cdrskin.c
+Generally enabled -multi, -msinfo and writing to appendable CDs in TAO mode
+
+11 Nov 2006  []
+cdrskin/changelog.txt
+Prepared next cdrskin-0.2.5 cycle
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.11.
+* Bug fixed: False speed with first pacifier cycle. Potential SIGFPE by NaN.
+* multi-session CDs (for now restricted to write mode TAO) by -multi, -msinfo
+
+
+
+------------------------------------ cycle  - cdrskin-0.2.5 - 
 
   []
-Check desired write and block type with burn_drive_info.*_block_types
+Enable multi-session for write modes other than TAO
 
 
   []
 Liberate generic SCSI code from sg-linux.c (scsi_notify_error(), scsi_error())
+
+  []
+Coordinate scsi_notify_error() and scsi_error() about harmless conditions
 
 
 2006  []
@@ -1450,9 +1531,6 @@ Convert burn_print() into libdax_msgs_submit()
 2006  []
 Test unlocking of all drives by burn_drive_info_free()
 Test unlocking of single drive by burn_drive_grab(), burn_drive_release()
-
-
-
 
 2006  []
 Clear outdated persistent read buffer after small CD image was read (ticket 57)
