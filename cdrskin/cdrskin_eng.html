@@ -126,6 +126,7 @@ wishes as well as on the development of libburn.</DT>
 <DT></DT>
 <LI>
 Burns only a single closed session. No -multi option yet.
+Note: Development version 0.2.5 offers multi-session now. See below.
 </LI>
 <LI>
 No TAO mode in cdrskin-0.2.4 and therefore no writing on-the-fly without
@@ -225,10 +226,14 @@ Enhancements towards previous stable version cdrskin-0.2.2:
      default is -tao. With other multi-track sessions, default is -sao.
      (The latter is an intentional deviation from cdrecord defaults.)
  </LI>
- <LI>Status report during blank, preparation and finalization improved</LI>
+ <LI>Status report during blank, preparation and finalization improved.</LI>
  <LI>Bug fixed: Trailing trash appended to .wav files caused error message
      and, if exceeding fifo size, could even stall a burn. 
      (Workaround: disable fifo by <KBD><B>fs=0</B></KBD>)</LI>
+ <LI>Bug fixed: False speed with first pacifier cycle. Potential program
+     abort by floating point exception (NaN).</LI>
+ <LI>multi-session CDs: <KBD><B>-multi</B></KBD>, <KBD><B>-msinfo</B></KBD>,
+     writing to appendable CDs (for now restricted to write mode TAO).</LI>
  </UL>
 </DD>
 <DD>&nbsp;</DD>

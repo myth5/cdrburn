@@ -207,9 +207,10 @@ Run a backup :
 
                                 Restrictions
 
-No multi session yet.
+The major restrictions are lifted now: audio, TAO, multi-session do work.
+Many cdrecord options are still unsupported, though.
 
-Please report your wishes about other not yet supported options.
+If you have use cases for them, please report your wishes and expectations.
 
 
 
