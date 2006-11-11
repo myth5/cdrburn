@@ -3430,6 +3430,32 @@ ex:;
 }
 
 
+int Cdrskin_obtain_nwa(struct CdrskiN *skin, int *nwa, int flag)
+{
+ int ret,lba;
+ struct burn_drive *drive;
+ struct burn_write_opts *o= NULL;
+
+ /* Set write opts in order to provoke MODE SELECT. LG GSA-4082B needs it. */
+ drive= skin->drives[skin->driveno].drive;
+ o= burn_write_opts_new(drive);
+ if(o!=NULL) {
+   burn_write_opts_set_perform_opc(o, 0);
+   burn_write_opts_set_write_type(o,skin->write_type,skin->block_type);
+   burn_write_opts_set_underrun_proof(o,skin->burnfree);
+ }
+#ifdef Cdrskin_libburn_has_multI
+ ret= burn_disc_track_lba_nwa(drive,o,0,&lba,nwa);
+#else
+ ret= 0;
+ lba= 0;/* silence gcc warning */
+#endif
+ if(o!=NULL)
+   burn_write_opts_free(o);
+ return(ret);
+}
+
+
 /** Print lba of first track of last session and Next Writeable Address of
     the next unwritten session.
 */
@@ -3444,8 +3470,6 @@ int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
  struct burn_session **sessions;
  struct burn_track **tracks;
  struct burn_toc_entry toc_entry;
- struct burn_write_opts *o= NULL;
-
 
  ret= Cdrskin_grab_drive(skin,0);
  if(ret<=0)
@@ -3479,21 +3503,7 @@ int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
    {ret= 0; goto ex;}
  }
 
-#ifdef Cdrskin_libburn_has_multI
-
- /* Set write opts in order to provoke MODE SELECT. LG GSA-4082B needs it. */
- o= burn_write_opts_new(drive);
- if(o!=NULL) {
-   burn_write_opts_set_perform_opc(o, 0);
-   burn_write_opts_set_write_type(o,skin->write_type,skin->block_type);
-   burn_write_opts_set_underrun_proof(o,skin->burnfree);
- }
- ret= burn_disc_track_lba_nwa(drive,o,0,&aux_lba,&nwa);
-
-#else
- ret= 0;
-#endif /* ! Cdrskin_libburn_has_multI */
-
+ ret= Cdrskin_obtain_nwa(skin,&nwa,flag);
  if(ret<=0) {
    fprintf(stderr,
            "cdrskin: NOTE : Guessing next writeable address from leadout\n");
@@ -3518,8 +3528,6 @@ ex:;
  Cdrskin_release_drive(skin,0);
  Cdrskin_grab_drive(skin,0);
 
- if(o!=NULL)
-   burn_write_opts_free(o);
  Cdrskin_release_drive(skin,0);
  return(ret);
 }
@@ -4198,7 +4206,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  enum burn_drive_status drive_status;
  struct burn_progress p;
  struct burn_drive *drive;
- int ret,loop_counter= 0,max_track= -1,i,hflag;
+ int ret,loop_counter= 0,max_track= -1,i,hflag,nwa;
  int fifo_disabled= 0,fifo_percent,total_min_fill,mb,min_buffer_fill= 101;
  double put_counter,get_counter,empty_counter,full_counter;
  double start_time,last_time;
@@ -4245,7 +4253,19 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
    Cdrskin_report_disc_status(skin,s,0);
 
 #ifdef Cdrskin_libburn_has_multI
- if (s != BURN_DISC_BLANK && s != BURN_DISC_APPENDABLE) {
+ if (s == BURN_DISC_APPENDABLE) {
+
+#ifdef Cdrskin_allow_sao_for_appendablE
+   ;
+#else
+   if(skin->write_type!=BURN_WRITE_TAO) {
+     Cdrskin_release_drive(skin,0);
+     fprintf(stderr,"cdrskin: FATAL : For now only write mode -tao can be used with appendable disks\n");
+     return(0);
+   }
+#endif /* ! Cdrskin_allow_sao_for_appendablE */
+
+ } else if (s != BURN_DISC_BLANK) {
 #else
  if (s != BURN_DISC_BLANK) {
 #endif
@@ -4332,8 +4352,11 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  burn_write_opts_set_underrun_proof(o,skin->burnfree);
 
  Cdrskin_adjust_speed(skin,0);
- if(skin->verbosity>=Cdrskin_verbose_progresS)
-   printf("Starting new track at sector: 0\n");
+ if(skin->verbosity>=Cdrskin_verbose_progresS) {
+   ret= Cdrskin_obtain_nwa(skin, &nwa,0);
+   if(ret>0)
+     printf("Starting new track at sector: %d\n",nwa);
+ }
  skin->drive_is_busy= 1;
  burn_disc_write(o, disc);
  if(skin->preskin->abort_handler==-1)
@@ -5421,10 +5444,10 @@ int Cdrskin_run(struct CdrskiN *skin, int *exit_value, int flag)
  }
  if(skin->do_msinfo) {
    if(skin->n_drives<=0)
-     {*exit_value= 11; goto no_drive;}
+     {*exit_value= 12; goto no_drive;}
    ret= Cdrskin_msinfo(skin,0);
    if(ret<=0)
-     {*exit_value= 11; goto ex;}
+     {*exit_value= 12; goto ex;}
  }
  if(skin->do_atip) {
    if(skin->n_drives<=0)
