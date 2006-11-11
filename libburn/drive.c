@@ -1202,3 +1202,31 @@ int burn_disc_read_atip(struct burn_drive *d)
 	return 1;
 }
 
+/* ts A61110 : new API function */
+int burn_disc_track_lba_nwa(struct burn_drive *d, struct burn_write_opts *o,
+			    int trackno, int *lba, int *nwa)
+{
+	int ret;
+
+	if (burn_drive_is_released(d)) {
+		libdax_msgs_submit(libdax_messenger,
+			d->global_index, 0x0002011b,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Attempt to read track info from ungrabbed drive",
+			0, 0);
+		return -1;
+	}
+	if (d->busy != BURN_DRIVE_IDLE) {
+		libdax_msgs_submit(libdax_messenger,
+			d->global_index, 0x0002011c,
+			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+			"Attempt to read track info from busy drive",
+			0, 0);
+		return -1;
+	}
+	if (o!=NULL)
+		d->send_write_parameters(d, o);
+	ret = d->get_nwa(d, trackno, lba, nwa);
+	return ret;
+}
+

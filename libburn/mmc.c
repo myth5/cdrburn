@@ -99,7 +99,9 @@ void mmc_send_cue_sheet(struct burn_drive *d, struct cue_sheet *s)
 	d->issue_command(d, &c);
 }
 
-int mmc_get_nwa(struct burn_drive *d)
+/* ts A61110 : added parameters trackno, lba, nwa. Redefined return value. 
+   @return 1=nwa is valid , 0=nwa is not valid , -1=error */
+int mmc_get_nwa(struct burn_drive *d, int trackno, int *lba, int *nwa)
 {
 	struct buffer buf;
 	struct command c;
@@ -110,21 +112,27 @@ int mmc_get_nwa(struct burn_drive *d)
 	c.oplen = sizeof(MMC_TRACK_INFO);
 	memcpy(c.opcode, MMC_TRACK_INFO, sizeof(MMC_TRACK_INFO));
 	c.opcode[1] = 1;
-	c.opcode[5] = 0xFF;
+	if(trackno<=0)
+		c.opcode[5] = 0xFF;
+	else
+		c.opcode[5] = trackno;
 	c.page = &buf;
 	c.dir = FROM_DRIVE;
 	d->issue_command(d, &c);
 	data = c.page->data;
 
-	/* ts A61106 : >>> MMC-1 Table 142 : NWA_V = NWA Valid Flag
-			What to do if this is not 1 ? */
-	if (!(data[7]&1))
+	*lba = (data[8] << 24) + (data[9] << 16)
+		+ (data[10] << 8) + data[11];
+	*nwa = (data[12] << 24) + (data[13] << 16)
+		+ (data[14] << 8) + data[15];
+	/* ts A61106 :  MMC-1 Table 142 : NWA_V = NWA Valid Flag */
+	if (!(data[7]&1)) {
 		libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
 			   LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
 			   "mmc_get_nwa: Track Info Block: NWA_V == 0", 0, 0);
-
-	return (data[12] << 24) + (data[13] << 16)
-		+ (data[14] << 8) + data[15];
+		return 0;
+	}
+	return 1;
 }
 
 /* ts A61009 : function is obviously unused. */

@@ -182,7 +182,7 @@ struct burn_drive
 	void (*send_cue_sheet) (struct burn_drive *, struct cue_sheet *);
 	void (*sync_cache) (struct burn_drive *);
 	int (*get_erase_progress) (struct burn_drive *);
-	int (*get_nwa) (struct burn_drive *);
+	int (*get_nwa) (struct burn_drive *, int trackno, int *lba, int *nwa);
 
 	/* ts A61009 : removed d in favor of o->drive */
 	/* void (*close_disc) (struct burn_drive * d,

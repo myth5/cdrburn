@@ -570,7 +570,7 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 {
 	struct burn_track *t = s->track[tnum];
 	struct burn_drive *d = o->drive;
-	int i, tmp = 0, open_ended = 0, ret, nwa;
+	int i, tmp = 0, open_ended = 0, ret, nwa, lba;
 	int sectors;
 	char msg[80];
 
@@ -609,9 +609,10 @@ int burn_write_track(struct burn_write_opts *o, struct burn_session *s,
 		d->send_write_parameters(d, o);
 
 		/* ts A61103 */
-		nwa = d->get_nwa(d);
-		sprintf(msg, "pre-track %2.2d : get_nwa()= %d  , d->nwa= %d\n",
-			tnum+1, nwa, d->nwa);
+		ret = d->get_nwa(d, -1, &lba, &nwa);
+		sprintf(msg, 
+			"pre-track %2.2d : get_nwa(%d), ret= %d , d->nwa= %d\n",
+			tnum+1, nwa, ret, d->nwa);
 		libdax_msgs_submit(libdax_messenger, d->global_index, 0x000002,
 				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
 				msg,0,0);
@@ -749,8 +750,7 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	struct burn_drive *d = o->drive;
 	struct buffer buf;
 	struct burn_track *lt;
-	int first = 1, i;
-	int nwa;
+	int first = 1, i, ret, lba, nwa;
 	char msg[80];
 
 /* ts A60924 : libburn/message.c gets obsoleted
@@ -778,8 +778,8 @@ return crap.  so we send the command, then ignore the result.
 
 		d->send_write_parameters(d, o);
 
-		nwa = d->get_nwa(d);
-		sprintf(msg, "Inquired nwa: %d", nwa);
+		ret = d->get_nwa(d, -1, &lba, &nwa);
+		sprintf(msg, "Inquired nwa: %d  (ret=%d)", nwa, ret);
 		libdax_msgs_submit(libdax_messenger, d->global_index,
 				0x00000002,
 				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,

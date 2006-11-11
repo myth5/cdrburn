@@ -37,7 +37,11 @@ void mmc_set_speed(struct burn_drive *, int, int);
 void mmc_read_lead_in(struct burn_drive *, struct buffer *);
 void mmc_perform_opc(struct burn_drive *);
 void mmc_get_configuration(struct burn_drive *);
-int mmc_get_nwa(struct burn_drive *);
+
+/* ts A61110 : added parameters trackno, lba, nwa. Redefined return value.
+   @return 1=nwa is valid , 0=nwa is not valid , -1=error */
+int mmc_get_nwa(struct burn_drive *d, int trackno, int *lba, int *nwa);
+
 void mmc_send_cue_sheet(struct burn_drive *, struct cue_sheet *);
 
 /* ts A61023 : get size and free space of drive buffer */

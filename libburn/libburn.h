@@ -41,6 +41,10 @@ struct burn_session;
 /** References a single track on a disc */
 struct burn_track;
 
+/* ts A61111 */
+/** References a set of write parameters */
+struct burn_write_opts;
+
 /** Session format for normal audio or data discs */
 #define BURN_CDROM	0
 /** Session format for obsolete CD-I discs */
@@ -690,6 +694,21 @@ int burn_disc_read_atip(struct burn_drive *drive);
 */
 int burn_drive_get_start_end_lba(struct burn_drive *drive,
                                  int *start_lba, int *end_lba, int flag);
+
+/* ts A61110 */
+/** Read start lba and Next Writeable Address of a track from media.
+    Usually a track lba is obtained from the result of burn_track_get_entry().
+    This call retrieves an updated lba, eventual nwa, and can address the
+    invisible track to come.
+    The drive must be grabbed for this call. One may not issue this call
+    during ongoing burn_disc_write() or burn_disc_erase().
+    @param d The drive to query.
+    @param o If not NULL: write parameters to be set on drive before query
+    @param trackno 0=next track to come, >0 number of existing track
+    @return 1=nwa is valid , 0=nwa is not valid , -1=error
+*/
+int burn_disc_track_lba_nwa(struct burn_drive *d, struct burn_write_opts *o,
+				int trackno, int *lba, int *nwa);
 
 
 /** Tells whether a disc can be erased or not

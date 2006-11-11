@@ -332,6 +332,8 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x00020118 (DEBUG,HIGH)   = Closing track
  0x00020119 (DEBUG,HIGH)   = Closing session
  0x0002011a (NOTE,HIGH)    = Padding up track to minimum size
+ 0x0002011b (FATAL,HIGH)   = Attempt to read track info from ungrabbed drive
+ 0x0002011c (FATAL,HIGH)   = Attempt to read track info from busy drive
 
  libdax_audioxtr:
  0x00020200 (SORRY,HIGH)   = Cannot open audio source file
