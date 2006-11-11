@@ -3436,7 +3436,7 @@ ex:;
 int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
 {
  int num_sessions, session_no, ret, num_tracks;
- int nwa= -123456789, lba, aux_lba;
+ int nwa= -123456789, lba= -123456789, aux_lba;
  char msg[80];
  enum burn_disc_status s;
  struct burn_drive *drive;
@@ -3467,6 +3467,10 @@ int Cdrskin_msinfo(struct CdrskiN *skin, int flag)
  continue;
    burn_track_get_entry(tracks[0],&toc_entry);
    lba= burn_msf_to_lba(toc_entry.pmin,toc_entry.psec,toc_entry.pframe);
+ }
+ if(lba==-123456789) {
+   fprintf(stderr,"cdrskin: SORRY : Cannot find any track on CD\n");
+   {ret= 0; goto ex;}
  }
 
 #ifdef Cdrskin_libburn_has_multI
@@ -5447,7 +5451,7 @@ no_drive:;
 
 int main(int argc, char **argv)
 {
- int ret,exit_value= 0,lib_initialized= 0,i,result_fd;
+ int ret,exit_value= 0,lib_initialized= 0,i,result_fd= -1;
  struct CdrpreskiN *preskin= NULL;
  struct CdrskiN *skin= NULL;
  char *lean_id= "";
