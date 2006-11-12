@@ -3740,7 +3740,7 @@ int Cdrskin_atip(struct CdrskiN *skin, int flag)
  printf("  1T speed low:  %.f 1T speed high: %.f\n",x_speed_min,x_speed_max);
  ret= 1;
  if(flag&1)
-   ret= Cdrskin_toc(skin,1);
+   Cdrskin_toc(skin,1);/*cdrecord seems to ignore -toc errors if -atip is ok */
 ex:;
  Cdrskin_release_drive(skin,0);
  return(ret);
