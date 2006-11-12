@@ -763,6 +763,13 @@ void mmc_set_speed(struct burn_drive *d, int r, int w)
 {
 	struct command c;
 
+	/* ts A61112 : MMC standards prescribe FFFFh as max speed.
+			But libburn.h prescribes 0. */
+	if (r<=0 || r>0xffff)
+		r = 0xffff;
+	if (w<=0 || w>0xffff)
+		w = 0xffff;
+
 	mmc_function_spy("mmc_set_speed");
 	memcpy(c.opcode, MMC_SET_SPEED, sizeof(MMC_SET_SPEED));
 	c.retry = 1;
