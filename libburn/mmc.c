@@ -301,6 +301,27 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 #endif /* Libburn_log_in_and_out_streaM */
 
 	d->issue_command(d, &c);
+
+	/* ts A61112 : react on eventual error condition */ 
+	if (c.error && c.sense[2]!=0) {
+
+		/* >>> make this scsi_notify_error() when liberated */
+		if (c.sense[2]!=0) {
+			char msg[80];
+			sprintf(msg,
+		"SCSI error condition on write : key=%X asc=%2.2Xh ascq=%2.2Xh",
+				c.sense[2],c.sense[12],c.sense[13]);
+			libdax_msgs_submit(libdax_messenger, d->global_index,
+				0x0002011d,
+				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+				msg, 0, 0);
+		}
+		pthread_mutex_lock(&d->access_lock);
+		d->cancel = 1;
+		pthread_mutex_unlock(&d->access_lock);
+		return BE_CANCELLED;
+	} 
+
 	return 0;
 }
 
