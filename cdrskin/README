@@ -59,9 +59,9 @@ systems, including 64 bit systems. (Further reports are welcome.)
 
                    Compilation, First Glimpse, Installation
 
-Obtain cdrskin-0.2.6.pl01.tar.gz, take it to a directory of your choice and do:
+Obtain cdrskin-0.2.6.pl02.tar.gz, take it to a directory of your choice and do:
 
-    tar xzf cdrskin-0.2.6.pl01.tar.gz
+    tar xzf cdrskin-0.2.6.pl02.tar.gz
     cd cdrskin-0.2.6
 
 Or obtain a libburn.pykix.org SVN snapshot,
@@ -90,6 +90,7 @@ Version identification and help texts available afterwards:
     cdrskin/cdrskin -version
     cdrskin/cdrskin --help
     cdrskin/cdrskin -help
+    man cdrskin/cdrskin.1
 
 Install (eventually as superuser) cdrskin to a directory where it can be found:
 If cdrskin was already installed by a previous version, or by "make install"
@@ -107,6 +108,10 @@ installed, since it incorporates the necessary libburn parts at compile time.
 It will not collide with an installed version of libburn either.
 But libpthread must be installed on the system and glibc has to match. (See
 below for a way to create a statically linked binary.)
+
+To install the man page, you may do: echo $MANPATH and choose one of the
+listed directories to copy the man-page under its ./man1 directory. Like:
+    cp cdrskin/cdrskin.1 /usr/share/man/man1/cdrskin.1
 
 
                                     Usage

@@ -165,6 +165,9 @@ indent: $(indent_files)
 nodist_pkgconfig_DATA = \
 	libburn-1.pc
 
+# http://www.nada.kth.se/cgi-bin/info?(automake.info)Man%20pages
+man_MANS = cdrskin/cdrskin.1 
+
 EXTRA_DIST = \
 	libburn-1.pc.in \
 	version.h.in \
@@ -186,5 +189,6 @@ EXTRA_DIST = \
 	libburn/os-linux.h \
 	libburn/sg-freebsd.c \
 	libburn/sg-linux.c \
-	COPYING
+	COPYING \
+	$(man_MANS)
 

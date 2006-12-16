@@ -1710,35 +1710,48 @@ Coordinated scsi_notify_error() and scsi_error()
 
 ------------------------------------ cycle  - cdrskin-0.2.5 - 2006.11.22.142517
 
-23 Nov 2006  []
+23 Nov 2006  [433]
 cdrskin/changelog.txt
 Last cdrskin-0.2.5 cycle
 
 
+23 Nov 2006  [434] [tag ]
+- test/burn.c
+- test/master.c
+- test/tree.py
+- test/tree.pyc
+- test/rip.c
+Removed obsolete test programs
+
+
+2006.11.23.102340  [435] [tag ]
+Makefile.am
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin.c
+cdrskin/cdrskin_eng.html
+cdrskin/README
+cdrskin/wiki_plain.txt
++ cdrskin/add_ts_changes_to_libburn_0_2_6
++ cdrskin/add_ts_changes_to_libburn_0_2_7
+- cdrskin/add_ts_changes_to_libburn_0_2_4
+- cdrskin/add_ts_changes_to_libburn_0_2_5
+Version leap to 0.2.6
+
+
+2006.11.24.121745  [437]
+Version leap to 0.2.7
+
+
+2006.12.16.090001  []
+Makefile.am
++ cdrskin-0.2.6/cdrskin/cdrskin.1
+cdrskin-0.2.6/cdrskin/README
+cdrskin-0.2.6/cdrskin/cdrskin_eng.html
+cdrskin-0.2.6/cdrskin/changelog.txt
+cdrskin-0.2.6/cdrskin/cdrskin_timestamp.h
+Backported manpage to libburn-0.2.6 -> libburn-0.2.6.2
+
+
+
 ----------------------------------------- long term intentions:
-
-  []
-Truely recognize media type
-
-  []
--reset: ioctl(fd,CDROMRESET)  ioctl(fd,SG_SCSI_RESET,SG_SCSI_RESET_DEVICE)
-
-  []
-Open O_EXCL all devices in address resolution chain
-(Might help with non-standard hdX device siblings)
-
-  []
-Convert libburn_experimental: into LIBDAX_MSGS_SEV_DEBUG
-Convert burn_print() into libdax_msgs_submit()
-
-  []
-Test unlocking of all drives by burn_drive_info_free()
-Test unlocking of single drive by burn_drive_grab(), burn_drive_release()
-
-  []
-Clear outdated persistent read buffer after small CD image was read (ticket 57)
-
-  []
-Enable multi-session for write modes other than TAO
-
 
