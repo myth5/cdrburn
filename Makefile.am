@@ -7,7 +7,7 @@ lib_LTLIBRARIES = libburn/libburn.la
 
 # Build libraries
 libburn_libburn_la_LDFLAGS = \
-	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+	-version-info $(LT_VERSION_INFO)
 libburn_libburn_la_LIBADD = $(LIBBURN_ARCH_LIBS) $(THREAD_LIBS)
 libburn_libburn_la_SOURCES = \
 	libburn/async.c \
