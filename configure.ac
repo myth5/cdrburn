@@ -7,10 +7,10 @@ dnl version info
 m4_define([burn_major_version], [0])
 m4_define([burn_minor_version], [2])
 m4_define([burn_micro_version], [6])
-m4_define([burn_nano_version], [2])
+m4_define([burn_nano_version], [3])
 m4_define([burn_version], [burn_major_version().burn_minor_version().burn_micro_version()ifelse(burn_nano_version(), [], [], [.burn_nano_version()])])
 
-AC_INIT([libburn], [burn_version], [http://libburn.pykix.org])
+AC_INIT([libburn], [burn_version], [http://libburnia.pykix.org])
 AC_PREREQ([2.50])
 dnl AC_CONFIG_HEADER([config.h])	
 
