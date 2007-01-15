@@ -178,6 +178,12 @@ Project history as far as known to me:
   libburn, is now called libburnia. For the origin of this name, see 
   http://en.wikipedia.org/wiki/Liburnians .
 
+- 16th January 2007 release of libburn-0.3.0 and cdrskin-0.3.0 . Now the scope
+  is widened to a first class of DVD media: overwriteable single layer types
+  DVD-RAM, DVD+RW, DVD-RW. This is not a cdrecord emulation but rather inspired
+  by dvd+rw-tools' "poor man" writing facility for this class of media.
+  Taking a bow towards Andy Polyakov.
+
 
 ------------------------------------------------------------------------------
 
