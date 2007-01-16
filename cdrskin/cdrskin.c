@@ -4340,16 +4340,16 @@ thank_you_for_patience:;
          Cdrfifo_get_counters(skin->fifo,&curr_fifo_in,&curr_fifo_out,0);
          Cdrfifo_get_sizes(skin->fifo,&bs,&fs,0);
        }
-     }
-     if(skin->fifo_size>0) {
-       sprintf(fifo_text,"(fifo %3d%%) ",fifo_percent);
-       if(skin->verbosity>=Cdrskin_verbose_debug_fifO) {
-         fprintf(stderr,
-                 "\ncdrskin_debug: fifo >= %9d / %d :  %8.f in, %8.f out\n",
-                 fill,(int) buffer_size,
-                 curr_fifo_in-last_fifo_in,curr_fifo_out-last_fifo_out);
-         last_fifo_in= curr_fifo_in;
-         last_fifo_out= curr_fifo_out;
+       if(skin->fifo_size>0) {
+         sprintf(fifo_text,"(fifo %3d%%) ",fifo_percent);
+         if(skin->verbosity>=Cdrskin_verbose_debug_fifO) {
+           fprintf(stderr,
+                   "\ncdrskin_debug: fifo >= %9d / %d :  %8.f in, %8.f out\n",
+                   fill,(int) buffer_size,
+                   curr_fifo_in-last_fifo_in,curr_fifo_out-last_fifo_out);
+           last_fifo_in= curr_fifo_in;
+           last_fifo_out= curr_fifo_out;
+         }
        }
      }
      if(skin->supposed_track_idx >= 0 && 
