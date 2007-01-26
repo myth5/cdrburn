@@ -73,9 +73,6 @@ static off_t file_size(struct burn_source *source)
 
 	if (fstat(fs->datafd, &buf) == -1)
 		return (off_t) 0;
-	/* for now we keep it compatible to the old (int) return value */
-	if(buf.st_size >= 1308622848)  /* 2 GB - 800 MB to prevent rollover */ 
-		return (off_t) 1308622848;
 	return (off_t) buf.st_size;
 }
 
@@ -126,9 +123,6 @@ static off_t fd_get_size(struct burn_source *source)
 		return fs->fixed_size;
 	if (fstat(fs->datafd, &buf) == -1)
 		return (off_t) 0;
-	/* for now we keep it compatible to the old (int) return value */
-	if (buf.st_size >= 1308622848) /* 2 GB - 800 MB to prevent rollover */
-		return (off_t) 1308622848;
 	return buf.st_size;
 }
 
