@@ -29,17 +29,17 @@ intermediate="./libburn_pykix"
 #  $ svn co http://libburnia-svn.pykix.org/libburn/tags/... $intermediate
 # packed up in a tarball just to save it from inadverted changes by
 #  $ tar czf libburn_svn.tgz $intermediate
-original="./libburn_svn_release.tgz"
+original="./libburn_svn.tgz"
 # Historic moments:
 # original="./libburn_svn_A60815.tgz"
 # original="./libburn_cdrskin_A60819.tgz"
 
 
 # My changes are in $changes , mainly in $changes/cdrskin
-changes="./libburn-release"
+changes="./libburn-develop"
 
-skin_release="0.3.4"
-patch_level=".pl00"
+skin_release="0.3.7"
+patch_level=""
 skin_rev="$skin_release""$patch_level"
 
 # The result directory and the name of the result tarballs
@@ -114,7 +114,8 @@ then
 fi
 cp -a "$cdrskin_dir" "$cdrskin_target"
 
-# Remove copied binaries
+# Remove copied vim.swp and binaries
+rm "$cdrskin_target"/.*.swp
 rm "$cdrskin_target"/*.o
 rm "$cdrskin_target"/cdrfifo
 rm "$cdrskin_target"/cdrskin
@@ -193,7 +194,7 @@ do
 done
 
 # Repair non-portable shell code output of ./bootstrap
-(
+( 
  cd "$compile_dir" || exit 1
  sed -e 's/^for ac_header in$/test -z 1 \&\& for ac_header in dummy/' \
      < ./configure > ./configure-repaired
@@ -204,6 +205,7 @@ done
  mv ./configure-repaired ./configure
  chmod a+rx,go-w,u+w ./configure
 )
+
 
 # Pack it up to the new libburn+cdrskin-tarball
 tar czf "$cdrskin_tarball" "$target"
