@@ -290,10 +290,10 @@ Each number triple corresponds either to a device file address or to a
 libburn drive number.
 Component "scsibus" indicates the translation method. Defined busses are:
   0  target is the libburn drivenumber as listed with --devices
-  1  associated to device file /dev/s[gr]N , target chooses N
+  1  associated to device file /dev/sgN , target chooses N
   2  associated to device file /dev/hdX , target 0='a', 1='b' ..., 25='z' 
 
-So "1,1,0" is /dev/sg1 or /dev/sr1, "2,3,0" is /dev/hdd,
+So "1,1,0" is /dev/sg1 (resp. its /dev/sr*), "2,3,0" is /dev/hdd,
 "0,2,0" is libburn drive #2 at some unspecified device file. 
 This scheme shall help to keep cdrecord-style addresses stable and exchangeable
 between users without excluding drives with unexpected device addresses.
