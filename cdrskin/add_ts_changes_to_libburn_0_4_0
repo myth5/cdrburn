@@ -38,7 +38,7 @@ original="./libburn_svn_release.tgz"
 # My changes are in $changes , mainly in $changes/cdrskin
 changes="./libburn-release"
 
-skin_release="0.3.8"
+skin_release="0.4.0"
 patch_level=".pl00"
 skin_rev="$skin_release""$patch_level"
 
@@ -153,6 +153,10 @@ do
     rm $i
   fi
 done
+
+# Remove libcevap
+rm -rf "$target"/libcevap
+
 
 # Remove unwanted SVN stuff (TODO: avoid downloading it)
 for i in "$target"/.svn "$target"/*/.svn
