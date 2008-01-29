@@ -2069,8 +2069,8 @@ void burn_version(int *major, int *minor, int *micro);
 /** Note:
     Above version numbers are also recorded in configure.ac and indirectly
     lead to the reply of burn_version().
-    So the version triples in configure.ac and libburn.h must be keep equal.
-    In future versions the version triple of libburn.h will be decisive alone.
+    So the version triples in configure.ac and libburn.h must be kept equal.
+    In future versions the triple of libburn.h will be decisive alone.
 */
 
 
