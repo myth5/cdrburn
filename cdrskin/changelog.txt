@@ -5201,9 +5201,17 @@ Made number transition and activated development documentation
 + cdrskin/add_ts_changes_to_libburn_0_4_5
 Updated cdrskin tarball generator
 
-8 Apr 2008  [ZeroFourFour ]
+8 Apr 2008  [ZeroFourFour 1671]
 cdrskin/changelog.txt
 Documented changes and release timestamp
+
+2008.04.08.100001  [ZeroFourFour 1672]
+libburn/util.c
+Switched from configure.ac versioning to libburn.h versioning
+
+8 Apr 2008  [ZeroFourFour ]
+cdrskin/changelog.txt
+Documented last minute changes
 
 ----------------------------- release  - cdrskin-0.4.4.pl00 - 2008.04.08.100001
 * Support for DVD+R/DL media is now official
