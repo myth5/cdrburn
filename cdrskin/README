@@ -275,6 +275,14 @@ behavior.
 BD-RE media need formatting before first use. cdrskin option "blank=as_needed"
 recognizes unformatted BD-RE and applies a lengthy formatting run.
 
+During write operations DVD-RAM and BD-RE automatically apply defect
+management. This usually slows them down to half nominal speed. If drive
+and media produce flawless results anyway, then one can try to reach full
+nominal speed by option "stream_recording=on".
+In this case bad blocks are not detected during write and not even previously
+known bad blocks are avoided. So you have to make your own readability tests
+and go back to half speed as soon as the first read errors show up.
+
 Option --grow_overwriteable_iso allows -multi (although unneeded), enables
 -msinfo and -toc, and makes blank=fast an invalidator for ISO filesystems
 on overwriteable media.
