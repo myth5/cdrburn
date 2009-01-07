@@ -11,7 +11,7 @@ Still containing parts of Libburn. By Derek Foreman <derek@signalmarketing.com>
 and Ben Jansens <xor@orodu.net>
 Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
-     http://files.libburnia-project.org/releases/libburn-0.6.0.pl00.tar.gz
+     http://files.libburnia-project.org/releases/libburn-0.6.0.pl01.tar.gz
 
 ------------------------------------------------------------------------------
 
@@ -19,9 +19,9 @@ Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
                                 From tarball
 
-Obtain libburn-0.6.0.pl00.tar.gz, take it to a directory of your choice and do:
+Obtain libburn-0.6.0.pl01.tar.gz, take it to a directory of your choice and do:
 
-   tar xzf libburn-0.6.0.pl00.tar.gz
+   tar xzf libburn-0.6.0.pl01.tar.gz
    cd libburn-0.6.0
    ./configure --prefix=/usr
    make
