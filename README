@@ -11,7 +11,7 @@ Still containing parts of Libburn. By Derek Foreman <derek@signalmarketing.com>
 and Ben Jansens <xor@orodu.net>
 Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
-     http://files.libburnia-project.org/releases/libburn-0.7.4.pl00.tar.gz
+     http://files.libburnia-project.org/releases/libburn-0.7.4.pl01.tar.gz
 
 ------------------------------------------------------------------------------
 
@@ -19,9 +19,9 @@ Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
                                 From tarball
 
-Obtain libburn-0.7.4.pl00.tar.gz, take it to a directory of your choice and do:
+Obtain libburn-0.7.4.pl01.tar.gz, take it to a directory of your choice and do:
 
-   tar xzf libburn-0.7.4.pl00.tar.gz
+   tar xzf libburn-0.7.4.pl01.tar.gz
    cd libburn-0.7.4
    ./configure --prefix=/usr
    make
@@ -475,6 +475,13 @@ Project history as far as known to me:
 - 06 Dec 2009 libburn-0.7.4 works around problems with newer DVD burners,
   provides throughput enhancements with hampered busses on Linux, and new
   API calls to log SCSI commands and to control the libburn fifo.
+
+- 09 Dec 2009 libisoburn-0.4.6 allows performance tuning of output to DVD 
+  drives or disk files.
+
+- 26 Dec 2009 libburn-0.7.2.pl01 fixes the release tarball which was lacking
+  the files of the generic system adapter for X/Open.
+
 
 ------------------------------------------------------------------------------
 
