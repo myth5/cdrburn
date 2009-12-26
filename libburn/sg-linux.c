@@ -1,5 +1,11 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
+
+/* <<< ts A91112 : experiments to get better speed with USB
+#define Libburn_sgio_as_growisofS 1
+*/
+
+
 /*
 
 This is the main operating system dependent SCSI part of libburn. It implements
@@ -48,7 +54,22 @@ sg_issue_command()      sends a SCSI command to the drive, receives reply,
 
 sg_obtain_scsi_adr()    tries to obtain SCSI address parameters.
 
+
 burn_os_stdio_capacity()  estimates the emulated media space of stdio-drives.
+
+burn_os_open_track_src()  opens a disk file in a way that allows best
+                        throughput with file reading and/or SCSI write command
+                        transmission.
+
+burn_os_close_track_src()  closes a filedescriptor obtained by
+                        burn_os_open_track_src().
+
+burn_os_alloc_buffer()  allocates a memory area that is suitable for file
+                        descriptors issued by burn_os_open_track_src().
+                        The buffer size may be rounded up for alignment
+                        reasons.
+
+burn_os_free_buffer()   delete a buffer obtained by burn_os_alloc_buffer().
 
 
 Porting hints are marked by the text "PORTING:".
@@ -61,6 +82,13 @@ Hint: You should also look into sg-freebsd-port.c, which is a younger and
 
 
 /** PORTING : ------- OS dependent headers and definitions ------ */
+
+
+#ifdef Libburn_read_o_direcT
+# ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+# endif
+#endif /* Libburn_read_o_direcT */
 
 #include <errno.h>
 #include <unistd.h>
@@ -79,6 +107,9 @@ Hint: You should also look into sg-freebsd-port.c, which is a younger and
 
 /* for ioctl(BLKGETSIZE) */
 #include <linux/fs.h>
+
+/* for mmap() */
+#include <sys/mman.h>
 
 
 #include <scsi/sg.h>
@@ -168,6 +199,7 @@ static int linux_ata_enumerate_verbous = 0;
 
 /** PORTING : ------ libburn portable headers and definitions ----- */
 
+#include "libburn.h"
 #include "transport.h"
 #include "drive.h"
 #include "sg.h"
@@ -196,17 +228,25 @@ static void enumerate_common(char *fname, int bus_no, int host_no,
 
 
 /* ts A60813 : storage objects are in libburn/init.c
-   wether to use O_EXCL with open(2) of devices
-   wether to use fcntl(,F_SETLK,) after open(2) of devices
+   whether to use O_EXCL with open(2) of devices
+   whether to use fcntl(,F_SETLK,) after open(2) of devices
    what device family to use : 0=default, 1=sr, 2=scd, (3=st), 4=sg
-   wether to use O_NOBLOCK with open(2) on devices
-   wether to take O_EXCL rejection as fatal error */
+   whether to use O_NOBLOCK with open(2) on devices
+   whether to take O_EXCL rejection as fatal error
+*/
 extern int burn_sg_open_o_excl;
 extern int burn_sg_fcntl_f_setlk;
 extern int burn_sg_use_family;
 extern int burn_sg_open_o_nonblock;
 extern int burn_sg_open_abort_busy;
 
+/* ts A91111 :
+   whether to log SCSI commands:
+   bit0= log in /tmp/libburn_sg_command_log
+   bit1= log to stderr
+   bit2= flush every line
+*/
+extern int burn_sg_log_scsi;
 
 /* ts A60821
    debug: for tracing calls which might use open drive fds
@@ -1642,6 +1682,7 @@ int sg_release(struct burn_drive *d)
 }
 
 
+/* <<< ts A91111: on its way out */
 /** ts A70518: 
     Debugging log facility. Controlled by existence of macros:
      Libburn_log_sg_commandS          enables logging to file
@@ -1650,29 +1691,29 @@ int sg_release(struct burn_drive *d)
      Libburn_log_sg_command_stderR    enables additional log to stderr
 */
 /*
+ ts A91111: now enabled by default and controlled burn_sg_log_scsi
+*/
 #define Libburn_log_sg_commandS 1
 #define Libburn_fflush_log_sg_commandS 1
 #define Libburn_log_sg_command_stderR 1
-*/
+
 
 #ifdef Libburn_log_sg_commandS
 
 /** Logs command (before execution) */
 static int sg_log_cmd(struct command *c, FILE *fp, int flag)
 {
-	int i;
+	if (fp != NULL && (fp == stderr || (burn_sg_log_scsi & 1))) {
+		scsi_show_cmd_text(c, fp, 0);
 
-	if (fp != NULL) {
-		for(i = 0; i < 16 && i < c->oplen; i++)
-  			fprintf(fp,"%2.2x ", c->opcode[i]);
-		fprintf(fp, "\n");
 #ifdef Libburn_fflush_log_sg_commandS
-		fflush(fp);
+		if (burn_sg_log_scsi & 4)
+			fflush(fp);
 #endif
 	}
-	if (fp == stderr)
-		return 1;
 #ifdef Libburn_log_sg_command_stderR
+	if (fp == stderr || !(burn_sg_log_scsi & 2))
+		return 1;
 	sg_log_cmd(c, stderr, flag);
 #endif
 	return 1;
@@ -1684,20 +1725,23 @@ static int sg_log_err(struct command *c, FILE *fp,
 		sg_io_hdr_t *s,
 		int flag)
 {
-      	if(fp!=NULL) {
-		if(flag & 1)
+      	if(fp != NULL && (fp == stderr || (burn_sg_log_scsi & 1))) {
+		if(flag & 1) {
   			fprintf(fp,
 			"+++ key=%X  asc=%2.2Xh  ascq=%2.2Xh   (%6d ms)\n",
 				s->sbp[2], s->sbp[12], s->sbp[13],s->duration);
-		else
+		} else {
+			scsi_show_cmd_reply(c, fp, 0);
 			fprintf(fp,"%6d ms\n", s->duration);
+		}
 #ifdef Libburn_fflush_log_sg_commandS
-		fflush(fp);
+		if (burn_sg_log_scsi & 4)
+			fflush(fp);
 #endif
 	}
-	if (fp == stderr)
-		return 1;
 #ifdef Libburn_log_sg_command_stderR
+	if (fp == stderr || !(burn_sg_log_scsi & 2))
+		return 1;
 	sg_log_err(c, stderr, s, flag);
 #endif
 	return 1;
@@ -1737,11 +1781,15 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 
 #ifdef Libburn_log_sg_commandS
 	/* ts A61030 */
-	if(fp==NULL) {
-		fp= fopen("/tmp/libburn_sg_command_log","a");
-		fprintf(fp,"\n-----------------------------------------\n");
+	if (burn_sg_log_scsi & 1) {
+		if (fp == NULL) {
+			fp= fopen("/tmp/libburn_sg_command_log", "a");
+			fprintf(fp,
+			    "\n-----------------------------------------\n");
+		}
 	}
-	sg_log_cmd(c,fp,0);
+	if (burn_sg_log_scsi & 3)
+		sg_log_cmd(c,fp,0);
 #endif /* Libburn_log_sg_commandS */
 	  
 
@@ -1755,6 +1803,13 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 	memset(&s, 0, sizeof(sg_io_hdr_t));
 
 	s.interface_id = 'S';
+
+#ifdef Libburn_sgio_as_growisofS
+	/* ??? ts A91112 : does this speed up USB ? (from growisofs)
+	--- did not help
+	 */
+	s.flags = SG_FLAG_DIRECT_IO;
+#endif /* Libburn_sgio_as_growisofS */
 
 	if (c->dir == TO_DRIVE)
 		s.dxfer_direction = SG_DXFER_TO_DEV;
@@ -1878,7 +1933,8 @@ ex:;
 	}
 
 #ifdef Libburn_log_sg_commandS
-	sg_log_err(c, fp, &s, c->error != 0);
+	if (burn_sg_log_scsi & 3)
+		sg_log_err(c, fp, &s, c->error != 0);
 #endif /* Libburn_log_sg_commandS */
 
 	return 1;
@@ -2031,5 +2087,82 @@ int burn_os_stdio_capacity(char *path, off_t *bytes)
 						(off_t) vfsbuf.f_bavail;
 	}
 	return 1;
+}
+
+
+/* ts A91122 : an interface to open(O_DIRECT) or similar OS tricks. */
+
+#ifdef PROT_READ
+#ifdef PROT_WRITE
+#ifdef MAP_SHARED
+#ifdef MAP_ANONYMOUS
+#ifdef MAP_FAILED
+#define Libburn_linux_do_mmaP 1
+#endif
+#endif
+#endif
+#endif
+#endif
+
+#ifdef Libburn_read_o_direcT
+#ifdef O_DIRECT
+#define Libburn_linux_do_o_direcT 1
+#endif
+#endif /* Libburn_read_o_direcT */
+
+
+int burn_os_open_track_src(char *path, int open_flags, int flag)
+{
+	int fd;
+
+#ifdef Libburn_linux_do_o_direcT
+	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+		LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
+		"Opening track source with O_DIRECT" , 0, 0);
+	fd = open(path, open_flags | O_DIRECT);
+#else
+	fd = open(path, open_flags);
+#endif
+	return fd;
+}
+
+
+void *burn_os_alloc_buffer(size_t amount, int flag)
+{
+	void *buf = NULL;
+
+#ifdef Libburn_linux_do_mmaP
+
+	/* >>> check whether size is suitable */;
+
+	libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+		LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
+		"Allocating buffer via mmap()" , 0, 0);
+	buf = mmap(NULL, amount, PROT_READ | PROT_WRITE,
+			 	MAP_SHARED | MAP_ANONYMOUS, -1, (off_t) 0);
+	if (buf == MAP_FAILED)
+		buf = NULL;
+	else
+		memset(buf, 0, amount);
+#else
+	buf = calloc(1, amount);
+#endif /* ! Libburn_linux_do_mmaP */
+
+	return buf;
+}
+
+
+int burn_os_free_buffer(void *buffer, size_t amount, int flag)
+{
+	int ret = 0;
+
+	if (buffer == NULL)
+		return 0;
+#ifdef Libburn_linux_do_mmaP
+	ret = munmap(buffer, amount);
+#else
+	free(buffer);
+#endif
+	return (ret == 0);
 }
 

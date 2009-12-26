@@ -25,6 +25,11 @@
 #include <sys/time.h>
 #include <sys/select.h>
 
+#ifndef Cdrfifo_standalonE
+/* <<< until release of 0.7.4 : for Libburn_has_open_trac_srC */
+#include "../libburn/libburn.h"
+#endif
+
 #include "cdrfifo.h"
 
 
@@ -120,7 +125,7 @@ struct CdrfifO {
                    struct burn_source object.
     @param chunk_size Size of buffer block for a single transaction (0=default)
     @param buffer_size Size of fifo buffer
-    @param flag Unused yet
+    @param flag bit0= Debugging verbosity
     @return 1 on success, <=0 on failure
 */
 int Cdrfifo_new(struct CdrfifO **ff, int source_fd, int dest_fd,
@@ -174,7 +179,13 @@ int Cdrfifo_new(struct CdrfifO **ff, int source_fd, int dest_fd,
  o->follow_up_fd_idx= -1;
  o->next= o->prev= NULL;
  o->chain_idx= 0;
+
+#ifdef Libburn_has_open_trac_srC
+ o->buffer= burn_os_alloc_buffer((size_t) buffer_size, 0);
+#else
  o->buffer= TSOB_FELD(char,buffer_size);
+#endif /* ! Libburn_has_open_trac_srC */
+
  if(o->buffer==NULL)
    goto failed;
  return(1);
@@ -226,8 +237,14 @@ int Cdrfifo_destroy(struct CdrfifO **ff, int flag)
 
  if(o->iso_fs_descr!=NULL)
    free((char *) o->iso_fs_descr);
+
  if(o->buffer!=NULL)
+#ifdef Libburn_has_open_trac_srC
+   burn_os_free_buffer(o->buffer, o->buffer_size, 0);
+#else
    free((char *) o->buffer);
+#endif /* Libburn_has_open_trac_srC */
+
  free((char *) o);
  (*ff)= NULL;
  return(1);
@@ -616,7 +633,7 @@ return: <0 = error , 0 = idle , 1 = did some work
 */
 {
  double buffer_space;
- int can_read,can_write,ret,did_work= 0,idx,sod,eop_is_near,eop_idx;
+ int can_read,can_write= 0,ret,did_work= 0,idx,sod,eop_is_near,eop_idx;
 
  buffer_space= Cdrfifo_tell_buffer_space(o,0);
  if(o->dest_fd>=0) if(FD_ISSET((o->dest_fd),wts)) {
@@ -659,6 +676,46 @@ return: <0 = error , 0 = idle , 1 = did some work
 after_write:;
  if(o->source_fd>=0) if(FD_ISSET((o->source_fd),rds)) {
    can_read= o->buffer_size - o->write_idx;
+
+#ifdef Libburn_has_open_trac_srC
+
+   /* ts A91115
+      This chunksize must be aligned to filesystem blocksize.
+    */
+#define Cdrfifo_o_direct_chunK 32768
+
+   if(o->write_idx < o->read_idx && o->write_idx + can_read > o->read_idx)
+     can_read= o->read_idx - o->write_idx;
+   if(o->fd_in_limit>=0.0)
+     if(can_read > o->fd_in_limit - o->fd_in_counter)
+       can_read= o->fd_in_limit - o->fd_in_counter;
+   /* Make sure to read with properly aligned size */
+   if(can_read > Cdrfifo_o_direct_chunK)
+     can_read= Cdrfifo_o_direct_chunK;
+   else if(can_read < Cdrfifo_o_direct_chunK)
+     can_read= -1;
+   ret= 0;
+   if(can_read>0)
+     ret= read(o->source_fd,o->buffer+o->write_idx,can_read);
+   if(can_read < 0) {
+     /* waiting for a full Cdrfifo_o_direct_chunK to fit */
+     if(can_write <= 0 && o->dest_fd >= 0) {
+        fd_set rds,wts,exs;
+        struct timeval wt;
+
+        FD_ZERO(&rds);
+        FD_ZERO(&wts);
+        FD_ZERO(&exs);
+        FD_SET((o->dest_fd),&wts);
+        wt.tv_sec=  0;
+        wt.tv_usec= 10000;
+        select(o->dest_fd + 1,&rds, &wts, &exs, &wt);
+
+     }
+   } else
+
+#else /* Libburn_has_open_trac_srC */
+
    if(can_read>o->chunk_size)
      can_read= o->chunk_size;
    if(o->write_idx<o->read_idx && o->write_idx+can_read > o->read_idx)
@@ -669,6 +726,9 @@ after_write:;
    ret= 0;
    if(can_read>0)
      ret= read(o->source_fd,o->buffer+o->write_idx,can_read);
+
+#endif /* ! Libburn_has_open_trac_srC */
+
    if(ret==-1) {
 
      /* >>> handle input error */;

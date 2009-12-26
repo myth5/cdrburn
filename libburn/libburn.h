@@ -141,19 +141,22 @@ enum burn_write_types
 	      only raw block types are supported
 	    With DVD and BD media: not supported.
 
-	    ts A90901: THIS HAS BEEN DISABLED because its implementation
+	    ts A90901: This had been disabled because its implementation
 	               relied on code from cdrdao which is not understood
 	               currently.
 	               A burn run will abort with "FATAL" error message
 	               if this mode is attempted.
 	               @since 0.7.2
+	    ts A91016: Re-implemented according to ECMA-130 Annex A and B.
+	               Now understood, explained and not stemming from cdrdao.
+	               @since 0.7.4
 	*/
 	BURN_WRITE_RAW,
 
 	/** In replies this indicates that not any writing will work.
 	    As parameter for inquiries it indicates that no particular write
             mode shall is specified.
-	    Do not use for setting a write mode for burning. It won't work.
+	    Do not use for setting a write mode for burning. It will not work.
 	*/
 	BURN_WRITE_NONE
 };
@@ -758,6 +761,19 @@ int burn_abort_pacifier(void *handle, int patience, int elapsed);
                  values for more information output.
 */
 void burn_set_verbosity(int level);
+
+/* ts A91111 */
+/** Enable resp. disable logging of SCSI commands (currently Linux only).
+    This call can be made at any time - even before burn_initialize().
+    It is in effect for all active drives and currently not very thread
+    safe for multiple drives.
+    @param flag  Bitfield for control purposes. The default is 0.
+                 bit0= log to file /tmp/libburn_sg_command_log
+                 bit1= log to stderr
+                 bit2= flush output after each line
+    @since 0.7.4
+*/
+void burn_set_scsi_logging(int flag);
 
 /* ts A60813 */
 /** Set parameters for behavior on opening device files. To be called early
@@ -1562,9 +1578,11 @@ void burn_drive_cancel(struct burn_drive *drive);
 
 
 /* ts A61223 */
-/** Inquire whether the most recent write run was successful. Reasons for
-    non-success may be: rejection of burn parameters, abort during fatal errors
-    during write, a call to burn_drive_cancel() by the application thread.
+/** Inquire whether the most recent asynchronous media job was successful.
+    This applies to burn_disc_erase(), burn_disc_format(), burn_disc_write().
+    Reasons for non-success may be: rejection of burn parameters, abort due to
+    fatal errors during write, blank or format, a call to burn_drive_cancel()
+    by the application thread.
     @param d The drive to inquire.
     @return 1=burn seems to have went well, 0=burn failed 
     @since 0.2.6
@@ -1772,6 +1790,58 @@ void burn_source_free(struct burn_source *s);
 struct burn_source *burn_file_source_new(const char *path,
 					 const char *subpath);
 
+
+/* ts A91122 : An interface to open(O_DIRECT) or similar OS tricks. */
+
+/** Opens a file with eventual acceleration preparations which may depend
+    on the operating system and on compile time options of libburn.
+    You may use this call instead of open(2) for opening file descriptors
+    which shall be handed to burn_fd_source_new().
+    This should only be done for tracks with BURN_BLOCK_MODE1 (2048 bytes
+    per block).
+
+    If you use this call then you MUST allocate the buffers which you use
+    with read(2) by call burn_os_alloc_buffer(). Read sizes MUST be a multiple
+    of a safe buffer amount. Else you risk that track data get altered during
+    transmission.
+    burn_disk_write() will allocate a suitable read/write buffer for its own
+    operations. A fifo created by burn_fifo_source_new() will allocate
+    suitable memory for its buffer if called with flag bit0 and a multiple
+    of a safe buffer amount. 
+    @param path       The file address to open
+    @param open_flags The flags as of man 2 open. Normally just O_RDONLY.
+    @param flag       Bitfield for control purposes (unused yet, submit 0).
+    @return           A file descriptor as of open(2). Finally to be disposed
+                      by close(2).
+                      -1 indicates failure.
+    @since 0.7.4
+*/
+int burn_os_open_track_src(char *path, int open_flags, int flag);
+
+/** Allocate a memory area that is suitable for reading with a file descriptor
+    opened by burn_os_open_track_src().
+    @param amount     Number of bytes to allocate. This should be a multiple
+                      of the operating system's i/o block size. 32 KB is
+                      guaranteed by libburn to be safe.
+    @param flag       Bitfield for control purposes (unused yet, submit 0).
+    @return           The address of the allocated memory, or NULL on failure.
+                      A non-NULL return value has finally to be disposed via
+                      burn_os_free_buffer().
+    @since 0.7.4
+*/
+void *burn_os_alloc_buffer(size_t amount, int flag);
+
+/** Dispose a memory area which was obtained by burn_os_alloc_buffer(),
+    @param buffer     Memory address to be freed.
+    @param amount     The number of bytes which was allocated at that
+                      address.
+    @param flag       Bitfield for control purposes (unused yet, submit 0).
+    @return           1 success , <=0 failure
+    @since 0.7.4
+*/
+int burn_os_free_buffer(void *buffer, size_t amount, int flag);
+
+
 /** Creates a data source for an image file (a track) from an open
     readable filedescriptor, an eventually open readable subcodes file
     descriptor and eventually a fixed size in bytes.
@@ -1810,7 +1880,17 @@ struct burn_source *burn_fd_source_new(int datafd, int subfd, off_t size);
                       a particular chunksize. E.g. libisofs demands 2048.
     @param chunks     The number of chunks to be allocated in ring buffer.
                       This value must be >= 2.
-    @param flag       Bitfield for control purposes (unused yet, submit 0).
+    @param flag       Bitfield for control purposes:
+                      bit0= The read method of inp is capable of delivering
+                            arbitrary amounts of data per call. Not only one
+                            sector.
+                            Suitable for inp from burn_file_source_new()
+                            and burn_fd_source_new() if not the fd has
+                            exotic limitations on read size.
+                            You MUST use this on inp which uses an fd opened
+                            with burn_os_open_track_src().
+                            Better do not use with other inp types.
+                            @since 0.7.4
     @return           A pointer to the newly created burn_source.
                       Later both burn_sources, inp and the returned fifo, have
                       to be disposed by calling burn_source_free() for each.
@@ -1843,12 +1923,43 @@ struct burn_source *burn_fifo_source_new(struct burn_source *inp,
 int burn_fifo_inquire_status(struct burn_source *fifo, int *size, 
                             int *free_bytes, char **status_text);
 
+/* ts A91125 */
+/** Inquire various counters which reflect the fifo operation.
+    @param fifo              The fifo object to inquire
+    @param total_min_fill    The minimum number of bytes in the fifo. Beginning
+                             from the moment when fifo consumption is enabled.
+    @param interval_min_fill The minimum byte number beginning from the moment
+                             when fifo consumption is enabled or from the
+                             most recent moment when burn_fifo_next_interval()
+                             was called.
+    @param put_counter       The number of data transactions into the fifo.
+    @param get_counter       The number of data transactions out of the fifo.
+    @param empty_counter     The number of times the fifo was empty.
+    @param full_counter      The number of times the fifo was full.
+    @since 0.7.4
+*/
+void burn_fifo_get_statistics(struct burn_source *source,
+                             int *total_min_fill, int *interval_min_fill,
+                             int *put_counter, int *get_counter,
+                             int *empty_counter, int *full_counter);
+
+/* ts A91125 */
+/** Inquire the fifo minimum fill counter for intervals and reset that counter.
+    @param fifo              The fifo object to inquire
+    @param interval_min_fill The minimum number of bytes in the fifo. Beginning
+                             from the moment when fifo consumption is enabled
+                             or from the most recent moment when
+                             burn_fifo_next_interval() was called.
+    @since 0.7.4
+*/
+void burn_fifo_next_interval(struct burn_source *source,
+                            int *interval_min_fill);
 
 /* ts A80713 */
 /** Obtain a preview of the first input data of a fifo which was created
     by burn_fifo_source_new(). The data will later be delivered normally to
     the consumer track of the fifo.
-    bufsize may not be larger than the fifo size (chunk_size * chunks).
+    bufsize may not be larger than the fifo size (chunk_size * chunks) - 32k.
     This call will succeed only if data consumption by the track has not
     started yet, i.e. best before the call to burn_disc_write().
     It will start the worker thread of the fifo with the expectable side
@@ -1856,9 +1967,9 @@ int burn_fifo_inquire_status(struct burn_source *fifo, int *size,
     data have arrived or until it becomes clear that this will not happen.
     The call may be repeated with increased bufsize. It will always yield
     the bytes beginning from the first one in the fifo.
-    @param fifo     The fifo object to inquire
+    @param fifo     The fifo object to inquire resp. start
     @param buf      Pointer to memory of at least bufsize bytes where to
-                    deliver the peeked data
+                    deliver the peeked data.
     @param bufsize  Number of bytes to peek from the start of the fifo data
     @param flag     Bitfield for control purposes (unused yet, submit 0).
     @return <0 on severe error, 0 if not enough data, 1 if bufsize bytes read
@@ -1866,6 +1977,22 @@ int burn_fifo_inquire_status(struct burn_source *fifo, int *size,
 */
 int burn_fifo_peek_data(struct burn_source *source, char *buf, int bufsize,
                         int flag);
+
+/* ts A91125 */
+/** Start the fifo worker thread and wait either until the requested number
+    of bytes have arrived or until it becomes clear that this will not happen.
+    Filling will go on asynchronously after burn_fifo_fill() returned.
+    This call and burn_fifo_peek_data() do not disturb each other.
+    @param fifo     The fifo object to start
+    @param fill     Number of bytes desired. Expect to get return 1 if 
+                    at least fifo size - 32k were read.
+    @param flag     Bitfield for control purposes.
+                    bit0= fill fifo to maximum size
+    @return <0 on severe error, 0 if not enough data,
+             1 if desired amount or fifo full
+    @since 0.7.4
+*/
+int burn_fifo_fill(struct burn_source *source, int bufsize, int flag);
 
 
 /* ts A70328 */
@@ -2102,6 +2229,32 @@ void burn_write_opts_set_force(struct burn_write_opts *opts, int use_force);
 */
 void burn_write_opts_set_stream_recording(struct burn_write_opts *opts, 
                                          int value);
+
+/* ts A91115 */
+/** Overrides the write chunk size for DVD and BD media which is normally
+    determined according to media type and setting of stream recording.
+    A chunk size of 64 KB may improve throughput with bus systems which show
+    latency problems.
+    @param opts The write opts to change
+    @param obs  Number of bytes which shall be sent by a single write command.
+                0 means automatic size, 32768 and 65336 are the only other
+                accepted sizes for now.
+    @since 0.7.4
+*/
+void burn_write_opts_set_dvd_obs(struct burn_write_opts *opts, int obs);
+
+/* ts A91115 */
+/** Sets the rythm by which stdio pseudo drives force their output data to
+    be consumed by the receiving storage device. This forcing keeps the memory
+    from being clogged with lots of pending data for slow devices.
+    @param opts   The write opts to change
+    @param rythm  Number of 2KB output blocks after which fsync(2) is
+                  performed. -1 means no fsync(), 0 means default,
+                  elsewise the value must be >= 32.
+                  Default is currently 8192 = 16 MB.
+    @since 0.7.4
+*/
+void burn_write_opts_set_stdio_fsync(struct burn_write_opts *opts, int rythm);
 
 
 /** Sets whether to read in raw mode or not
@@ -2449,7 +2602,7 @@ void burn_version(int *major, int *minor, int *micro);
 */
 #define burn_header_version_major  0
 #define burn_header_version_minor  7
-#define burn_header_version_micro  2
+#define burn_header_version_micro  4
 /** Note:
     Above version numbers are also recorded in configure.ac because libtool
     wants them as parameters at build time.
@@ -2745,5 +2898,39 @@ int burn_drive_equals_adr(struct burn_drive *d1, char *adr2, int drive_role2);
 BURN_END_DECLS
 
 #endif
+
+
+/* ts A91205 */
+/* The following experiments may be interesting in future:
+*/
+
+/* Perform OPC explicitely.
+   # define Libburn_pioneer_dvr_216d_with_opC 1
+*/
+
+/* Load mode page 5 and modify it rather than composing from scratch.
+   # define Libburn_pioneer_dvr_216d_load_mode5 1
+*/
+
+/* Inquire drive events and react by reading configuration or starting unit.
+   # define Libburn_pioneer_dvr_216d_get_evenT 1
+*/
+
+/* ts A91112 */
+/* Do not probe CD modes but declare only data and audio modes supported.
+   For other modes resp. real probing one has to call
+   burn_drive_probe_cd_write_modes().
+
+   # define Libburn_pioneer_dvr_216d_dummy_probe_wM 1
+*/
+#ifdef Libburn_pioneer_dvr_216d_dummy_probe_wM
+
+/* Probe available CD write modes and block types.
+   @param drive_info  drive object to be inquired
+*/
+int burn_drive_probe_cd_write_modes(struct burn_drive_info *drive_info)
+
+#endif /* Libburn_pioneer_dvr_216d_dummy_probe_wM */
+
 
 #endif /*LIBBURN_H*/

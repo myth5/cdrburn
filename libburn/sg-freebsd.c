@@ -72,6 +72,8 @@ static int sg_init_enumerator(burn_drive_enumerator_t *idx_)
 
 	if ((idx->fd = open(XPT_DEVICE, O_RDWR)) == -1) {
 		warn("couldn't open %s", XPT_DEVICE);
+		free(idx);
+		idx = NULL;
 		return -1;
 	}
 
@@ -683,6 +685,42 @@ int burn_os_stdio_capacity(char *path, off_t *bytes)
 		*bytes = add_size + ((off_t) vfsbuf.f_bsize) *
 						(off_t) vfsbuf.f_bavail;
 	}
+	return 1;
+}
+
+
+/* ts A91122 : an interface to open(O_DIRECT) or similar OS tricks. */
+
+#ifdef Libburn_read_o_direcT
+
+	/* No special O_DIRECT-like precautions are implemented here */
+
+#endif /* Libburn_read_o_direcT */
+
+
+int burn_os_open_track_src(char *path, int open_flags, int flag)
+{
+	int fd;
+
+	fd = open(path, open_flags);
+	return fd;
+}
+
+
+void *burn_os_alloc_buffer(size_t amount, int flag)
+{
+	void *buf = NULL;
+
+	buf = calloc(1, amount);
+	return buf;
+}
+
+
+int burn_os_free_buffer(void *buffer, size_t amount, int flag)
+{
+	if (buffer == NULL)
+		return 0;
+	free(buffer);
 	return 1;
 }
 

@@ -1,5 +1,6 @@
 /* -*- indent-tabs-mode: t; tab-width: 8; c-basic-offset: 8; -*- */
 
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -27,8 +28,6 @@ an unreadable disc */
 /* This is a generic OS oriented function wrapper which compensates
    shortcommings of read() in respect to a guaranteed amount of return data.
    See  man 2 read , paragraph "RETURN VALUE".
-   Possibly libburn/file.c is not the right storage location for this.
-   To make it ready for a move, this function is not declared static.
 */
 static int read_full_buffer(int fd, unsigned char *buffer, int size)
 {
@@ -211,7 +210,7 @@ static int fifo_read(struct burn_source *source,
 		     int size)
 {
 	struct burn_source_fifo *fs = source->data;
-	int ret, todo, rpos, bufsize, diff;
+	int ret, todo, rpos, bufsize, diff, counted = 0;
 
 	if (fs->end_of_consumption) {
 		/* ??? msg: reading has been ended already */;
@@ -256,6 +255,9 @@ static int fifo_read(struct burn_source *source,
 				   "Forwarded input error ends output", 0, 0);
 				return -1;
 			}
+			if (!counted)
+				fs->empty_counter++;
+			counted = 1;
 			fifo_sleep(0);
 		}
 		diff = fs->buf_writepos - rpos; /* read volatile only once */
@@ -285,6 +287,7 @@ static int fifo_read(struct burn_source *source,
 		(size - todo), fs->buf_readpos, (double) fs->out_counter);
 */
 
+	fs->get_counter++;
 	return (size - todo);
 }
 
@@ -312,8 +315,10 @@ static void fifo_free(struct burn_source *source)
 	burn_fifo_abort(fs, 0);
 	if (fs->inp != NULL)
 		burn_source_free(fs->inp);
+
 	if (fs->buf != NULL)
-		free(fs->buf);
+		burn_os_free_buffer(fs->buf,
+			((size_t) fs->chunksize) * (size_t) fs->chunks, 0);
 	free((char *) fs);
 }
 
@@ -321,7 +326,8 @@ static void fifo_free(struct burn_source *source)
 int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 {
 	struct burn_source_fifo *fs = source->data;
-	int ret, bufsize, diff, wpos, rpos, trans_end, free_bytes;
+	int ret, bufsize, diff, wpos, rpos, trans_end, free_bytes, fill;
+	int counted;
 	char *bufpt;
 	pthread_t thread_handle_storage;
 
@@ -335,6 +341,7 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 
 		/* wait for enough buffer space available */
 		wpos = fs->buf_writepos;
+		counted = 0;
 		while (1) {
 			rpos = fs->buf_readpos;
 			diff = rpos - wpos;
@@ -345,18 +352,28 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 				free_bytes = diff - 1;
 			else {
 				free_bytes = (bufsize - wpos) + rpos - 1;
-				if (bufsize - wpos < fs->chunksize)
+				if (bufsize - wpos < fs->inp_read_size)
 					trans_end = 1;
 			}
-			if (free_bytes >= fs->chunksize)
+			if (free_bytes >= fs->inp_read_size)
 		break;
+			if (!counted)
+				fs->full_counter++;
+			counted = 1;
 			fifo_sleep(0);
 		}
+
+		fill = bufsize - free_bytes - 1;
+		if (fill < fs->total_min_fill)
+			fs->total_min_fill = fill;
+		if (fill < fs->interval_min_fill)
+			fs->interval_min_fill = fill;
 
 		/* prepare the receiving memory */
 		bufpt = fs->buf + wpos;
 		if (trans_end) {
-			bufpt = calloc(fs->chunksize, 1);
+			bufpt = burn_os_alloc_buffer(
+					(size_t) fs->inp_read_size, 0);
 			if (bufpt == NULL) {
 				libdax_msgs_submit(libdax_messenger, -1,
 				  0x00000003,
@@ -370,15 +387,13 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 		/* Obtain next chunk */
 		if (fs->inp->read != NULL)
 			ret = fs->inp->read(fs->inp,
-				 (unsigned char *) bufpt, fs->chunksize);
+				 (unsigned char *) bufpt, fs->inp_read_size);
 		else
 			ret = fs->inp->read_xt( fs->inp,
-				 (unsigned char *) bufpt, fs->chunksize);
-		if (ret > 0)
-			fs->in_counter += ret;
-		else if (ret == 0)
+				 (unsigned char *) bufpt, fs->inp_read_size);
+		if (ret == 0)
 	break; /* EOF */
-		else {
+		else if (ret < 0) {
 			libdax_msgs_submit(libdax_messenger, -1, 0x00020153,
 				 LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
 				"Read error on fifo input", errno, 0);
@@ -387,17 +402,21 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 				fs->input_error = EIO;
 	break;
 		}
+		fs->in_counter += ret;
+		fs->put_counter++;
 
 		/* activate read chunk */
-		if (ret > fs->chunksize) /* beware of ill custom burn_source */
-			ret = fs->chunksize;
+		if (ret > fs->inp_read_size)
+					/* beware of ill custom burn_source */
+			ret = fs->inp_read_size;
 		if (trans_end) {
 			/* copy to end of buffer */
 			memcpy(fs->buf + wpos, bufpt, bufsize - wpos);
 			/* copy to start of buffer */
 			memcpy(fs->buf, bufpt + (bufsize - wpos),
-				fs->chunksize - (bufsize - wpos));
-			free(bufpt);
+				fs->inp_read_size - (bufsize - wpos));
+			burn_os_free_buffer(bufpt, (size_t) fs->inp_read_size,
+						0);
 			if (ret >= bufsize - wpos)
 				fs->buf_writepos = ret - (bufsize - wpos);
 			else
@@ -433,7 +452,9 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag)
 	   So in both cases the consumer is aware that reading is futile
 	   or even fatal.
 	*/
-	free(fs->buf); /* Give up fifo buffer. Next fifo might start soon. */
+	if(fs->buf != NULL)
+		burn_os_free_buffer(fs->buf,
+			((size_t) fs->chunksize) * (size_t) fs->chunks, 0);
 	fs->buf = NULL;
 
 	fs->thread_handle= NULL;
@@ -450,7 +471,9 @@ int burn_fifo_cancel(struct burn_source *source)
 	return(1);
 }
 
-
+/*
+   @param flag bit0= allow larger read chunks
+*/
 struct burn_source *burn_fifo_source_new(struct burn_source *inp,
 		 		int chunksize, int chunks, int flag)
 {
@@ -477,6 +500,10 @@ struct burn_source *burn_fifo_source_new(struct burn_source *inp,
 	fs->thread_pid = 0;
 	fs->thread_is_valid = 0;
 	fs->inp = NULL; /* set later */
+	if (flag & 1)
+		fs->inp_read_size = 32 * 1024;
+	else
+		fs->inp_read_size = chunksize;
 	fs->chunksize = chunksize;
 	fs->chunks = chunks;
 	fs->buf = NULL;
@@ -485,6 +512,9 @@ struct burn_source *burn_fifo_source_new(struct burn_source *inp,
 	fs->input_error = 0;
 	fs->end_of_consumption = 0;
 	fs->in_counter = fs->out_counter = 0;
+	fs->total_min_fill = fs->interval_min_fill = 0;
+	fs->put_counter = fs->get_counter = 0;
+	fs->empty_counter = fs->full_counter = 0;
 
 	src = burn_source_new();
 	if (src == NULL) {
@@ -550,34 +580,89 @@ int burn_fifo_inquire_status(struct burn_source *source,
 }
 
 
-int burn_fifo_peek_data(struct burn_source *source, char *buf, int bufsize,
+/* ts A91125 : API */
+void burn_fifo_get_statistics(struct burn_source *source,
+                             int *total_min_fill, int *interval_min_fill,
+                             int *put_counter, int *get_counter,
+                             int *empty_counter, int *full_counter)
+{
+	struct burn_source_fifo *fs = source->data;
+
+	*total_min_fill = fs->total_min_fill;
+	*interval_min_fill = fs->interval_min_fill;
+	*put_counter = fs->put_counter;
+	*get_counter = fs->get_counter;
+	*empty_counter = fs->empty_counter;
+	*full_counter = fs->full_counter;
+}
+
+
+/* ts A91125 : API */
+void burn_fifo_next_interval(struct burn_source *source,
+                            int *interval_min_fill)
+{ 
+	struct burn_source_fifo *fs = source->data;
+	int size, free_bytes, ret;
+	char *status_text;
+
+	*interval_min_fill = fs->interval_min_fill;
+	ret = burn_fifo_inquire_status(source,
+					 &size, &free_bytes, &status_text);	
+	fs->interval_min_fill = size - free_bytes - 1;
+}
+
+
+/* @param flag bit0= do not copy to buf but only wait until the fifo has read
+                     bufsize or input ended.
+                     The same happens if buf is NULL.
+               bit1= fill to max fifo size
+*/
+int burn_fifo_fill_data(struct burn_source *source, char *buf, int bufsize,
                         int flag)
 {
 	int size, free_bytes, ret, wait_count= 0;
 	char *status_text;
 	struct burn_source_fifo *fs = source->data;
 
+	if (buf == NULL)
+		flag |= 1;
+
 	/* Eventually start fifo thread by reading 0 bytes */
 	ret = fifo_read(source, (unsigned char *) NULL, 0);
 	if (ret<0)
-		return 0;
+		{ret = 0; goto ex;}
 
 	/* wait for at least bufsize bytes being ready */
 	while (1) {
 		ret= burn_fifo_inquire_status(source,
 					 &size, &free_bytes, &status_text);
-		if (size < bufsize) {
-			libdax_msgs_submit(libdax_messenger, -1, 0x0002015c,
-			LIBDAX_MSGS_SEV_FAILURE, LIBDAX_MSGS_PRIO_HIGH,
-		 	"Fifo size is smaller than desired peek buffer", 0, 0);
-			return -1;
+		if (flag & 2) {
+			bufsize = size - (size % fs->inp_read_size) -
+					fs->inp_read_size;
+			if (bufsize <= 0)
+				{ret = 0; goto ex;}
+		}
+		if (size - fs->inp_read_size < bufsize) {
+			if (flag & 1) {
+				bufsize = size - (size % fs->inp_read_size) -
+						fs->inp_read_size;
+				if (bufsize <= 0)
+					{ret = 0; goto ex;}
+			} else {
+				libdax_msgs_submit(libdax_messenger, -1,
+					0x0002015c, LIBDAX_MSGS_SEV_FAILURE,
+					 LIBDAX_MSGS_PRIO_HIGH,
+			 	"Fifo size too small for desired peek buffer",
+					 0, 0);
+				{ret = -1; goto ex;}
+			}
 		}
 		if (fs->out_counter > 0 || (ret & 4) || fs->buf == NULL) {
 			libdax_msgs_submit(libdax_messenger, -1, 0x0002015e,
 			LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
 	 	"Fifo is already under consumption when peeking is desired",
 			0, 0);
-			return -1;
+			{ret = -1; goto ex;}
 		}
 		if(size - free_bytes >= bufsize) {
 
@@ -586,17 +671,33 @@ int burn_fifo_peek_data(struct burn_source *source, char *buf, int bufsize,
 		"libburn_DEBUG: after waiting cycle %d : fifo %s , %d bytes\n",
 			 wait_count, status_text, size - free_bytes);
 			*/
-
-			memcpy(buf, fs->buf, bufsize);
-			return 1;
+			if(!(flag & 1))
+				memcpy(buf, fs->buf, bufsize);
+			{ret = 1; goto ex;}
 		}
-		if (ret&2) { /* input has ended, not enough data arrived */
+
+		if (ret & 2) {
+			/* input has ended, not enough data arrived */
+			if (flag & 1)
+				{ret = 0; goto ex;}
 			libdax_msgs_submit(libdax_messenger, -1, 0x0002015d,
 			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
 		 	"Fifo input ended short of desired peek buffer size",
 			0, 0);
-			return 0;
+			{ret = 0; goto ex;}
 		}
+
+		if (free_bytes < fs->inp_read_size) {
+			/* Usable fifo size filled, not enough data arrived */
+			if (flag & 1)
+				{ret = 0; goto ex;}
+			libdax_msgs_submit(libdax_messenger, -1, 0x00020174,
+			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+		 	"Fifo alignment does not allow desired read size",
+			0, 0);
+			{ret = 0; goto ex;}
+		}
+
 		usleep(100000);
 		wait_count++;
 
@@ -608,5 +709,25 @@ int burn_fifo_peek_data(struct burn_source *source, char *buf, int bufsize,
 		*/
 
 	}
-	return(0);
+	ret = 0;
+ex:;
+	fs->total_min_fill = fs->interval_min_fill = fs->buf_writepos;
+	return(ret);
 }
+
+
+/* ts A80713 : API */
+int burn_fifo_peek_data(struct burn_source *source, char *buf, int bufsize,
+                        int flag)
+{
+	return burn_fifo_fill_data(source, buf, bufsize, 0);
+}
+
+
+/* ts A91125 : API */
+int burn_fifo_fill(struct burn_source *source, int bufsize, int flag)
+{
+	return burn_fifo_fill_data(source, NULL, bufsize,
+					1 | ((flag & 1) << 1));
+}
+

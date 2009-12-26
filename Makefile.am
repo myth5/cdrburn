@@ -12,6 +12,9 @@ lib_LTLIBRARIES = libburn/libburn.la
 # Build libraries
 libburn_libburn_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+# This causes undesired .o names
+# configure.ac appends -D options to variable CFLAG
+### libburn_libburn_la_CFLAGS = $(LIBBURN_DVD_OBS_64K)
 libburn_libburn_la_LIBADD = $(LIBBURN_ARCH_LIBS) $(THREAD_LIBS)
 libburn_libburn_la_SOURCES = \
 	libburn/async.c \
@@ -25,6 +28,8 @@ libburn_libburn_la_SOURCES = \
 	libburn/debug.h \
 	libburn/drive.c \
 	libburn/drive.h \
+	libburn/ecma130ab.c \
+	libburn/ecma130ab.h \
 	libburn/error.h \
 	libburn/file.c \
 	libburn/file.h \
@@ -64,9 +69,6 @@ libburn_libburn_la_SOURCES = \
 	libburn/write.c \
 	libburn/write.h \
 	version.h
-
-##	libburn/lec.c \
-##	libburn/lec.h \
 
 ##	libburn/sg-@ARCH@.c \
 
@@ -108,9 +110,9 @@ test_structest_CPPFLAGS = -Ilibburn
 test_structest_LDADD = $(libburn_libburn_la_OBJECTS) $(LIBBURN_EXTRALIBS)
 test_structest_SOURCES = test/structest.c
 
-##  cdrskin construction site - ts A60816 - A91012
+##  cdrskin construction site - ts A60816 - A91206
 cdrskin_cdrskin_CPPFLAGS = -Ilibburn
-cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_7_2
+cdrskin_cdrskin_CFLAGS = -DCdrskin_libburn_0_7_4 
 
 # cdrskin_cdrskin_LDADD = $(libburn_libburn_la_OBJECTS) $(LIBBURN_EXTRALIBS)
 # ts A80123, change proposed by Simon Huggins to cause dynamic libburn linking

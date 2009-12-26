@@ -35,6 +35,7 @@ struct burn_source_fifo {
 
 	/* the burn_source for which this fifo is acting as proxy */
 	struct burn_source *inp;
+	int inp_read_size;
 
 	/* <<< up to now it was only a pipe. This is on its way out. */
 	int outlet[2];
@@ -51,6 +52,14 @@ struct burn_source_fifo {
 
 	off_t in_counter;
 	off_t out_counter;
+
+	int total_min_fill;
+	int interval_min_fill;
+	int put_counter;
+	int get_counter;
+	int empty_counter;
+	int full_counter;
+
 };
 
 

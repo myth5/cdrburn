@@ -43,9 +43,17 @@
 #include "options.h"
 #include "structure.h"
 #include "source.h"
+#include "mmc.h"
+#include "spc.h"
 
 #include "libdax_msgs.h"
 extern struct libdax_msgs *libdax_messenger;
+
+
+/* ts A91120 : <<< experimental */
+#ifdef Libburn_mmap_write_buffeR
+#include <sys/mman.h>
+#endif
 
 
 /* The maximum output size to be used with CD media. This is also curbed
@@ -882,9 +890,14 @@ ex:;
 		   next track. cdrecord does not use CLOSE TRACK at all but
 		   ends the tracks by SYNCHRONIZE CACHE alone.
 		*/
-		if (!o->simulate)
-			if (burn_write_close_track(o, s, tnum) <= 0)
-				ret = 0;
+		/* ts A91202 :
+		   Peng Shao reports that his LG GH22LS30 issues an SCSI error
+		   on CLOSE TRACK even in non-dummy mode. So i better give up
+		   this gesture which seems not be needed by any drive.
+			if (!o->simulate)
+				if (burn_write_close_track(o, s, tnum) <= 0)
+					ret = 0;
+		*/
 	}
 	return ret;
 }
@@ -1080,11 +1093,25 @@ int burn_disc_open_track_dvd_minus_r(struct burn_write_opts *o,
 	/* ts A70214 : eventually adjust already expanded size of track */
 	burn_track_apply_fillup(s->track[tnum], d->media_capacity_remaining,1);
 
+#ifdef Libburn_pioneer_dvr_216d_with_opC
+	fprintf(stderr, "libburn_DEBUG: Libburn_pioneer_dvr_216d_with_opC : num_opc_tables = %d\n", d->num_opc_tables);
+	if (d->num_opc_tables <= 0 && !o->simulate) {
+		fprintf(stderr, "libburn_DEBUG: Libburn_pioneer_dvr_216d_with_opC : performing OPC\n");
+		d->perform_opc(d);
+		fprintf(stderr, "libburn_DEBUG: Libburn_pioneer_dvr_216d_with_opC : done\n");
+	}
+#endif
+
+#ifdef Libburn_pioneer_dvr_216d_get_evenT
+	mmc_get_event(d);
+#endif
+
 	if (o->write_type == BURN_WRITE_SAO) { /* DAO */
- 		/* Round track size up to 32 KiB and reserve track */
+ 		/* Round track size up to write chunk size and reserve track */
 		size = ((off_t) burn_track_get_sectors(s->track[tnum]))
-			 * (off_t) 2048;
-		size = (size + (off_t) 0x7fff) & ~((off_t) 0x7fff);
+			* (off_t) 2048;
+		if (size % o->obs)
+			size += (off_t) (o->obs - (size % o->obs));
 		ret = d->reserve_track(d, size);
 		if (ret <= 0) {
 			sprintf(msg, "Cannot reserve track of %.f bytes",
@@ -1122,14 +1149,11 @@ int burn_disc_open_track_dvd_plus_r(struct burn_write_opts *o,
 
 	if (o->write_type == BURN_WRITE_SAO &&
 	    ! burn_track_is_open_ended(s->track[tnum])) {
- 		/* Round track size up to 32 KiB and reserve track */
-
-		/* ts A81208 */
-		/* >>> ??? round to 64 KiB for BD-R ? (It is not mandatory) */
-
+ 		/* Round track size up to write chunk size and reserve track */
 		size = ((off_t) burn_track_get_sectors(s->track[tnum]))
-			 * (off_t) 2048;
-		size = (size + (off_t) 0x7fff) & ~((off_t) 0x7fff);
+			* (off_t) 2048;
+		if (size % o->obs)
+			size += (off_t) (o->obs - (size % o->obs));
 		ret = d->reserve_track(d, size);
 		if (ret <= 0) {
 			sprintf(msg, "Cannot reserve track of %.f bytes",
@@ -1231,6 +1255,132 @@ int burn_disc_close_track_dvd_plus_r(struct burn_write_opts *o,
 }
 
 
+/* <<<
+#define Libburn_simplified_dvd_chunk_transactioN 1
+*/
+
+#ifdef Libburn_simplified_dvd_chunk_transactioN
+
+/* ts A91114 : EXPERIMENTAL, NOT COMPLETELY IMPLEMENTED
+
+   Simplified data transmission for DVD. libburn via Linux USB is 30 % slower
+   than growisofs or cdrecord when transmitting 32 KB chunks.
+   With 64 KB chunks it is 20% faster than the competitors.
+   No heavy CPU load is visible but there might be subtle race conditions in
+   the USB driver which work better with shorter time gaps between WRITE
+   commands.
+
+   Insight: It is actually about the interference of track source reading
+            with SCSI writing via USB. growisofs reads with O_DIRECT into a
+            mmap()ed buffer. When doing the same, libburn with 32 KB chunks
+            reaches similar write speed.
+            On the other hand, 64 KB chunks are 20% faster than that and
+            are not improved by reading O_DIRECT.
+
+            O_DIRECT is a property of the input fd of struct burn_source.
+            It can only be done with properly aligned memory and with aligned
+            read size. Alignment size is file system system specific.
+            System call
+                mmap(NULL, (size_t) buffer_size, PROT_READ | PROT_WRITE,
+                     MAP_SHARED | MAP_ANONYMOUS, -1, (off_t) 0);
+            is supposed to allocate a properly aligned buffer.
+            64 KB is supposed to be a safe size.
+            Actually mmap() seems to be the main cause for a positive effect
+            of O_DIRECT.
+
+   This simplified transmission function did not bring visible benefit.
+   So for now it is not worth to teach it all applicable details of old
+   CD sector oriented transmission.
+
+   @return 1= ok, go on , 2= no input with track->open_ended = nothing written
+           <= 0 = error
+*/
+static int transact_dvd_chunk(struct burn_write_opts *opts,
+				 struct burn_track *track)
+{
+	int curr = 0, valid, err;
+	struct burn_drive *d = opts->drive;
+        struct buffer *out = d->buffer;
+	unsigned char *data = out->data;
+
+#ifdef Libburn_log_in_and_out_streaM
+	/* <<< ts A61031 */
+	static int tee_fd= -1;
+	if(tee_fd==-1)
+		tee_fd= open("/tmp/libburn_sg_readin",
+				O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR);
+#endif /* Libburn_log_in_and_out_streaM */
+
+
+	/* Read a chunk full of data */
+
+	/* ??? Do we have offset padding ? >>> First produce offset padding */;
+
+	/*  <<<< */
+	if (0 && !track->eos) {
+		for (curr = 0; curr < opts->obs; curr += 2048) {
+			if (track->source->read != NULL)
+				valid = track->source->read(track->source,
+						data + curr, 2048);
+			else
+				valid = track->source->read_xt(track->source,
+						data + curr, 2048);
+			if (valid <= 0) {
+				track->eos = 1;
+		break;
+			}
+			track->sourcecount += valid;
+
+#ifdef Libburn_log_in_and_out_streaM
+			if(tee_fd!=-1 && valid>0) {
+				write(tee_fd, data + curr, valid);
+			}
+#endif /* Libburn_log_in_and_out_streaM */
+
+		}
+	} else if (!track->eos){
+		valid = track->source->read(track->source, data, opts->obs);
+		if (valid <= 0) {
+			track->eos = 1;
+		} else {
+			track->sourcecount += valid;
+			curr = valid;
+
+#ifdef Libburn_log_in_and_out_streaM
+			if(tee_fd!=-1 && valid>0) {
+				write(tee_fd, data, valid);
+			}
+#endif /* Libburn_log_in_and_out_streaM */
+		}
+	}
+	if (curr == 0 && track->open_ended) {
+
+		/* >>> allow tail padding */;
+
+		return 2;
+	}
+	if (curr < opts->obs)
+		memset(data + curr , 0, opts->obs - curr);
+
+	/* Write chunk */
+	out->bytes = opts->obs;
+	out->sectors = out->bytes / 2048;
+	err = d->write(d, d->nwa, out);
+	if (err == BE_CANCELLED)
+		return 0;
+	track->writecount += out->bytes;
+	track->written_sectors += out->sectors;
+	d->progress.buffered_bytes += out->bytes;
+	d->nwa += out->sectors;
+	out->bytes = 0;
+	out->sectors = 0;
+
+	return 1;
+}
+
+#endif /* Libburn_simplified_dvd_chunk_transactioN */
+
+
 /* ts A61218 - A81208 */
 int burn_dvd_write_track(struct burn_write_opts *o,
 			struct burn_session *s, int tnum, int is_last_track)
@@ -1240,6 +1390,7 @@ int burn_dvd_write_track(struct burn_write_opts *o,
 	struct buffer *out = d->buffer;
 	int sectors;
 	int i, open_ended = 0, ret= 0, is_flushed = 0;
+	int first_buf_cap = 0, further_cap = 0, buf_cap_step = 1024;
 
 	/* ts A70213 : eventually expand size of track to max */
 	burn_track_apply_fillup(t, d->media_capacity_remaining, 0);
@@ -1250,6 +1401,11 @@ int burn_dvd_write_track(struct burn_write_opts *o,
 		ret = burn_disc_open_track_dvd_minus_r(o, s, tnum);
 		if (ret <= 0)
 			goto ex;
+		/* Pioneer DVR-216D rev 1.09 hates multiple buffer inquiries
+		   before the drive buffer is full.
+		*/
+		first_buf_cap = 0;
+		further_cap = -1;
 	} else if (d->current_profile == 0x1b || d->current_profile == 0x2b) {
 		/* DVD+R , DVD+R/DL */
 		ret = burn_disc_open_track_dvd_plus_r(o, s, tnum);
@@ -1285,12 +1441,30 @@ int burn_dvd_write_track(struct burn_write_opts *o,
 	for (i = 0; open_ended || i < sectors; i++) {
 
 		/* From time to time inquire drive buffer */
-		if ((i%256)==0)
+		/* ts A91110: Eventually avoid to do this more than once
+		              before the drive buffer is full. See above DVD-
+		*/
+		if (i == first_buf_cap ||
+		   ((i % buf_cap_step) == 0 &&
+		    (i >= further_cap || further_cap < 0))) {
 			d->read_buffer_capacity(d);
+			if (further_cap < 0)
+				further_cap =
+			 	    d->progress.buffer_capacity / 2048 + 128;
+		}
 
+#ifdef Libburn_simplified_dvd_chunk_transactioN
+
+		ret = transact_dvd_chunk(o, t);
+		if (ret <= 0)
+			{ret = 0; goto ex;}
+		i += o->obs / 2048 - 1;
+		d->progress.sector += o->obs / 2048 - 1;
+#else
 		/* transact a (CD sized) sector */
 		if (!sector_data(o, t, 0))
 			{ ret = 0; goto ex; }
+#endif
 
 		if (open_ended) {
 			d->progress.sectors = sectors = i;
@@ -1751,13 +1925,29 @@ int burn_dvd_write_sync(struct burn_write_opts *o,
 		o->obs_pad = 1; /* fill-up track's last 32k buffer */
 	}
 
+#ifdef Libburn_dvd_obs_default_64K
+	o->obs = 64 * 1024;
+#endif
 
 	/* <<< test only : Does this increase effective speed with USB ?
 		ts A90801 : 64kB: speed with 16x DVD-R is 12 rather than 8
-		>>> next try is 128 kB
-	o->obs = 128 * 1024;
+		            128kB: glibc complains about double free
+		                   With BURN_OS_TRANSPORT_BUFFER_SIZE
+		                   enlarged to 128 MB, the first WRITE fails
+		                   with an i/o error.
+	o->obs = 64 * 1024;
 	*/
 
+	if (o->dvd_obs_override >= 32 * 1024)
+		o->obs = o->dvd_obs_override;
+
+	if (o->obs > BUFFER_SIZE) {
+		sprintf(msg, "Chosen write chunk size %d exceeds system dependent buffer size", o->obs);
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+				 0x00000002, LIBDAX_MSGS_SEV_DEBUG,
+				 LIBDAX_MSGS_PRIO_ZERO, msg, 0, 0);
+		o->obs = 32 * 1024; /* This size is required to work */
+	}
 
 	sprintf(msg, "dvd/bd Profile= %2.2Xh , obs= %d , obs_pad= %d",
 		d->current_profile, o->obs, o->obs_pad);
@@ -2045,8 +2235,9 @@ int burn_stdio_write_track(struct burn_write_opts *o, struct burn_session *s,
 	break;
 		}
 		d->progress.sector++;
-		/* Flush to disk after each full MB */
-		if (d->progress.sector - prev_sync_sector >= 512) {
+		/* Flush to disk from time to time */
+		if (d->progress.sector - prev_sync_sector >=
+		    o->stdio_fsync_size && o->stdio_fsync_size > 0) {
 			prev_sync_sector = d->progress.sector;
 			if (!o->simulate)
 				burn_stdio_sync_cache(d->stdio_fd, d, 1);
@@ -2129,6 +2320,7 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	off_t default_size;
 	char msg[80];
 
+
 /* ts A60924 : libburn/message.c gets obsoleted
 	burn_message_clear_queue();
 */
@@ -2143,10 +2335,11 @@ void burn_disc_write_sync(struct burn_write_opts *o, struct burn_disc *disc)
 	else
 		d->stream_recording_start = 0;
 
-	d->buffer = calloc(sizeof(struct buffer), 1);
+	/* ts A91122 : Get buffer suitable for sources made by
+	               burn_os_open_track_src() */
+	d->buffer = burn_os_alloc_buffer(sizeof(struct buffer), 0);
 	if (d->buffer == NULL)
 		goto fail_wo_sync;
-
 
 /* >>> ts A90321
 
@@ -2368,7 +2561,8 @@ fail_wo_sync:;
 ex:;
 	d->do_stream_recording = 0;
 	if (d->buffer != NULL)
-		free((char *) d->buffer);
+		burn_os_free_buffer((char *) d->buffer,
+					sizeof(struct buffer), 0);
 	d->buffer = buffer_mem;
 	return;
 }

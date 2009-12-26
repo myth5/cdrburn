@@ -28,6 +28,8 @@
 /* ts A70223 : in init.c */
 extern int burn_support_untested_profiles;
 
+static int mmc_get_configuration_al(struct burn_drive *d, int *alloc_len);
+
 
 #ifdef Libburn_log_in_and_out_streaM
 /* <<< ts A61031 */
@@ -177,7 +179,7 @@ static unsigned char MMC_GET_CONFIGURATION[] =
 	{ 0x46, 0, 0, 0, 0, 0, 0, 16, 0, 0 };
 
 static unsigned char MMC_SYNC_CACHE[] = { 0x35, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-static unsigned char MMC_GET_EVENT[] = { 0x4A, 1, 0, 0, 16, 0, 0, 0, 8, 0 };
+static unsigned char MMC_GET_EVENT[] = { 0x4A, 1, 0, 0, 0x7e, 0, 0, 0, 8, 0 };
 static unsigned char MMC_CLOSE[] = { 0x5B, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 static unsigned char MMC_TRACK_INFO[] = { 0x52, 0, 0, 0, 0, 0, 0, 16, 0, 0 };
 
@@ -243,11 +245,6 @@ int mmc_function_spy(struct burn_drive *d, char * text)
 		d->cancel = 1;
 		return 0;
 	}
-	if (d->is_stopped && strcmp(text, "stop_unit") != 0 &&
-	    strcmp(text, "start_unit") != 0) {
-		d->start_unit(d);
-		d->is_stopped = 0;
-	}
 	return 1;
 }
 
@@ -276,12 +273,29 @@ int mmc_int_to_four_char(unsigned char *data, int num)
 }
 
 
+static int mmc_start_for_bit0 = 0;
+
+/* @param flag bit0= the calling function should need no START UNIT.
+                     (Handling depends on mmc_start_for_bit0)
+*/
+int mmc_start_if_needed(struct burn_drive *d, int flag)
+{
+	if (!d->is_stopped)
+		return 2;
+	if ((flag & 1) && !mmc_start_for_bit0)
+		return 2;
+	d->start_unit(d);
+	d->is_stopped = 0;
+	return 1;
+}
+
+
 void mmc_send_cue_sheet(struct burn_drive *d, struct cue_sheet *s)
 {
 	struct buffer buf;
 	struct command c;
 
-
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_send_cue_sheet") <= 0)
 		return;
 
@@ -313,6 +327,7 @@ int mmc_reserve_track(struct burn_drive *d, off_t size)
 	int lba;
 	char msg[80];
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_reserve_track") <= 0)
 		return 0;
 
@@ -347,6 +362,7 @@ int mmc_read_track_info(struct burn_drive *d, int trackno, struct buffer *buf,
 {
 	struct command c;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_track_info") <= 0)
 		return 0;
 
@@ -399,6 +415,7 @@ int mmc_get_nwa(struct burn_drive *d, int trackno, int *lba, int *nwa)
 	int ret, num, alloc_len = 20;
 	unsigned char *data;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_get_nwa") <= 0)
 		return -1;
 
@@ -409,6 +426,11 @@ int mmc_get_nwa(struct burn_drive *d, int trackno, int *lba, int *nwa)
 	*lba = mmc_four_char_to_int(data + 8);
 	*nwa = mmc_four_char_to_int(data + 12);
 	num = mmc_four_char_to_int(data + 16);
+
+#ifdef Libburn_pioneer_dvr_216d_load_mode5
+	/* >>> memorize track mode : data[6] & 0xf */;
+#endif
+
 	if (d->current_profile == 0x1a || d->current_profile == 0x13 ||
 	    d->current_profile == 0x12 || d->current_profile == 0x43) {
 		 /* overwriteable */
@@ -519,17 +541,19 @@ void mmc_get_event(struct burn_drive *d)
 {
 	struct buffer buf;
 	struct command c;
-	int alloc_len= 8;
+	int alloc_len = 8, len, evt_code, loops = 0;
+	unsigned char *evt;
 
 	if (mmc_function_spy(d, "mmc_get_event") <= 0)
 		return;
 
+again:;
 	scsi_init_command(&c, MMC_GET_EVENT, sizeof(MMC_GET_EVENT));
-/*
-	c.oplen = sizeof(MMC_GET_EVENT);
-	memcpy(c.opcode, MMC_GET_EVENT, sizeof(MMC_GET_EVENT));
-*/
-	c.dxfer_len = alloc_len;
+	c.dxfer_len = 8;
+
+	/* >>> have a burn_drive element for Notification Class */;
+	c.opcode[4] = 0x7e;
+
 	c.opcode[7] = (c.dxfer_len >> 8) & 0xff;
 	c.opcode[8] = c.dxfer_len & 0xff;
 	c.retry = 1;
@@ -538,11 +562,66 @@ void mmc_get_event(struct burn_drive *d)
 	c.page->sectors = 0;
 	c.dir = FROM_DRIVE;
 	d->issue_command(d, &c);
-	burn_print(12, "0x%x:0x%x:0x%x:0x%x\n",
-		   c.page->data[0], c.page->data[1], c.page->data[2],
-		   c.page->data[3]);
-	burn_print(12, "event: %d:%d:%d:%d\n", c.page->data[4],
-		   c.page->data[5], c.page->data[6], c.page->data[7]);
+	if (c.error)
+		return;
+
+	evt = c.page->data;
+	len = ((evt[0] << 8) | evt[1]) + 2;
+	if (len < 8)
+		return;
+
+	/* >>> memorize evt[3] in burn_drive element for Notification Class */;
+	if (evt[3] == 0) /* No event */
+		return;
+
+	evt_code = evt[4] & 0xf;
+	if (evt_code == 0) /* No change */
+		return;
+
+	switch (evt[2] & 7) {
+	case 0: /* no events supported */
+		return;
+	case 1: /* Operational change */
+		if (((evt[6] << 8) | evt[7])) {
+			alloc_len = 8;
+			mmc_get_configuration_al(d, &alloc_len);
+		}
+		break;
+	case 2: /* Power Management */
+		if (evt[5] >= 2)
+			d->start_unit(d);
+		break;
+	case 3: /* External request */
+
+		/* >>> report about external request */;
+
+		break;
+	case 4: /* Media */
+		if (evt_code == 2) {
+			d->start_unit(d);
+			alloc_len = 8;
+			mmc_get_configuration_al(d, &alloc_len);
+		}
+		break;
+	case 5: /* Multiple Host Events */
+		
+		/* >>> report about foreign host interference */;
+
+		break;
+
+	case 6: /* Device busy */
+		if (evt_code == 1 && evt[5]) {
+
+			/* >>> wait the time announced in evt[6],[7]
+				 as 100ms units */;
+		}
+		break;
+	default: /* reserved */
+		break;
+	}
+	loops++;
+	if (loops < 100)
+		goto again;
 }
 
 
@@ -687,6 +766,7 @@ void mmc_write_12(struct burn_drive *d, int start, struct buffer *buf)
 	struct command c;
 	int len;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_write_12") <= 0)
 		return;
 
@@ -729,6 +809,7 @@ int mmc_write(struct burn_drive *d, int start, struct buffer *buf)
 				O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR);
 #endif /* Libburn_log_in_and_out_streaM */
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_write") <= 0)
 		return BE_CANCELLED;
 
@@ -1022,6 +1103,7 @@ static int mmc_read_toc_fmt0(struct burn_drive *d)
 {
 	int alloc_len = 4, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_toc_fmt0") <= 0)
 		return -1;
 	ret = mmc_read_toc_fmt0_al(d, &alloc_len);
@@ -1404,6 +1486,7 @@ void mmc_read_toc(struct burn_drive *d)
 {
 	int alloc_len = 4, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_toc") <= 0)
 		return;
 
@@ -1434,6 +1517,7 @@ int mmc_read_multi_session_c1(struct burn_drive *d, int *trackno, int *start)
 	struct burn_track **tracks;
 	struct burn_toc_entry toc_entry;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_multi_session_c1") <= 0)
 		return 0;
 
@@ -1631,7 +1715,7 @@ static int mmc_read_disc_info_al(struct burn_drive *d, int *alloc_len)
 	d->disc_info_valid |= (!!(data[7] & 128)) << 1;
 	if (len + 2 > 31 && (data[7] & 64)) {
 		memcpy(d->disc_bar_code, data + 24, 8);
-		d->disc_bar_code[9] = 0;
+		d->disc_bar_code[8] = 0;
 		d->disc_info_valid |= 4;
 	}
 	if (len + 2 > 32 && (data[7] & 16)) {
@@ -1766,11 +1850,16 @@ regard_as_blank:;
 		return 0;
 	}
 
-	/* ts A61217 : Note for future
+	/* ts A61217 :
 	   growisofs performs OPC if (data[0]<<8)|data[1]<=32
 	   which indicates no OPC entries are attached to the
 	   reply from the drive.
+	   ts A91104 :
+	   Actually growisofs performs OPC only on DVD-R[W].
 	*/
+	d->num_opc_tables = 0;
+	if(((data[0] << 8) | data[1]) > 32) /* i.e. > 34 bytes are available */
+		d->num_opc_tables = data[33];
 
 	/* ts A61219 : mmc5r03c.pdf 6.22.3.1.13 BG Format Status
 	   0=blank (not yet started)
@@ -1818,6 +1907,7 @@ void mmc_read_disc_info(struct burn_drive *d)
 {
 	int alloc_len = 34, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_disc_info") <= 0)
 		return;
 
@@ -1849,6 +1939,7 @@ void mmc_read_atip(struct burn_drive *d)
 	                   4234, 5646, 7056, 8468, -12, -13, -14, -15};
 	               /*    24,   32,   40,   48,   -,   -,   -,   - */
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_atip") <= 0)
 		return;
 
@@ -2006,6 +2097,7 @@ void mmc_read_sectors(struct burn_drive *d,
 	int errorblock, req;
 	struct command c;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_read_sectors") <= 0)
 		return;
 
@@ -2076,6 +2168,7 @@ void mmc_erase(struct burn_drive *d, int fast)
 {
 	struct command c;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_erase") <= 0)
 		return;
 
@@ -2097,6 +2190,7 @@ void mmc_read_lead_in(struct burn_drive *d, struct buffer *buf)
 	int len;
 	struct command c;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_read_lead_in") <= 0)
 		return;
 
@@ -2125,6 +2219,7 @@ void mmc_perform_opc(struct burn_drive *d)
 {
 	struct command c;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_perform_opc") <= 0)
 		return;
 
@@ -2157,14 +2252,11 @@ int mmc_set_streaming(struct burn_drive *d,
 	unsigned char *pd;
 	int key, asc, ascq;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_set_streaming") <= 0)
 		return 0;
 
 	scsi_init_command(&c, MMC_SET_STREAMING, sizeof(MMC_SET_STREAMING));
-/*
-	c.oplen = sizeof(MMC_SET_STREAMING);
-	memcpy(c.opcode, MMC_SET_STREAMING, sizeof(MMC_SET_STREAMING));
-*/
 	c.retry = 1;
 	c.page = &buf;
 	c.page->bytes = 28;
@@ -2218,26 +2310,10 @@ int mmc_set_streaming(struct burn_drive *d,
 	d->issue_command(d, &c);
 	if (c.error) {
 		if (c.sense[2]!=0 && !d->silent_on_scsi_error) {
-
-#ifdef NIX
-			sprintf(msg,
-	"SCSI error on set_streaming(%d): key=%X asc=%2.2Xh ascq=%2.2Xh",
-				w_speed,
-				c.sense[2],c.sense[12],c.sense[13]);
-				libdax_msgs_submit(libdax_messenger,
-				d->global_index,
-				0x00020124,
-				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
-				msg, 0, 0);
-#else /* NIX */
-
 			sprintf(msg,
 				"SCSI error on set_streaming(%d): ", w_speed);
 			scsi_error_msg(d, c.sense, 14, msg + strlen(msg), 
 					&key, &asc, &ascq);
-
-#endif /* !NIX */
-
 		}
 		return 0;
 	}
@@ -2251,6 +2327,7 @@ void mmc_set_speed(struct burn_drive *d, int r, int w)
 	int ret, end_lba = 0;
 	struct burn_speed_descriptor *best_sd = NULL;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_set_speed") <= 0)
 		return;
 
@@ -2364,7 +2441,7 @@ static int mmc_get_configuration_al(struct burn_drive *d, int *alloc_len)
 		return 0;
 	}
 	old_alloc_len = *alloc_len;
-	*alloc_len = len = mmc_four_char_to_int(c.page->data);
+	*alloc_len = len = mmc_four_char_to_int(c.page->data) + 4;
 	if (len > old_alloc_len)
 		len = old_alloc_len;
 	if (len < 8 || len > 4096)
@@ -2591,6 +2668,7 @@ void mmc_get_configuration(struct burn_drive *d)
 {
 	int alloc_len = 8, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_get_configuration") <= 0)
 		return;
 
@@ -2794,6 +2872,7 @@ int mmc_read_format_capacities(struct burn_drive *d, int top_wanted)
 {
 	int alloc_len = 4, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_format_capacities") <= 0)
 		return 0;
 
@@ -2822,9 +2901,7 @@ void mmc_sync_cache(struct burn_drive *d)
 	c.oplen = sizeof(MMC_SYNC_CACHE);
 */
 	c.retry = 1;
-
 	c.opcode[1] |= 2; /* ts A70918 : Immed */
-
 	c.page = NULL;
 	c.dir = NO_TRANSFER;
 
@@ -2852,6 +2929,7 @@ void mmc_sync_cache(struct burn_drive *d)
 		d->cancel = 1;
 		return;
 	}
+
 	if (spc_wait_unit_attention(d, 3600, "SYNCHRONIZE CACHE", 0) <= 0)
 		d->cancel = 1;
 	else
@@ -2874,11 +2952,6 @@ int mmc_read_buffer_capacity(struct burn_drive *d)
 
 	scsi_init_command(&c, MMC_READ_BUFFER_CAPACITY,
 			 sizeof(MMC_READ_BUFFER_CAPACITY));
-/*
-	memcpy(c.opcode, MMC_READ_BUFFER_CAPACITY,
-		 sizeof(MMC_READ_BUFFER_CAPACITY));
-	c.oplen = sizeof(MMC_READ_BUFFER_CAPACITY);
-*/
 	c.dxfer_len = alloc_len;
 	c.opcode[7] = (c.dxfer_len >> 8) & 0xff;
 	c.opcode[8] = c.dxfer_len & 0xff;
@@ -2946,6 +3019,7 @@ int mmc_format_unit(struct burn_drive *d, off_t size, int flag)
 	int key, asc, ascq;
 	int full_format_type = 0x00; /* Full Format (or 0x10 for DVD-RW ?) */
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_format_unit") <= 0)
 		return 0;
 	size_mode = (flag >> 1) & 3;
@@ -3687,6 +3761,7 @@ int mmc_get_write_performance(struct burn_drive *d)
 {
 	int alloc_len = 8, max_descr = 0, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_get_write_performance") <= 0)
 		return 0;
 
@@ -3729,10 +3804,9 @@ int mmc_compose_mode_page_5(struct burn_drive *d,
 		pd[4] = 8;
 		/* Link size dummy */
 		pd[5] = 0;
-
 	} else if ((d->current_profile == 0x14 || d->current_profile == 0x11 ||
 			d->current_profile == 0x15)
-		&& o->write_type == BURN_WRITE_SAO) {
+			&& o->write_type == BURN_WRITE_SAO) {
 		/* ts A70205 : DVD-R[W][/DL] : Disc-at-once, DAO */
 		/* Learned from dvd+rw-tools and mmc5r03c.pdf .
 		   See doc/cookbook.txt for more detailed references. */
@@ -3741,8 +3815,17 @@ int mmc_compose_mode_page_5(struct burn_drive *d,
 		pd[2] = ((!!o->underrun_proof) << 6)
 			| ((!!o->simulate) << 4)
 			| 2;
-		/* No multi-session , FP = 0 , Track Mode = 5 */
+
+		/* No multi-session , FP = 0 , Copy = 0, Track Mode = 5 */
 		pd[3] = 5;
+
+#ifdef Libburn_pioneer_dvr_216d_load_mode5
+
+		/* >>> use track mode from mmc_get_nwa() */
+		/* >>> pd[3] = (pd[3] & ~0xf) | (d->track_inf[5] & 0xf); */
+
+#endif
+
 		/* Data Block Type = 8 */
 		pd[4] = 8;
 
@@ -3819,6 +3902,7 @@ int mmc_read_10(struct burn_drive *d, int start,int amount, struct buffer *buf)
 {
 	struct command c;
 
+	mmc_start_if_needed(d, 0);
 	if (mmc_function_spy(d, "mmc_read_10") <= 0)
 		return -1;
 ;
@@ -3877,6 +3961,7 @@ int mmc_read_capacity(struct burn_drive *d)
 	int alloc_len= 8;
 
 	d->media_read_capacity = 0x7fffffff;
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_capacity") <= 0)
 		return 0;
 
@@ -3960,7 +4045,9 @@ int mmc_read_disc_structure(struct burn_drive *d,
 		char **reply, int *reply_len, int flag)
 {
 	int alloc_len = 4, ret;
+	char msg[80];
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "mmc_read_disc_structure") <= 0)
 		return 0;
 
@@ -3971,7 +4058,49 @@ int mmc_read_disc_structure(struct burn_drive *d,
 	fprintf(stderr,"LIBBURN_DEBUG: ADh alloc_len = %d , ret = %d\n",
 		 alloc_len, ret);
 */
-	if (alloc_len >= 12 && ret > 0)
+	if (ret <= 0)
+		return ret;
+	if (alloc_len < 12) {
+		sprintf(msg,
+		    "READ DISC STRUCTURE announces only %d bytes of reply\n", 
+		    alloc_len);
+		libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+			LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+			msg, 0, 0);
+		ret = 0;
+
+/* ts A91205
+   LG GH22LS30 revision 1.00 returns for DVD-R format
+   code 0x0E an allocation length of 4 (= 0 payload).
+   A MS-Windows tool can inquire media code "RITEKF1",
+   though.
+   This macro causes a try to unconditionally read the
+   desired payload bytes. The drive then returns 35
+   bytes as requested and the media id is "RITEKF1".
+   Nevertheless this is not a generally usable gesture
+   because older Linux USB dislikes requests to fetch
+   more bytes than the drive will deliver.
+
+   # define Libburn_enforce_structure_code_0x0E 1
+*/
+
+#ifdef Libburn_enforce_structure_code_0x0E
+		if (format == 0x0E) {
+			alloc_len = min_len + 4;
+			ret = mmc_read_disc_structure_al(d, &alloc_len,
+				media_type, layer_number, format, min_len,
+				reply, reply_len, 0);
+			if (*reply_len < min_len || *reply == NULL)
+				ret = 0;
+			sprintf(msg, "READ DISC STRUCTURE returns %d bytes of required %d\n", 
+				*reply_len + 4, min_len + 4);
+			libdax_msgs_submit(libdax_messenger, -1, 0x00000002,
+				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_ZERO,
+				msg, 0, 0);
+		}
+#endif
+
+	} else
 		ret = mmc_read_disc_structure_al(d, &alloc_len,
 				media_type, layer_number, format, min_len,
 				reply, reply_len, 0);
@@ -4253,6 +4382,7 @@ int mmc_setup_drive(struct burn_drive *d)
 	d->needs_close_session = 0;
 	d->needs_sync_cache = 0;
 	d->bg_format_status = -1;
+	d->num_opc_tables = -1;
 	d->last_lead_in = -2000000000;
 	d->last_lead_out = -2000000000;
 	d->disc_type = 0xff;

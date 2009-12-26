@@ -27,11 +27,6 @@
 #include "libdax_msgs.h"
 extern struct libdax_msgs *libdax_messenger;
 
-/* ts A70910
-   debug: for tracing calls which might use open drive fds
-          or for catching SCSI usage of emulated drives. */
-int mmc_function_spy(struct burn_drive *d, char * text);
-
 
 /* spc command set */
 /* ts A70519 : allocation length byte 3+4 was 0,255 */
@@ -98,7 +93,9 @@ int spc_test_unit_ready(struct burn_drive *d)
 
 
 /* ts A70315 */
-/** @param flag bit0=do not wait 0.1 seconds before first test unit ready */
+/** @param flag bit0=do not wait 0.1 seconds before first test unit ready
+                bit1=do not issue success message
+ */
 /** Wait until the drive state becomes clear or until max_usec elapsed */
 int spc_wait_unit_attention(struct burn_drive *d, int max_sec, char *cmd_text,
 				int flag)
@@ -112,13 +109,6 @@ int spc_wait_unit_attention(struct burn_drive *d, int max_sec, char *cmd_text,
 		usleep(100000);
 	for(i = !(flag & 1); i < max_sec * 10; i++) {
 		ret = spc_test_unit_ready_r(d, &key, &asc, &ascq);
-
-/* <<< 
-		fprintf(stderr,
-"libburn_EXPERIMENTAL: i= %d  ret= %d  key= %X  asc= %2.2X  ascq= %2.2X\n",
-		i, ret, (unsigned) key, (unsigned) asc, (unsigned) ascq);
-*/
-
 		if (ret > 0) /* ready */
 	break;
 		if (key!=0x2 || asc!=0x4) {
@@ -140,24 +130,14 @@ int spc_wait_unit_attention(struct burn_drive *d, int max_sec, char *cmd_text,
 				/* media change notice = try again */
 				goto slumber;
 
-#ifdef NIX
-			sprintf(msg,
-		"Asynchromous SCSI error on %s: key=%X asc=%2.2Xh ascq=%2.2Xh",
-			 	cmd_text, (unsigned) key, (unsigned) asc,
-				(unsigned) ascq);
-#else
-
 			/* ts A90213 */
 			sprintf(msg,
-				"Asynchromous SCSI error on %s: ", cmd_text);
+				"Asynchronous SCSI error on %s: ", cmd_text);
 			sense[2] = key;
 			sense[12] = asc;
 			sense[13] = ascq;
 			resp = scsi_error_msg(d, sense, 14, msg + strlen(msg),
 						 &key, &asc, &ascq);
-
-#endif /* ! NIX */
-
 			libdax_msgs_submit(libdax_messenger, d->global_index,
 				0x0002014d,
 				LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
@@ -168,11 +148,14 @@ int spc_wait_unit_attention(struct burn_drive *d, int max_sec, char *cmd_text,
 slumber:;
 		usleep(100000);
 	}
-
-	sprintf(msg, "Async %s %s after %d.%d seconds",
-		cmd_text, (ret > 0 ? "succeeded" : "failed"), i / 10, i % 10);
-	libdax_msgs_submit(libdax_messenger, d->global_index, 0x00020150,
-		LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_LOW, msg, 0, 0);
+	if (ret <= 0 || !(flag & 2)) {
+		sprintf(msg, "Async %s %s after %d.%d seconds",
+			cmd_text, (ret > 0 ? "succeeded" : "failed"),
+			i / 10, i % 10);
+		libdax_msgs_submit(libdax_messenger, d->global_index,
+			 0x00020150, LIBDAX_MSGS_SEV_DEBUG,
+			 LIBDAX_MSGS_PRIO_LOW, msg, 0, 0);
+	}
 
 	if (i < max_sec * 10)
 		return (ret > 0);
@@ -262,14 +245,14 @@ void spc_prevent(struct burn_drive *d)
 		return;
 
 	scsi_init_command(&c, SPC_PREVENT, sizeof(SPC_PREVENT));
-/*
-	memcpy(c.opcode, SPC_PREVENT, sizeof(SPC_PREVENT));
-	c.oplen = sizeof(SPC_PREVENT);
-	c.page = NULL;
-*/
 	c.retry = 1;
 	c.dir = NO_TRANSFER;
 	d->issue_command(d, &c);
+
+#ifdef Libburn_pioneer_dvr_216d_get_evenT
+        mmc_get_event(d);
+#endif
+
 }
 
 void spc_allow(struct burn_drive *d)
@@ -489,6 +472,7 @@ void spc_sense_caps(struct burn_drive *d)
 {
 	int alloc_len, start_len = 30, ret;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "sense_caps") <= 0)
 		return;
 
@@ -513,6 +497,7 @@ void spc_sense_error_params(struct burn_drive *d)
 	unsigned char *page;
 	struct command c;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "sense_error_params") <= 0)
 		return;
 
@@ -546,6 +531,7 @@ void spc_select_error_params(struct burn_drive *d,
 	struct buffer buf;
 	struct command c;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "select_error_params") <= 0)
 		return;
 
@@ -587,6 +573,7 @@ void spc_sense_write_params(struct burn_drive *d)
 	unsigned char *page;
 	struct command c;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "sense_write_params") <= 0)
 		return;
 
@@ -650,7 +637,9 @@ void spc_select_write_params(struct burn_drive *d,
 {
 	struct buffer buf;
 	struct command c;
+	int alloc_len;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "select_write_params") <= 0)
 		return;
 
@@ -664,13 +653,33 @@ void spc_select_write_params(struct burn_drive *d,
 		o->block_type,spc_block_type(o->block_type));
 	*/
 
-	scsi_init_command(&c, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
-/*
-	memcpy(c.opcode, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
-	c.oplen = sizeof(SPC_MODE_SELECT);
-*/
+	alloc_len = 8 + 2 + d->mdata->write_page_length;
+	memset(&(buf.data), 0, alloc_len);
+
+#ifdef Libburn_pioneer_dvr_216d_load_mode5
+
+	scsi_init_command(&c, SPC_MODE_SENSE, sizeof(SPC_MODE_SENSE));
+	c.dxfer_len = alloc_len;
+	c.opcode[7] = (alloc_len >> 8) & 0xff;
+	c.opcode[8] = alloc_len & 0xff;
 	c.retry = 1;
-	c.opcode[8] = 8 + 2 + d->mdata->write_page_length;
+	c.opcode[2] = 0x05;
+	c.page = &buf;
+	c.page->bytes = 0;
+	c.page->sectors = 0;
+	c.dir = FROM_DRIVE;
+	d->issue_command(d, &c);
+
+	if (c.error) 
+		memset(&(buf.data), 0,
+				8 + 2 + d->mdata->write_page_length);
+
+#endif /* Libburn_pioneer_dvr_216d_load_mode5 */
+
+	scsi_init_command(&c, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
+	c.retry = 1;
+	c.opcode[7] = (alloc_len >> 8) & 0xff;
+	c.opcode[8] = alloc_len & 0xff;
 	c.page = &buf;
 	c.page->bytes = 0;
 	c.page->sectors = 0;
@@ -678,8 +687,7 @@ void spc_select_write_params(struct burn_drive *d,
 	/* ts A61007 : moved up to burn_disc_write() */
 	/* a ssert(d->mdata->valid); */
 
-	memset(c.page->data, 0, 8 + 2 + d->mdata->write_page_length);
-	c.page->bytes = 8 + 2 + d->mdata->write_page_length;
+	c.page->bytes = alloc_len;
 
 	burn_print(12, "using write page length %d (valid %d)\n",
 		   d->mdata->write_page_length, d->mdata->write_page_valid);
@@ -716,6 +724,7 @@ void spc_probe_write_modes(struct burn_drive *d)
 	int last_try = 0;
 	struct command c;
 
+	mmc_start_if_needed(d, 1);
 	if (mmc_function_spy(d, "spc_probe_write_modes") <= 0)
 		return;
 
@@ -733,11 +742,8 @@ void spc_probe_write_modes(struct burn_drive *d)
 			try_block_type = useable_block_type;
 			last_try= 1;
 		}
+
 		scsi_init_command(&c, SPC_MODE_SELECT,sizeof(SPC_MODE_SELECT));
-/*
-		memcpy(c.opcode, SPC_MODE_SELECT, sizeof(SPC_MODE_SELECT));
-		c.oplen = sizeof(SPC_MODE_SELECT);
-*/
 		c.retry = 1;
 		c.opcode[8] = 8 + 2 + 0x32;
 		c.page = &buf;
@@ -766,7 +772,6 @@ void spc_probe_write_modes(struct burn_drive *d)
 		key = c.sense[2];
 		asc = c.sense[12];
 		ascq = c.sense[13];
-
 		if (key)
 			burn_print(7, "%d not supported\n", try_block_type);
 		else {
@@ -812,6 +817,7 @@ void spc_probe_write_modes(struct burn_drive *d)
 			return;
 		}
 	}
+
 }
 
 /* ( ts A61229 : shouldn't this go to mmc.c too ?) */
@@ -1142,6 +1148,11 @@ enum response scsi_error_msg(struct burn_drive *d, unsigned char *sense,
 			sprintf(msg, "Medium not present");
 		d->status = BURN_DISC_EMPTY;
 		return FAIL;
+	case 0x57:
+		if (*key != 3 || *ascq != 0)
+			break;
+		sprintf(msg, "Unable to recover Table-of-Content");
+		return FAIL;
 	case 0x63:
 		if (*key != 5)
 			break;
@@ -1229,6 +1240,8 @@ static char *scsi_command_name(unsigned int c, int flag)
 		return "FORMAT UNIT";
         case 0x1b:
 		return "START/STOP UNIT";
+	case 0x12:
+		return "INQUIRY";
 	case 0x1e:
 		return "PREVENT/ALLOW MEDIA REMOVAL";
         case 0x23:
@@ -1258,7 +1271,7 @@ static char *scsi_command_name(unsigned int c, int flag)
         case 0x55:
 		return "MODE SELECT";
 	case 0x5a:
-		return "SEND OPC INFORMATION";
+		return "MODE SENSE";
         case 0x5b:
 		return "CLOSE TRACK/SESSION";
         case 0x5c:
@@ -1336,3 +1349,66 @@ int scsi_notify_error(struct burn_drive *d, struct command *c,
 	return ret;
 }
 
+
+/* ts A91106 */
+/* @param flag bit0= do not show eventual data payload sent to the drive
+                     (never with WRITE commands)
+               bit1= show write length and target LBA in decimal
+*/
+int scsi_show_cmd_text(struct command *c, void *fp_in, int flag)
+{
+	int i;
+	FILE *fp = fp_in;
+
+	fprintf(fp, "\n%s\n",
+		 scsi_command_name((unsigned int) c->opcode[0], 0));
+	for(i = 0; i < 16 && i < c->oplen; i++)
+		fprintf(fp, "%2.2x ", c->opcode[i]);
+	if (i > 0)
+		fprintf(fp, "\n");
+	if (flag & 1)
+		return 1;
+	if (c->opcode[0] == 0x2A) { /* WRITE 10 */
+		if (flag & 2)
+			fprintf(fp, "%d -> %d\n",
+				(c->opcode[7] << 8) | c->opcode[8], 
+				mmc_four_char_to_int(c->opcode + 2));
+	} else if (c->opcode[0] == 0xAA) { /* WRITE 12 */
+		if (flag & 2)
+			fprintf(fp, "%d -> %d\n",
+				mmc_four_char_to_int(c->opcode + 6),
+				mmc_four_char_to_int(c->opcode + 2));	
+	} else if (c->dir == TO_DRIVE) {
+		fprintf(fp, "To drive: %db\n", c->page->bytes);
+		for (i = 0; i < c->page->bytes; i++) 
+			fprintf(fp, "%2.2x%c", c->page->data[i],
+				((i % 20) == 19 ? '\n' : ' '));
+		if (i % 20)
+			fprintf(fp, "\n");
+	}
+	return 1;
+}
+
+/* ts A91106 */
+int scsi_show_cmd_reply(struct command *c, void *fp_in, int flag)
+{
+	int i;
+	FILE *fp = fp_in;
+
+	if (c->dir != FROM_DRIVE)
+		return 2;
+	if (c->opcode[0] == 0x28 || c->opcode[0] == 0x3C ||
+	    c->opcode[0] == 0xA8 || c->opcode[0] == 0xBE) {
+							/* READ commands */
+		/* >>> report amount of data */;
+
+		return 2;
+	}
+	fprintf(fp, "From drive: %db\n", c->dxfer_len);
+	for (i = 0; i < c->dxfer_len; i++)
+		fprintf(fp, "%2.2x%c", c->page->data[i],
+			((i % 20) == 19 ? '\n' : ' '));
+	if (i % 20)
+		fprintf(fp, "\n");
+	return 1;
+}

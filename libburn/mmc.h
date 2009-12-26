@@ -68,6 +68,9 @@ int mmc_compose_mode_page_5(struct burn_drive *d,
                             const struct burn_write_opts *o,
                             unsigned char *pd);
 
+/* ts A70201 */
+int mmc_four_char_to_int(unsigned char *data);
+
 /* ts A70812 : return 0 = ok , return BE_CANCELLED = error occured */
 int mmc_read_10(struct burn_drive *d, int start, int amount,
                 struct buffer *buf);
@@ -89,5 +92,13 @@ char *mmc_obtain_profile_name(int profile_number);
 int mmc_get_media_product_id(struct burn_drive *d,
         char **product_id, char **media_code1, char **media_code2,
 	char **book_type, int flag);
+
+
+/* ts A60910 (estimated) */
+int mmc_function_spy(struct burn_drive *d, char * text);
+
+/* ts A91118 */
+int mmc_start_if_needed(struct burn_drive *d, int flag);
+
 
 #endif /*__MMC*/

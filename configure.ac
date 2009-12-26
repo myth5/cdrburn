@@ -1,4 +1,4 @@
-AC_INIT([libburn], [0.7.2], [http://libburnia-project.org])
+AC_INIT([libburn], [0.7.4], [http://libburnia-project.org])
 AC_PREREQ([2.50])
 dnl AC_CONFIG_HEADER([config.h])	
 
@@ -75,6 +75,7 @@ dnl    0.6.6 = libburn.so.4.31.0
 dnl    0.6.8 = libburn.so.4.33.0
 dnl    0.7.0 = libburn.so.4.35.0
 dnl    0.7.2 = libburn.so.4.37.0
+dnl    0.7.4 = libburn.so.4.39.0
 dnl
 dnl So LT_CURRENT, LT_REVISION and LT_AGE get set directly here.
 dnl SONAME of the emerging library is  LT_CURRENT - LT_AGE.
@@ -100,7 +101,7 @@ dnl
 dnl As said: Only copies. Original in libburn/libburn.h : burn_header_version_*
 BURN_MAJOR_VERSION=0
 BURN_MINOR_VERSION=7
-BURN_MICRO_VERSION=2
+BURN_MICRO_VERSION=4
 BURN_VERSION=$BURN_MAJOR_VERSION.$BURN_MINOR_VERSION.$BURN_MICRO_VERSION
 
 AC_SUBST(BURN_MAJOR_VERSION)
@@ -111,15 +112,15 @@ AC_SUBST(BURN_VERSION)
 dnl Libtool versioning
 LT_RELEASE=$BURN_MAJOR_VERSION.$BURN_MINOR_VERSION.$BURN_MICRO_VERSION
 dnl
-dnl ts A91012
-dnl ### This is the release version libburn-0.7.2 = libburn.so.4.37.0
-dnl This is the development version after above release version
+dnl ts A91206
+dnl This is the release version libburn-0.7.4 = libburn.so.4.39.0
+dnl ### This is the development version after above release version
 dnl LT_CURRENT++, LT_AGE++ has not yet happened.
 dnl ### LT_CURRENT++, LT_AGE++ has happened meanwhile.
 dnl
-dnl SONAME = 41 - 37 = 4 . Linux library name = libburn.so.4.37.0
-LT_CURRENT=41
-LT_AGE=37
+dnl SONAME = 43 - 39 = 4 . Linux library name = libburn.so.4.39.0
+LT_CURRENT=43
+LT_AGE=39
 LT_REVISION=0
 LT_CURRENT_MINUS_AGE=`expr $LT_CURRENT - $LT_AGE`
 
@@ -179,6 +180,37 @@ dnl If this would be done more specifically in Makefile.am
 dnl via libburn_libburn_la_CFLAGS then undesired .o file names would emerge
 CFLAGS="$CFLAGS $STATVFS_DEF"
 
+dnl ts A91122
+AC_ARG_ENABLE(track-src-odirect,
+[  --enable-track-src-odirect   Enable use of O_DIRECT with track input, default=no],
+               , enable_track_src_odirect=no)
+if test x$enable_track_src_odirect = xyes; then
+    LIBBURN_O_DIRECT_DEF="-DLibburn_read_o_direcT"
+    echo "enabled  use of O_DIRECT with track input"
+else
+    LIBBURN_O_DIRECT_DEF=
+    echo "disabled use of O_DIRECT with track input"
+fi
+dnl Avoid the need for libburn_libburn_la_CFLAGS in Makefile.am (ugly .o names)
+dnl ### AC_SUBST(LIBBURN_O_DIRECT_DEF)
+CFLAGS="$CFLAGS $LIBBURN_O_DIRECT_DEF"
+
+dnl ts A91116
+AC_ARG_ENABLE(dvd-obs-64k,
+[  --enable-dvd-obs-64k         64 KB default size for DVD/BD writing, default=no],
+               , enable_fifo_odirect=no)
+if test x$enable_dvd_obs_64k = xyes; then
+    LIBBURN_DVD_OBS_64K="-DLibburn_dvd_obs_default_64K"
+    echo "enabled  write size default 64 KB on DVD and BD"
+else
+    LIBBURN_DVD_OBS_64K=
+    echo "disabled write size default 64 KB on DVD and BD"
+fi
+dnl Avoid the need for libburn_libburn_la_CFLAGS in Makefile.am (ugly .o names)
+dnl ### AC_SUBST(LIBBURN_DVD_OBS_64K)
+CFLAGS="$CFLAGS $LIBBURN_DVD_OBS_64K"
+
+
 dnl Add compiler-specific flags
 
 dnl See if the user wants aggressive optimizations of the code
@@ -197,7 +229,6 @@ else
     fi
     CFLAGS="$CFLAGS -DDEBUG"
 fi
-
 
 dnl Determine target directory for libburn-*.pc
 dnl Important: Must be performed _after_ TARGET_SHIZZLE

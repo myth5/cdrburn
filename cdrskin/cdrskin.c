@@ -88,7 +88,7 @@ or
 
 /** The official program version */
 #ifndef Cdrskin_prog_versioN
-#define Cdrskin_prog_versioN "0.7.2"
+#define Cdrskin_prog_versioN "0.7.4"
 #endif
 
 /** The official libburn interface revision to use.
@@ -101,7 +101,7 @@ or
 #define Cdrskin_libburn_minoR 7
 #endif
 #ifndef Cdrskin_libburn_micrO
-#define Cdrskin_libburn_micrO 2
+#define Cdrskin_libburn_micrO 4
 #endif
 
 
@@ -135,42 +135,43 @@ or
 #endif /* Cdrskin_libburn_cvs_A60220_tS */
 
 
-#ifdef Cdrskin_libburn_0_7_2
-#define Cdrskin_libburn_versioN "0.7.2"
+#ifdef Cdrskin_libburn_0_7_4
+#define Cdrskin_libburn_versioN "0.7.4"
 #define Cdrskin_libburn_from_pykix_svN 1
-#endif /* Cdrskin_libburn_0_7_2 */
+#endif /* Cdrskin_libburn_0_7_4 */
 
-#ifdef Cdrskin_libburn_0_7_3
-#define Cdrskin_libburn_versioN "0.7.3"
+#ifdef Cdrskin_libburn_0_7_5
+#define Cdrskin_libburn_versioN "0.7.5"
 #define Cdrskin_libburn_from_pykix_svN 1
 
 /* Place novelty switch macros here. 
    Move them down to Cdrskin_libburn_from_pykix_svN on version leap
 */
 
-#endif /* Cdrskin_libburn_0_7_3 */
+
+#endif /* Cdrskin_libburn_0_7_5 */
 
 #ifndef Cdrskin_libburn_versioN
-#define Cdrskin_libburn_0_7_2
-#define Cdrskin_libburn_versioN "0.7.2"
+#define Cdrskin_libburn_0_7_4
+#define Cdrskin_libburn_versioN "0.7.4"
 #define Cdrskin_libburn_from_pykix_svN 1
 #endif
 
-#ifdef Cdrskin_libburn_0_7_2
+#ifdef Cdrskin_libburn_0_7_4
 #undef Cdrskin_libburn_majoR
 #undef Cdrskin_libburn_minoR
 #undef Cdrskin_libburn_micrO
 #define Cdrskin_libburn_majoR 0
 #define Cdrskin_libburn_minoR 7
-#define Cdrskin_libburn_micrO 2
+#define Cdrskin_libburn_micrO 4
 #endif
-#ifdef Cdrskin_libburn_0_7_3
+#ifdef Cdrskin_libburn_0_7_5
 #undef Cdrskin_libburn_majoR
 #undef Cdrskin_libburn_minoR
 #undef Cdrskin_libburn_micrO
 #define Cdrskin_libburn_majoR 0
 #define Cdrskin_libburn_minoR 7
-#define Cdrskin_libburn_micrO 3
+#define Cdrskin_libburn_micrO 5
 #endif
 
 
@@ -322,10 +323,15 @@ or
 /** A macro which is able to eat up a function call like printf() */
 #ifdef Cdrskin_extra_leaN
 #define ClN(x) 
+#define Cdrskin_no_cdrfifO 1
 #else
 #define ClN(x) x
+#ifdef Cdrskin_use_libburn_fifO
+/* 
+ # define Cdrskin_no_cdrfifO 1
+*/
 #endif
-
+#endif
 
 /** Verbosity level for pacifying progress messages */
 #define Cdrskin_verbose_progresS 1
@@ -865,12 +871,12 @@ backward:;
 /* --------------------------------------------------------------------- */
 
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
 
 /* Program is to be linked with cdrfifo.c */
 #include "cdrfifo.h"
 
-#else /* !  Cdrskin_extra_leaN */
+#else /* ! Cdrskin_no_cdrfifO */
 
 /* Dummy */
 
@@ -878,7 +884,7 @@ struct CdrfifO {
  int dummy;
 };
 
-#endif /* Cdrskin_extra_leaN */
+#endif /* Cdrskin_no_cdrfifO */
 
 
 /* --------------------------------------------------------------------- */
@@ -941,6 +947,10 @@ struct CdrtracK {
 
  struct burn_track *libburn_track;
 
+#ifdef Cdrskin_use_libburn_fifO
+ struct burn_source *libburn_fifo;
+#endif /* Cdrskin_use_libburn_fifO */
+
 };
 
 int Cdrtrack_destroy(struct CdrtracK **o, int flag);
@@ -998,6 +1008,9 @@ int Cdrtrack_new(struct CdrtracK **track, struct CdrskiN *boss,
  o->ff_fifo= NULL;
  o->ff_idx= -1;
  o->libburn_track= NULL;
+#ifdef Cdrskin_use_libburn_fifO
+ o->libburn_fifo= NULL;
+#endif /* Cdrskin_use_libburn_fifO */
 
  ret= Cdrskin_get_source(boss,o->source_path,&(o->fixed_size),
                          &(o->tao_to_sao_tsize),&(o->use_data_image_size),
@@ -1034,7 +1047,7 @@ int Cdrtrack_destroy(struct CdrtracK **o, int flag)
  if(track==NULL)
    return(0);
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
  Cdrfifo_destroy(&(track->fifo),0);
 #endif
 
@@ -1118,6 +1131,61 @@ int Cdrtrack_get_source_path(struct CdrtracK *track,
  *is_from_stdin= track->is_from_stdin;
  return(1);
 }
+
+
+#ifdef Cdrskin_use_libburn_fifO
+
+int Cdrtrack_get_libburn_fifo(struct CdrtracK *track,
+                              struct burn_source **fifo, int flag)
+{
+ *fifo= track->libburn_fifo;
+ return(1);
+}
+
+
+int Cdrtrack_report_fifo(struct CdrtracK *track, int flag)
+{
+ int size, free_bytes, ret;
+ int total_min_fill, interval_min_fill, put_counter, get_counter;
+ int empty_counter, full_counter;
+ double fifo_percent;
+ char *status_text;
+
+ if(track->libburn_fifo == NULL)
+   return(0);
+
+ /* Check for open input or leftover bytes in liburn fifo */
+ ret = burn_fifo_inquire_status(track->libburn_fifo, &size, &free_bytes,
+                                &status_text);
+ if(ret >= 0 && size - free_bytes > 1) {
+                                 /* not clear why free_bytes is reduced by 1 */
+   fprintf(stderr,
+     "cdrskin: FATAL : Fifo still contains data after burning has ended.\n");
+   fprintf(stderr,
+     "cdrskin: FATAL : %d bytes left.\n", size - free_bytes - 1);
+   fprintf(stderr,
+     "cdrskin: FATAL : This indicates an overflow of the last track.\n");
+   fprintf(stderr,
+     "cdrskin: NOTE : The media might appear ok but is probably truncated.\n");
+   return(-1);
+ }
+
+ burn_fifo_get_statistics(track->libburn_fifo, &total_min_fill,
+                          &interval_min_fill, &put_counter, &get_counter,
+                          &empty_counter, &full_counter);
+ fifo_percent= 100.0*((double) total_min_fill)/(double) size;
+ if(fifo_percent==0 && total_min_fill>0)
+   fifo_percent= 1;
+ fflush(stdout);
+ fprintf(stderr,"Cdrskin: fifo had %d puts and %d gets.\n",
+         put_counter,get_counter);
+ fprintf(stderr,
+   "Cdrskin: fifo was %d times empty and %d times full, min fill was %.f%%.\n",
+             empty_counter, full_counter, fifo_percent);
+ return(1);
+}
+
+#endif /* Cdrskin_use_libburn_fifO */
 
 
 int Cdrtrack_get_fifo(struct CdrtracK *track, struct CdrfifO **fifo, int flag)
@@ -1234,7 +1302,7 @@ int Cdrtrack_activate_image_size(struct CdrtracK *track, double *size_used,
  }
  track->extracting_container= 1;
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
  if(track->ff_fifo!=NULL)
    Cdrfifo_set_fd_in_limit(track->ff_fifo,track->fixed_size,track->ff_idx,0);
 #endif
@@ -1298,6 +1366,7 @@ int Cdrtrack_seek_isosize(struct CdrtracK *track, int fd, int flag)
                 bit0=debugging verbosity
                 bit1=open as source for direct write: 
                      no audio extract, no minimum track size
+                bit2=permission to use burn_os_open_track_src() (evtl O_DIRECT)
     @return <=0 error, 1 success
 */
 int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
@@ -1387,8 +1456,15 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
      return(-1);
    if(is_wav==-3)
      return(0);
-   if(is_wav==0)
-     *fd= open(track->source_path,O_RDONLY);
+   if(is_wav==0) {
+     if(track->track_type != BURN_MODE1 ||
+        (track->cdxa_conversion & 0x7fffffff))
+       flag&= ~4;                  /* Better avoid O_DIRECT with odd sectors */
+     if(flag & 4)
+       *fd= burn_os_open_track_src(track->source_path, O_RDONLY, 0);
+     else
+       *fd= open(track->source_path, O_RDONLY);
+   }
    if(*fd==-1) {
      fprintf(stderr,"cdrskin: failed to open source address '%s'\n",
              track->source_path);
@@ -1452,7 +1528,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 }
 
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
 
 /** Install a fifo object between data source and libburn.
     Its parameters are known to track.
@@ -1474,7 +1550,8 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
  *outlet_fd= -1;
  if(track->fifo_size<=0)
    return(2);
- ret= Cdrtrack_open_source_path(track,&source_fd,flag&1);
+ ret= Cdrtrack_open_source_path(track,&source_fd,
+                            (flag&1) | (4 * (track->fifo_size >= 256 * 1024)));
  if(ret<=0)
    return(ret);
  if(pipe(pipe_fds)==-1)
@@ -1491,7 +1568,7 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
 
    /* >>> ??? obtain track sector size and use instead of 2048 ? */
 
-   ret= Cdrfifo_new(&ff,source_fd,pipe_fds[1],2048,track->fifo_size,0);
+   ret= Cdrfifo_new(&ff,source_fd,pipe_fds[1],2048,track->fifo_size, flag & 1);
    if(ret<=0)
      return(ret);
    if(previous_fifo!=NULL)
@@ -1514,18 +1591,100 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
  return(1);
 }
 
+#endif /* ! Cdrskin_no_cdrfifO */
 
-/** Read data into the fifo until either it is full or the data source is
-    exhausted.
+
+#ifndef Cdrskin_extra_leaN
+
+#ifdef Cdrskin_use_libburn_fifO
+
+/** Read data into the eventual libburn fifo until either fifo_start_at bytes
+    are read (-1 = no limit), it is full or or the data source is exhausted.
     @return <=0 error, 1 success
 */
+int Cdrtrack_fill_libburn_fifo(struct CdrtracK *track, int fifo_start_at,
+                               int flag)
+{
+ int ret, bs= 32 * 1024;
+ int buffer_size, buffer_free;
+ double data_image_size;
+ char buf[64 * 1024], *buffer_text;
+
+ if(fifo_start_at == 0)
+   return(2);
+ if(track->libburn_fifo == NULL)
+   return(2);
+
+ if(fifo_start_at>0 && fifo_start_at<track->fifo_size)
+   printf(
+      "cdrskin: NOTE : Input buffer will be initially filled up to %d bytes\n",
+      fifo_start_at);
+ printf("Waiting for reader process to fill input buffer ... ");
+ fflush(stdout);
+ ret= burn_fifo_fill(track->libburn_fifo, fifo_start_at,
+                     (fifo_start_at == -1));
+ if(ret < 0)
+   return(0);
+
+/** Ticket 55: check fifos for input, throw error on 0-bytes from stdin
+    @return <=0 abort run, 1 go on with burning
+*/
+ ret= burn_fifo_inquire_status(track->libburn_fifo, &buffer_size,
+                               &buffer_free, &buffer_text);
+ if(track->is_from_stdin) {
+   if(ret<0 || buffer_size <= buffer_free) {
+     fprintf(stderr,"\ncdrskin: FATAL : (First track) fifo did not read a single byte from stdin\n");
+     return(0);
+   }
+ }
+
+ /* Try to obtain ISO 9660 Volume Descriptors and size from fifo.
+    Not an error if there is no ISO 9660. */
+ if(track->iso_fs_descr != NULL)
+   free(track->iso_fs_descr);
+ track->iso_fs_descr = NULL;
+ if(buffer_size - buffer_free >= 64 * 1024) {
+   ret= burn_fifo_peek_data(track->libburn_fifo, buf, 64 * 1024, 0);
+   if(ret == 1) {
+     track->iso_fs_descr = calloc(1, bs);
+     if(track->iso_fs_descr == NULL)
+       return(-1);
+     memcpy(track->iso_fs_descr, buf + bs, bs);
+     ret= Scan_for_iso_size((unsigned char *) buf + bs, &data_image_size, 0);
+     if(ret > 0)
+       track->data_image_size= data_image_size;
+   }
+ }
+ return(1);
+}
+
+#endif /* Cdrskin_use_libburn_fifO */
+
+
+#ifdef Cdrskin_no_cdrfifO
+
+int Cdrtrack_fill_fifo(struct CdrtracK *track, int fifo_start_at, int flag)
+{
+	return(Cdrtrack_fill_libburn_fifo(track, fifo_start_at, 0));
+}
+
+#else /* Cdrskin_no_cdrfifO */
+
 int Cdrtrack_fill_fifo(struct CdrtracK *track, int fifo_start_at, int flag)
 {
  int ret,buffer_fill,buffer_space;
  double data_image_size;
 
- if(track->fifo==NULL || fifo_start_at==0)
+ if(fifo_start_at==0)
    return(2);
+ if(track->fifo==NULL) {
+#ifdef Cdrskin_use_libburn_fifO
+   ret= Cdrtrack_fill_libburn_fifo(track, fifo_start_at, 0);
+   return(ret);
+#else
+   return(2);
+#endif
+ }
  if(fifo_start_at>0 && fifo_start_at<track->fifo_size)
    printf(
       "cdrskin: NOTE : Input buffer will be initially filled up to %d bytes\n",
@@ -1555,6 +1714,7 @@ int Cdrtrack_fill_fifo(struct CdrtracK *track, int fifo_start_at, int flag)
  return(1);
 }
 
+#endif /* ! Cdrskin_no_cdrfifO */
 #endif /* ! Cdrskin_extra_leaN */
 
 
@@ -1566,10 +1726,11 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
 /*
  bit0= debugging verbosity
  bit1= apply padding hack (<<< should be unused for now)
+ bit2= permission to use O_DIRECT (if enabled at compile time)
 */
 {
  struct burn_track *tr;
- struct burn_source *src= NULL;
+ struct burn_source *src= NULL, *fd_src= NULL;
  double padding,lib_padding;
  int ret,sector_pad_up;
  double fixed_size;
@@ -1581,7 +1742,7 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
 
  /* Note: track->track_type may get set in here */
  if(track->source_fd==-1) {
-   ret= Cdrtrack_open_source_path(track,&source_fd,(flag&1));
+   ret= Cdrtrack_open_source_path(track, &source_fd, flag & (4 | 1));
    if(ret<=0)
      goto ex;
  }
@@ -1626,6 +1787,41 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  }
  src= burn_fd_source_new(track->source_fd,-1,(off_t) fixed_size);
 
+#ifdef Cdrskin_use_libburn_fifO
+
+ if(src != NULL && track->fifo == NULL) {
+   int fifo_enabled, fifo_size, fifo_start_at, chunksize, chunks;
+   int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
+                            int *fifo_size, int *fifo_start_at, int flag);
+
+   Cdrskin_get_fifo_par(track->boss, &fifo_enabled, &fifo_size, &fifo_start_at,
+                        0);
+   fd_src= src;
+
+   if(track->track_type == BURN_AUDIO)
+     chunksize= 2352;
+   else if (track->cdxa_conversion == 1)
+     chunksize= 2056;
+   else
+     chunksize= 2048;
+   chunks= fifo_size / chunksize;
+   if(chunks > 1 && fifo_enabled) {
+     src= burn_fifo_source_new(fd_src, chunksize, chunks,
+                               (chunksize * chunks >= 128 * 1024));
+     if((flag & 1) || src == NULL)
+       fprintf(stderr, "cdrskin_DEBUG: %s libburn fifo of %d bytes\n",
+               src != NULL ? "installed" : "failed to install",
+               chunksize * chunks);
+     track->libburn_fifo= src;
+     if(src == NULL) {
+       src= fd_src;
+       fd_src= NULL;
+     }
+   }
+ }
+
+#endif /* Cdrskin_use_libburn_fifO */
+
  if(src==NULL) {
    fprintf(stderr,
            "cdrskin: FATAL : Could not create libburn data source object\n");
@@ -1638,6 +1834,8 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  burn_session_add_track(session,tr,BURN_POS_END);
  ret= 1;
 ex:
+ if(fd_src!=NULL)
+   burn_source_free(fd_src);
  if(src!=NULL)
    burn_source_free(src);
  return(ret);
@@ -1688,7 +1886,7 @@ int Cdrtrack_get_sectors(struct CdrtracK *track, int flag)
 }
 
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
 
 /** Try to read bytes from the track's fifo outlet and eventually discard
     them. Not to be called unless the track is completely written.
@@ -1709,7 +1907,7 @@ int Cdrtrack_has_input_left(struct CdrtracK *track, int flag)
  return(0);
 }
 
-#endif /* ! Cdrskin_extra_leaN */
+#endif /* ! Cdrskin_no_cdrfifO */
  
 
 /* --------------------------------------------------------------------- */
@@ -2136,6 +2334,8 @@ int Cdrpreskin_fallback(struct CdrpreskiN *preskin, int argc, char **argv,
  int i, wp= 1;
  char *ept, *upt;
 
+ if(preskin->fallback_program[0] == 0)
+   return(1);
  if(getuid()!=geteuid() && !preskin->allow_setuid) {
    fprintf(stderr,
      "cdrskin: SORRY : uid and euid differ. Will not start external fallback program.\n");
@@ -2672,6 +2872,9 @@ set_dev:;
      printf(
          " --drive_scsi_exclusive  try to exclusively reserve device files\n");
      printf("                    /dev/srN, /dev/scdM, /dev/stK of drive.\n");
+     printf(" dvd_obs=\"default\"|number\n");
+     printf(
+     "                    set number of bytes per DVD/BD write: 32k or 64k\n");
 #ifdef Cdrskin_burn_drive_eject_brokeN
      printf(
           " eject_device=<path>  set the device address for command eject\n");
@@ -2722,6 +2925,11 @@ set_dev:;
      printf(
          "                    byte addresses below that number.\n");
 #endif
+     printf(" stdio_sync=\"default\"|\"off\"|number\n");
+     printf(
+     "                    set number of bytes after which to force output\n");
+     printf(
+     "                    to drives with prefix \"stdio:\".\n");
 
 #ifdef Cdrskin_allow_libburn_taO
      printf(
@@ -2787,7 +2995,9 @@ see_cdrskin_eng_html:;
              "\tdev=target\tpseudo-SCSI target to use as CD-Recorder\n");
      fprintf(stderr,
          "\tgracetime=#\tset the grace time before starting to write to #.\n");
-     fprintf(stderr,"\t-v\t\tincrement verbose level by one\n");
+     fprintf(stderr,"\t-v\t\tincrement general verbose level by one\n");
+     fprintf(stderr,
+            "\t-V\t\tincrement SCSI command transport verbose level by one\n");
      fprintf(stderr,
              "\tdriveropts=opt\topt= one of {burnfree,noburnfree,help}\n");
      fprintf(stderr,
@@ -2914,12 +3124,16 @@ see_cdrskin_eng_html:;
    } else if(strcmp(argv[i],"-tao")==0) {
      strcpy(o->write_mode_name,"TAO");
 
+   } else if(strcmp(argv[i],"-V")==0 || strcmp(argv[i],"-Verbose")==0) {
+     burn_set_scsi_logging(2 | 4); /* log SCSI to stderr */
+
    } else if(strcmp(argv[i],"-v")==0 || strcmp(argv[i],"-verbose")==0) {
      (o->verbosity)++;
      ClN(printf("cdrskin: verbosity level : %d\n",o->verbosity));
 set_severities:;
      if(o->verbosity>=Cdrskin_verbose_debuG)
        Cdrpreskin_set_severities(o,"NEVER","DEBUG",0);
+
    } else if(strcmp(argv[i],"-vv")==0 || strcmp(argv[i],"-vvv")==0 ||
              strcmp(argv[i],"-vvvv")==0) {
      (o->verbosity)+= strlen(argv[i])-1;
@@ -3101,19 +3315,10 @@ ex:;
 
 
 /** List of furter wishes towards libburn:
-    - write mode which does not demand a track size in advance
-    - obtain minimum drive speed (for cdrskin -atip)
-    - obtain MMC profile of inserted media (for cdrskin -v -atip)
-    - a possibility to implement cdrskin -multi
     - a possibilty to implement cdrskin -reset
 */
 
 
-/** <<< Hopefully obsolete:
-    Limit to prevent int rollovers within libburn as long as not everything is
-    changed to 64 bit off_t : 2 GB minus 800 MB for eventual computations.
-#define Cdrskin_tracksize_maX 1308622848
-*/
 #define Cdrskin_tracksize_maX 1024.0*1024.0*1024.0*1024.0
 
 
@@ -3162,6 +3367,8 @@ struct CdrskiN {
  int dummy_mode;
  int force_is_set;
  int stream_recording_is_set; /* see burn_write_opts_set_stream_recording() */
+ int dvd_obs;                 /* DVD write chunk size: 0, 32k or 64k */
+ int stdio_sync;              /* stdio fsync interval: -1, 0, >=32 */
  int single_track;
  int prodvd_cli_compatible;
 
@@ -3380,6 +3587,8 @@ int Cdrskin_new(struct CdrskiN **skin, struct CdrpreskiN *preskin, int flag)
  o->dummy_mode= 0;
  o->force_is_set= 0;
  o->stream_recording_is_set= 0;
+ o->dvd_obs= 0;
+ o->stdio_sync= 0;
  o->single_track= 0;
  o->prodvd_cli_compatible= 0;
  o->do_devices= 0;
@@ -3554,6 +3763,8 @@ int Cdrskin_get_fifo_par(struct CdrskiN *skin, int *fifo_enabled,
 }
 
 
+#ifndef Cdrskin_no_cdrfifO
+
 /** Create and install fifo objects between track data sources and libburn.
     The sources and parameters are known to skin.
     @return <=0 error, 1 success
@@ -3562,6 +3773,20 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
 {
  struct CdrfifO *ff= NULL;
  int ret,i,hflag;
+
+#ifdef Cdrskin_use_libburn_fifO
+
+ int profile_number;
+ char profile_name[80];
+
+ /* Refuse here and thus use libburn fifo only with single track, non-CD */
+ ret= burn_disc_get_profile(skin->drives[skin->driveno].drive,
+                            &profile_number, profile_name);
+ if(profile_number != 0x09 && profile_number != 0x0a &&
+    skin->track_counter == 1)
+   return(1);
+
+#endif /* Cdrskin_use_libburn_fifO */
 
  skin->fifo= NULL;
  for(i=0;i<skin->track_counter;i++) {
@@ -3593,6 +3818,8 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
  }
  return(1);
 }
+
+#endif /* ! Cdrskin_no_cdrfifO */
 
 
 /** Read data into the track fifos until either #1 is full or its data source
@@ -3936,7 +4163,7 @@ int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
  if(skin->preskin->abort_handler==3)
    fprintf(stderr,"cdrskin: ABORT : Trying to ignore any further signals\n");
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
  if(skin->fifo!=NULL)
    Cdrfifo_close_all(skin->fifo,0);
 #endif
@@ -5831,15 +6058,27 @@ int Cdrskin_burn_pacifier(struct CdrskiN *skin,
  bit0= growisofs style
 */
 {
- double bytes_to_write,written_bytes= 0.0,written_total_bytes= 0.0,buffer_size;
+ double bytes_to_write= 0.0;
+ double written_bytes= 0.0,written_total_bytes= 0.0;
  double fixed_size,padding,sector_size,speed_factor;
  double measured_total_speed,measured_speed;
  double elapsed_time,elapsed_total_time,current_time;
  double estim_time,estim_minutes,estim_seconds,percent;
- int ret,fifo_percent,fill,space,advance_interval=0,new_mb,old_mb,time_to_tell;
- int fs,bs,old_track_idx,buffer_fill,formatting= 0,use_data_image_size;
- char fifo_text[80],mb_text[40];
+ int ret,fifo_percent,fill,advance_interval=0,new_mb,old_mb,time_to_tell;
+ int old_track_idx,buffer_fill,formatting= 0,use_data_image_size;
+ char fifo_text[80],mb_text[40], pending[40];
  char *debug_mark= ""; /* use this to prepend a marker text for experiments */
+
+#ifndef Cdrskin_no_cdrfifO
+ double buffer_size;
+ int fs, bs, space;
+#endif
+
+#ifdef Cdrskin_use_libburn_fifO
+ struct burn_source *current_fifo= NULL;
+ int size, free_space;
+ char *status_text= "";
+#endif /* Cdrskin_use_libburn_fifO */
 
  /* for debugging */
  static double last_fifo_in= 0.0,last_fifo_out= 0.0,curr_fifo_in,curr_fifo_out;
@@ -5944,9 +6183,14 @@ thank_you_for_patience:;
      if(skin->verbosity>=Cdrskin_verbose_progresS) {
        if(skin->is_writing)
          fprintf(stderr,"\n");
+       pending[0]= 0;
+/*
+       if(bytes_to_write > 0 && skin->verbosity >= Cdrskin_verbose_debuG)
+         sprintf(pending, " pnd %.f", bytes_to_write - written_total_bytes);
+*/
        fprintf(stderr,
- "\rcdrskin: thank you for being patient for %.f seconds                     ",
-           elapsed_total_time);
+           "\rcdrskin: thank you for being patient for %.f seconds%21.21s",
+           elapsed_total_time, pending);
      }
      advance_interval= 1;
    }
@@ -6011,6 +6255,37 @@ thank_you_for_patience:;
      fifo_text[0]= 0;
      curr_fifo_in= last_fifo_in;
      curr_fifo_out= last_fifo_out;
+
+#ifdef Cdrskin_use_libburn_fifO
+
+     /* Inquire fifo fill and format fifo pacifier text */
+     if(skin->fifo == NULL && skin->supposed_track_idx >= 0 && 
+        skin->supposed_track_idx < skin->track_counter &&
+        skin->fifo_size > 0) {
+       Cdrtrack_get_libburn_fifo(skin->tracklist[skin->supposed_track_idx],
+                                 &current_fifo, 0);
+       if(current_fifo != NULL) {
+         ret= burn_fifo_inquire_status(current_fifo, &size, &free_space,
+                                       &status_text);
+         if(ret <= 0 || ret >= 4) {
+           strcpy(fifo_text, "(fifo   0%) ");
+         } else if(ret == 1) {
+           burn_fifo_next_interval(current_fifo, &fill);
+           fifo_percent= 100.0 * ((double) fill) / (double) size;
+           if(fifo_percent<100 && fill>0)
+             fifo_percent++;
+           sprintf(fifo_text, "(fifo %3d%%) ", fifo_percent);
+         } else
+           strcpy(fifo_text, "(fifo 100%) ");
+       } else if(skin->fifo_size > 0) {
+         strcpy(fifo_text, "(fifo 100%) ");
+       }
+     }
+
+#endif /* Cdrskin_use_libburn_fifO */
+
+#ifndef Cdrskin_no_cdrfifO
+
      if(skin->fifo!=NULL) {
        ret= Cdrfifo_get_buffer_state(skin->fifo,&fill,&space,0);
        buffer_size= fill+space;
@@ -6039,6 +6314,9 @@ thank_you_for_patience:;
          }
        }
      }
+
+#endif /* ! Cdrskin_no_cdrfifO */
+
      if(skin->supposed_track_idx >= 0 && 
         skin->supposed_track_idx < skin->track_counter) {
        /* fixed_size,padding are fetched above via Cdrtrack_get_size() */;
@@ -6549,7 +6827,8 @@ int Cdrskin_direct_write(struct CdrskiN *skin, int flag)
                           &source_path,&source_fd,&is_from_stdin,0);
  if(source_fd==-1) {
    ret= Cdrtrack_open_source_path(skin->tracklist[0],&source_fd,
-                                  2|(skin->verbosity>=Cdrskin_verbose_debuG));
+                               2 | (skin->verbosity >= Cdrskin_verbose_debuG) |
+                               (4 * (skin->fifo_size >= 256 * 1024)));
    if(ret<=0)
      goto ex;
  }
@@ -6716,14 +6995,18 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  struct burn_progress p;
  struct burn_drive *drive;
  int ret,loop_counter= 0,max_track= -1,i,hflag,nwa,num, wrote_well= 2;
- int fifo_disabled= 0,fifo_percent,total_min_fill,min_buffer_fill= 101;
+ int fifo_disabled= 0, min_buffer_fill= 101;
  int use_data_image_size, needs_early_fifo_fill= 0,iso_size= -1;
- double put_counter,get_counter,empty_counter,full_counter;
  double start_time,last_time;
  double total_count= 0.0,last_count= 0.0,size,padding,sector_size= 2048.0;
  char *doing;
  char *source_path;
  int source_fd, is_from_stdin;
+
+#ifndef Cdrskin_no_cdrfifO
+ double put_counter, get_counter, empty_counter, full_counter;
+ int total_min_fill, fifo_percent;
+#endif
 
  if(skin->tell_media_space)
    doing= "estimating";
@@ -6783,6 +7066,11 @@ burn_failed:;
    hflag= (skin->verbosity>=Cdrskin_verbose_debuG);
    if(i==skin->track_counter-1)
      Cdrtrack_ensure_padding(skin->tracklist[i],hflag&1);
+
+/* if(skin->fifo_size >= 256 * 1024) */
+
+     hflag|= 4;
+
    ret= Cdrtrack_add_to_session(skin->tracklist[i],i,session,hflag);
    if(ret<=0) {
      fprintf(stderr,"cdrskin: FATAL : Cannot add track %d to session.\n",i+1);
@@ -6918,6 +7206,13 @@ burn_failed:;
 #ifdef Cdrskin_libburn_has_stream_recordinG
  burn_write_opts_set_stream_recording(o, skin->stream_recording_is_set);
 #endif
+#ifdef Cdrskin_dvd_obs_default_64K
+ if(skin->dvd_obs == 0)
+   burn_write_opts_set_dvd_obs(o, 64 * 1024);
+ else
+#endif
+   burn_write_opts_set_dvd_obs(o, skin->dvd_obs);
+ burn_write_opts_set_stdio_fsync(o, skin->stdio_sync);
 
  if(skin->dummy_mode) {
    fprintf(stderr,
@@ -7041,6 +7336,14 @@ fifo_filling_failed:;
    if(skin->fifo==NULL || fifo_disabled) {
      usleep(20000);
    } else {
+
+#ifdef Cdrskin_no_cdrfifO
+
+     /* Should never happen as skin->fifo should be NULL */
+     usleep(20000);
+
+#else /* Cdrskin_no_cdrfifO */
+
      ret= Cdrfifo_try_to_work(skin->fifo,20000,NULL,NULL,0);
      if(ret<0) {
        int abh;
@@ -7066,7 +7369,11 @@ fifo_filling_failed:;
          fprintf(stderr,"\ncdrskin_debug: fifo ended work with ret=%d\n",ret);
        fifo_disabled= 1;
      }
+
+#endif /* ! Cdrskin_no_cdrfifO */
+
    }
+
 #else /* ! Cdrskin_extra_leaN */
    usleep(20000);
 #endif /* Cdrskin_extra_leaN */
@@ -7105,6 +7412,19 @@ fifo_filling_failed:;
 
 
 #ifndef Cdrskin_extra_leaN
+
+#ifdef Cdrskin_use_libburn_fifO
+
+ if(skin->fifo == NULL && skin->verbosity>=Cdrskin_verbose_progresS) {
+   /* >>> this should rather be done for each track
+          (for now this libburn_fifo should only be used with single track)
+   */
+   Cdrtrack_report_fifo(skin->tracklist[skin->track_counter - 1], 0);
+ }
+
+#endif /* Cdrskin_use_libburn_fifO */
+
+#ifndef Cdrskin_no_cdrfifO
 
  if(skin->fifo!=NULL && skin->fifo_size>0 && wrote_well) {
    int dummy,final_fill;
@@ -7153,6 +7473,11 @@ fifo_full_at_end:;
   "Cdrskin: fifo was %.f times empty and %.f times full, min fill was %d%%.\n",
              empty_counter,full_counter,fifo_percent);
    }
+ }
+
+#endif /* ! Cdrskin_no_cdrfifO */
+
+ if(skin->verbosity>=Cdrskin_verbose_progresS) {
    drive_status= burn_drive_get_status(drive, &p);
 
 #ifdef Cdrskin_libburn_has_buffer_min_filL
@@ -7450,7 +7775,7 @@ int Cdrskin_setup(struct CdrskiN *skin, int argc, char **argv, int flag)
    ""
  };
  static char ignored_full_options[][41]= {
-   "-d", "-Verbose", "-V", "-silent", "-s", "-setdropts", "-prcap", 
+   "-d", "-silent", "-s", "-setdropts", "-prcap", 
    "-reset", "-abort", "-overburn", "-ignsize", "-useinfo",
    "-fix", "-nofix",
    "-raw", "-raw96p", "-raw16", "-raw96r",
@@ -7791,6 +8116,22 @@ set_driveropts:;
 
    } else if(strcmp(argv[i],"-dummy")==0) {
      skin->dummy_mode= 1;
+
+   } else if(strncmp(argv[i], "-dvd_obs=", 9)==0) {
+     value_pt= argv[i] + 9;
+     goto dvd_obs;
+   } else if(strncmp(argv[i], "dvd_obs=", 8)==0) {
+     value_pt= argv[i] + 8;
+dvd_obs:;
+     if(strcmp(value_pt, "default") == 0)
+       num= 0;
+     else
+       num = Scanf_io_size(value_pt,0);
+     if(num != 0 && num != 32768 && num != 65536) {
+       fprintf(stderr,
+       "cdrskin: SORRY : Option dvd_obs= accepts only sizes 0, 32k, 64k\n");
+     } else
+       skin->dvd_obs= num;
 
    } else if(strcmp(argv[i],"-eject")==0) {
      skin->do_eject= 1;
@@ -8182,6 +8523,26 @@ set_speed:;
      if(skin->verbosity>=Cdrskin_verbose_cmD)
        ClN(printf("cdrskin: speed : %f\n",skin->x_speed));
 
+   } else if(strncmp(argv[i], "-stdio_sync=", 12)==0) {
+     value_pt= argv[i] + 12;
+     goto stdio_sync;
+   } else if(strncmp(argv[i], "stdio_sync=", 11)==0) {
+     value_pt= argv[i] + 11;
+stdio_sync:;
+     if(strcmp(value_pt, "default") == 0 || strcmp(value_pt, "on") == 0)
+       num= 0;
+     else if(strcmp(value_pt, "off") == 0)
+       num= -1;
+     else
+       num = Scanf_io_size(value_pt,0);
+     if(num > 0)
+       num/= 2048;
+     if(num != -1 && num != 0 && (num < 32 || num > 512 * 1024)) {
+       fprintf(stderr,
+ "cdrskin: SORRY : Option stdio_sync= accepts only sizes -1, 0, 32k ... 1g\n");
+     } else
+       skin->stdio_sync= num;
+
    } else if(strncmp(argv[i],"-stream_recording=",18)==0) {
      value_pt= argv[i]+18;
      goto set_stream_recording;
@@ -8261,6 +8622,8 @@ track_too_large:;
      if(skin->smallest_tsize<0 || skin->smallest_tsize>skin->fixed_size)
        skin->smallest_tsize= skin->fixed_size;
 
+   } else if(strcmp(argv[i],"-V")==0 || strcmp(argv[i],"-Verbose")==0) {
+     /* is handled in Cdrpreskin_setup() */;
    } else if(strcmp(argv[i],"-v")==0 || strcmp(argv[i],"-verbose")==0) {
      /* is handled in Cdrpreskin_setup() */;
    } else if(strcmp(argv[i],"-vv")==0 || strcmp(argv[i],"-vvv")==0 ||
@@ -8451,13 +8814,13 @@ ignore_unknown:;
  if(skin->track_counter>0) {
    skin->do_burn= 1;
 
-#ifndef Cdrskin_extra_leaN
+#ifndef Cdrskin_no_cdrfifO
    if(!skin->do_direct_write) {
      ret= Cdrskin_attach_fifo(skin,0);
      if(ret<=0)
        return(ret);
    }
-#endif /* ! Cdrskin_extra_leaN */
+#endif /* ! Cdrskin_no_cdrfifO */
 
  }
  return(1);
