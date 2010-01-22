@@ -3143,7 +3143,7 @@ set_severities:;
      int major, minor, micro;
 
      printf(
-"Cdrecord 2.01-Emulation Copyright (C) 2006-2009, see libburnia-project.org\n");
+"Cdrecord 2.01-Emulation Copyright (C) 2006-2010, see libburnia-project.org\n");
      if(o->fallback_program[0]) {
        char *hargv[2];
 
