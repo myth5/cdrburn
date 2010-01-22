@@ -12,7 +12,7 @@ or take special precautions to interface with the library by 64 bit integers
 where this .h files prescribe off_t.
 
 To prevent 64 bit file i/o in the library would keep the application from
-producing and processing ISO images of more than 2 GB size.
+processing tracks of more than 2 GB size.
 
 */
 #include <sys/types.h>
@@ -2616,7 +2616,7 @@ void burn_version(int *major, int *minor, int *micro);
 */
 #define burn_header_version_major  0
 #define burn_header_version_minor  7
-#define burn_header_version_micro  5
+#define burn_header_version_micro  6
 /** Note:
     Above version numbers are also recorded in configure.ac because libtool
     wants them as parameters at build time.
