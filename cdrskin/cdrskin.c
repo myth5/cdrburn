@@ -4187,11 +4187,7 @@ int Cdrskin_abort(struct CdrskiN *skin, int flag)
 int Cdrskin_abort_handler(struct CdrskiN *skin, int signum, int flag)
 {
 
-#ifdef Cdrskin_libburn_has_burn_aborT
-
- int ret;
-
-#else 
+#ifndef Cdrskin_libburn_has_burn_aborT
 
  int wait_grain= 100000,first_status= 1;
  double start_time,last_time,current_time;
