@@ -1,6 +1,8 @@
-SVN trunk (to become libburn-1.0.4.pl00.tar.gz) 
+
+libburn-1.0.6.pl00.tar.gz Sat Apr 9 2011
 ===============================================================================
-- no novelties yet
+* Burning DVD-R DAO with 2 kB size granularity rather than 32 kB
+* New API call burn_allow_drive_role_4()
 
 libburn-1.0.4.pl00.tar.gz Thu Mar 3 2011
 ===============================================================================
