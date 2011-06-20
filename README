@@ -11,7 +11,7 @@ Still containing parts of Libburn. By Derek Foreman <derek@signalmarketing.com>
 and Ben Jansens <xor@orodu.net>
 Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
-     http://files.libburnia-project.org/releases/libburn-1.1.0.tar.gz
+     http://files.libburnia-project.org/releases/libburn-1.1.0.pl01.tar.gz
 
 ------------------------------------------------------------------------------
 
@@ -19,9 +19,9 @@ Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
                                 From tarball
 
-Obtain libburn-1.1.0.tar.gz, take it to a directory of your choice and do:
+Obtain libburn-1.1.0.pl01.tar.gz, take it to a directory of your choice and do:
 
-   tar xzf libburn-1.1.0.tar.gz
+   tar xzf libburn-1.1.0.pl01.tar.gz
    cd libburn-1.1.0
    ./configure --prefix=/usr
    make
@@ -624,6 +624,10 @@ Project history as far as known to me:
   The consumption of stack memory was reduced. Statical program analysis found
   some rarely occuring memory leaks. Several small bugs were fixed.
   The suffix .plXY was dropped from tarball names of libburn and libisoburn.
+
+- Mon Jun 20 2011 patch release libburn-1.1.0.pl01:
+  libburn-1.1.0 compiled only on Linux, FreeBSD, and Solaris, but not on
+  other X/Open compliant systems.
   
 
 ------------------------------------------------------------------------------
