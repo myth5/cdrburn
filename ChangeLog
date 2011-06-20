@@ -1,4 +1,8 @@
 
+libburn-1.1.0.pl01.tar.gz Mon Jun 20 2011
+===============================================================================
+* Bug fix: libburn-1.1.0 compiled only on Linux, FreeBSD, and Solaris
+
 libburn-1.1.0.tar.gz Sat Jun 18 2011
 ===============================================================================
 * Bug fix: burn_disc_format() on DVD-RW issued wrong block size with type 00h
