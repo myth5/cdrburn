@@ -7,6 +7,7 @@ libburn-1.1.4.tar.gz Sun Aug 07 2011
 * Bug fix: Avoiding to load speed descriptor list twice
 * New API call burn_lookup_device_link()
 * New API call burn_disc_get_phys_format_info()
+* New cdrskin option --device_links
 
 Release 1.1.2 was skipped to get back in sync with libisoburn.
 

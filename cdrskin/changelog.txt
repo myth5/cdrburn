@@ -9881,14 +9881,14 @@ cdrskin/cdrskin_timestamp.h
 cdrskin/cdrskin_eng.html
 Made number transition to 1.1.4
 
-07 Aug 2011  []
+07 Aug 2011  [4250]
 - cdrskin/add_ts_changes_to_libburn_1_1_0
 - cdrskin/add_ts_changes_to_libburn_1_1_1
 + cdrskin/add_ts_changes_to_libburn_1_1_4
 + cdrskin/add_ts_changes_to_libburn_1_1_5
 Updated cdrskin tarball generator
 
-  []
+07 Aug 2011  [4251]
 ChangeLog
 cdrskin/changelog.txt
 Documented changes and release timestamp
@@ -9901,6 +9901,34 @@ Documented changes and release timestamp
 * Bug fix: Avoiding to load speed descriptor list twice
 * New API call burn_lookup_device_link()
 * New API call burn_disc_get_phys_format_info()
+* New cdrskin option --device_links
+
+
+  []
+Makefile.am
+configure.ac
+README
+libburn/libburn.h
+cdrskin/cdrskin.c
+cdrskin/README
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin_timestamp.h
+cdrskin/cdrskin_eng.html
+Made number transition to 1.1.5
+
+  []
+- cdrskin/add_ts_changes_to_libburn_1_1_0
+- cdrskin/add_ts_changes_to_libburn_1_1_1
++ cdrskin/add_ts_changes_to_libburn_1_1_4
++ cdrskin/add_ts_changes_to_libburn_1_1_5
+Updated cdrskin tarball generator
+
+  []
+ChangeLog
+cdrskin/changelog.txt
+Documented changes and release timestamp
+
+------------------------------------ cycle  - cdrskin-1.1.5 - 
 
 
   []
@@ -9908,14 +9936,14 @@ ChangeLog
 cdrskin/changelog.txt
 Documented changes and release timestamp
 
------------------------------------- cycle  - cdrskin-1.1.1 - 
+------------------------------------ cycle  - cdrskin-1.1.5 - 
 
   []
 ChangeLog
 cdrskin/changelog.txt
 Documented changes and release timestamp
 
------------------------------------- cycle  - cdrskin-1.1.1 - 
+------------------------------------ cycle  - cdrskin-1.1.5 - 
 
 
 
