@@ -1,8 +1,9 @@
-SVN trunk (to become libburn-1.2.6 or higher)
+libburn-1.2.6.tar.gz Tue Jan 08 2013
 ===============================================================================
 * New cdrskin option --no_load
 * Bug fix: Speed setting had no effect on BD media
-
+* New API call burn_read_audio()
+* New API call burn_list_sev_texts()
 
 libburn-1.2.4.tar.gz Fri Jul 20 2012
 ===============================================================================
