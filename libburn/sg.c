@@ -74,7 +74,7 @@ static int intentional_compiler_warning(void)
  int Have_to_use_dummy_MMC_transport_adapter_;
  int This_libburn_will_not_be_able_to_operate_on_real_CD_drives;
  int Have_to_use_dummy_MMC_transport_adapter;
- int Cannot_recognize_GNU_Linux_nor_FreeBSD_nor_Solaris_nor_NetBSD_;
+ int Cannot_recognize_GNU_Linux_nor_FreeBSD_nor_Solaris_nor_NetBSD;
  int INTENTIONAL_COMPILER_WARNING;
 
  return(0);
