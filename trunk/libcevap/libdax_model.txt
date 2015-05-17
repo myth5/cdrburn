@@ -1,0 +1,944 @@
+
+#
+# libdax is the early working name for the successor software of libburn,
+# a library for writing information onto optical media, i.e. CD and DVD.
+# The current working name is libcevap, refering to various kinds of roasts in
+# Europe and Asia which share the property to be structured in smaller pieces.
+#
+# The reason for the replacement is the unclear copyright situation as well
+# as libburn's sketchy original state and the subsequential evolutionary
+# damages done by us in libburn code.
+# This does not mean libburn is shaky. Its current state just reflects the
+# virtual conflict of at least two programmer personalities and their goals.
+#
+
+#
+# Please: Nobody shall take the development of libcevap as a reason for not
+# programming an application which uses libburn.
+# libburn works now. libcevap is planned to work in future.
+#
+# libcevap will replace libburn in a controlled, application friendly way.
+# The first application of libcevap will be a libburn API wrapper which will
+# allow to perform all API calls of libburn which are proveable to work in
+# the current implementation. (Some CD stuff is not understood by us yet.
+# We will have to learn.)
+#
+# The libburn API will be frozen when libcevap has closed up to its current
+# capabilities. Nevertheless it may take profit from some of the future
+# progress in libcevap (e.g. new media types).
+# We hope that finally libcevap will have capabilities superior to libburn.
+# This will then be a reason to port applications to the libcevap API.
+#
+# Application programmers are advised to encapsulate their libburn API calls
+# in an own abstraction layer. The semantic concepts of burning will be
+# compatible between libburn and libcevap. I.e you will have a library object
+# to be started up, drives to be found and grabbed, media and their states
+# to be identified, sessions, tracks, burn options to be set, blanking,
+# formatting, and so on.
+# Data types, function calls, and quirks will be incompatible between both
+# APIs, though. 
+#
+
+# -------------------------------------------------------------------------
+
+# Originally this was a backup of text input clicketitoggled into ArgoUML
+# Meanwhile it becomes an intermediate storage for attributes and
+# class interconnections in the notation of my C stub generator CgeN
+# (see also end of this text)
+
+# next : work on completeness : cevapformat
+
+# Open questions:
+# - how to connect to GESTURES ? Globally ?
+
+
+Model=libdax
+
+ClassDiagram=Overview
+
+Class=API
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+The API is the only layer visible to the applications. It exposes MMC concepts
+which it reflects and augments by its own architectural concepts.
+Subordinates=EQUIP,JOB,AUX
+Cgen=\
+cevapi
+-r -m struct CevapequiP *equip
+-r -m struct CevapjoB *job
+-r -m struct CevapauX *aux
+-r -m struct CevapgestureS *gestures
+@
+=end Class
+
+Class=EQUIP
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+EQUIP represents the physical and logical equipment in reach of libdax.
+This includes the system, drives, media, and their current states.
+PeerToPeer=GESTURES
+Boss=API
+Cgen=\
+cevapequip
+-r -v struct CevapI *boss
+-r -m struct CevapsysteM *sys
+-v struct CevapgestureS *gestures
+@
+=end Class
+
+Class=JOB
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+JOB models the tasks to be performed via libdax.
+This includes disc, session, track, source, fifo, dewav, burn options.
+PeerToPeer=GESTURES
+Boss=API
+Cgen=\
+cevapjob
+-r -v struct CevapI *boss
+-r -m struct CevaptodO *todo
+-v struct CevapgestureS *gestures
+
+# >>>
+
+@
+=end Class
+
+Class=AUX
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+AUX bundles any models which are neither EQUIP nor JOB.
+This includes abort handler and message system.
+PeerToPeer=GESTURES
+Boss=API
+Cgen=\
+cevapaux
+-r -v struct CevapI *boss
+-v struct CevapgestureS *gestures
+
+# >>>
+
+@
+=end Class
+
+Class=GESTURES
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+GESTURES ist the procedural repertoire which interconnects EQUIP, JOB, and AUX
+and also provides to them the services from the SCSI oriented layers. 
+PeerToPeer=EQUIP,JOB,AUX
+Subordinates=SCSI_CMD
+Cgen=\
+cevapgestures
+-r -v struct CevapI *boss
+-v struct CevapequiP *equip
+-v struct CevapjoB *job
+-v struct CevapauX *aux
+-r -m struct CevapscmD *scsi_cmd
+
+# >>>
+
+@
+=end Class
+
+Class=SCSI_CMD
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+SCSI_CMD represents the semantic part of SCSI (i.e. mainly MMC) specs.
+This layer models each SCSI command that is used by libdax. It knows about
+its parameters and constraints with particular equipment and jobs.
+Boss=GESTURES
+Subordinates=Classes with SCSI_EXEC Interface
+Cgen=\
+cevapscmd
+-r -v struct CevapgestureS *boss
+-r -m struct CevapsexeC *scsi_exec
+
+# >>>
+
+@
+=end Class
+
+Interface=SCSI_EXEC
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+SCSI_EXEC hides the difference between the implementation principle of
+SCSI format+transport and the principle of SCSI service.
+Boss=SCSI_CMD
+Implementations=SCSI_FORMAT,SCSI_SERVICE
+Cgen=\
+cevapsexec
+-r -v struct CevapscmD *boss
+-p -v struct CevapsforM *scsi_format
+-p -v struct CevapsservicE *scsi_service
+-v int silent_on_scsi_error
+
+# >>>
+
+@
+=end Interface
+
+
+Class=OSDriveAspect
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.08.2007
+Documentation=\
+OSDriveAspect encapsulates operating system specific properties of an
+individual drive. It shall be handed out by SCSI_EXEC via the GESTURES layer
+to EquipDrive where it forms the link between cevap drive model and operating
+system driver.
+This class description models the implementation specific to Linux.
+Cgen=\
+cevaposdrv
+-r -v int fd
+
+# >>> ??? implement the sibling stuff which never worked properly ?
+
+@
+=end Class
+
+
+Class=SCSI_FORMAT
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+SCSI_FORMAT translates parameters of SCSI commands into CDBs, takes care for
+transport and decodes the reply into parameters.
+Boss=SCSI_CMD via SCSI_EXEC
+Subordinates=SCSI_TRANSPORT
+Cgen=\
+cevapsform
+-r -v struct CevapsexeC *boss
+-p -v struct CevapstransP *scsi_transport
+ 
+# former struct command
+-v unsigned char opcode[16] 
+-v int oplen 
+-v int dir 
+-v int dxfer_len 
+-v unsigned char sense[128] 
+-v int error 
+-v int retry 
+-v struct CevapbuffeR *page 
+
+# >>>
+
+@
+=end Class
+
+Class=SCSI_TRANSPORT
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+SCSI_TRANSPORT takes a formatted CDB from SCSI_FORMAT and makes the operating
+system perform a SCSI transaction. It then returns the reply data in raw form.
+Boss=SCSI_FORMAT
+Os_specific=yes
+Cgen=\
+cevapstransp
+-r -v struct CevapsforM *boss
+
+# >>>
+@
+=end Class
+
+Class=SCSI_SERVICE
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=11.03.2007
+Documentation=\
+SCSI_SERVICE provides the combined services of SCSI_FORMAT and SCSI_TRANSPORT
+via a set of parametrized functions which abstract SCSI command transactions.
+Boss=SCSI_CMD via SCSI_EXEC
+Os_specific=yes
+Cgen=\
+cevapsservice
+-r -v struct CevapsexeC *boss
+
+# >>>
+@
+=end Class
+
+=end ClassDiagram=Overview
+
+
+
+ClassDiagram=Equip_overview
+
+Class=EquipSystem
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+EquipSystem is the inner root class of EQUIP. It describes the system on
+which libdax is working. This includes the operating system, the system
+adapter classes, the drives.
+Boss=EQUIP
+Subordinates=EquipDrive*N
+Cgen=\
+cevapsystem
+-r -v struct CevapequiP *boss
+-r -m char *infotext
+-r -l struct CevapdrivE *drive
+-p -v struct CevapdrivE *eol_drive
+
+# >>> be boss of SCSI_CMD ? (Rather than GESTURES)
+
+# >>>
+@
+=end Class
+
+
+Class=EquipDrive
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+EquipDrive represents a drive, including its capabilities, its processing
+status, the media loaded.
+Subordinates=EquipMedia
+Boss=EquipSystem
+Cgen=\
+-l cevapdrive
+-r -v struct CevapsysteM *boss
+
+# Drive number
+-r -v int global_index
+ 
+# Persistent system drive address
+-r -m char *devname
+ 
+# Traditional SCSI address parameters (-1 if not applicable)
+-r -v int bus_no
+-r -v int host
+-r -v int id
+-r -v int channel
+-r -v int lun
+ 
+# (former struct burn_scsi_inquiry_data idata)
+# From 12h INQUIRY , spc3r23.pdf , 6.4.2 , Table 81
+-r -v char vendor[9]
+-r -v char product[17]
+-r -v char revision[5]
+# 1= above elements contain valid information
+-r -v int idata_valid
+ 
+# mc5r03c.pdf 5.3.2 Physical Interface Standard
+# 1=SCSI, 2=ATAPI, 3,4,6=FireWire, 7=SATA, 8=USB
+-r -v int phys_if_std
+# MMC-5 5.3.2 table 91 , e.g. "SCSI Family"
+-r -m char *phys_if_name
+
+# System despendent aspect of the drive (e.g. int fd;) 
+-r -v struct CevaposdrV *system_dep_drive_info
+
+# Result of the CD write mode x block type tests:
+# Index is for write mode : 0=packet , 1=TAO , 2=SAO , 3=raw
+# Bits are for block type
+# Numbering as in mc5r03c.pdf 7.5.4.13 Data Block Type, Table 668 :
+#    0=RAW0     (2352, Raw data)
+#    1=RAW16    (2368, Raw data with P and Q Sub-channel
+#    2=RAW96P   (2448, Raw data with P-W Sub-channel appended)
+#    3=RAW96R   (2448, Raw data with raw P-W Sub-channel appended)
+#    8=MODE1    (2048, ISO/IEC 10149)
+#    9=MODE2R   (2336, Mode 2 formless)
+#   10=MODE2F1  (2048, CD-ROM XA, form 1)
+#   11=MODE2F1X (2056, CD-ROM XA, form 1 plus 8 byte subheader)
+#   12=MODE2F2  (2324, CD-ROM XA, form 2)
+#   13=MODE2MIX (2332, CD-ROM XA, form 1, form 2, or mixed form)
+-r -v int block_types[4]
+
+# (former struct scsi_mode_data)
+# Information about the drive's capabilities, obtained via 5Ah MODE SENSE
+# from mode page 2Ah , mmc3r10g.pdf , 6.3.11 , Table 361
+# (which is deprecated in MMC-5 E.11)
+-p -v int mdata_buffer_size
+-p -v int mdata_dvdram_read
+-p -v int mdata_dvdram_write
+-p -v int mdata_dvdr_read
+-p -v int mdata_dvdr_write
+-p -v int mdata_dvdrom_read
+-p -v int mdata_cdrw_read
+-p -v int mdata_cdrw_write
+-p -v int mdata_cdr_read
+-p -v int mdata_cdr_write
+-p -v int mdata_max_read_speed
+-p -v int mdata_max_write_speed
+-p -v int madata_min_write_speed
+-p -v int mdata_cur_read_speed
+-p -v int mdata_cur_write_speed
+-p -v int mdata_simulate
+-p -v int mdata_c2_pointers
+-r -v int mdata_underrun_proof
+
+# Results from ACh GET PERFORMANCE, Type 03h
+# (Speed values go into *_*_speed)
+# (speed_descriptors became cevapperf which is under cevapmedia)
+-p -v int min_end_lba
+-p -v int max_end_lba
+
+# from mode page 01h , mmc5r03c.pdf , 7.3.2.1 , Table 657
+-p -v int mdata_retry_page_length
+-p -v int mdata_retry_page_valid
+
+# from mode page 05h , mmc5r03c.pdf , 7.5.4.1 , Table 664
+-p -v int mdata_write_page_length
+-p -v int mdata_write_page_valid
+
+# 1= above elements contain valid information
+-p -v int mdata_valid
+
+# The mutex shall be used to coordinate access to the drive in situations
+# where multi-threaded race conditions could disturb operations.
+# E.g. lock, read busy state, interpret, set busy state, unlock
+# A mere reader of the busy state does not have to lock because
+# reading of the state itself is atomar.
+-i -v pthread_mutex_t access_lock
+
+# Flags from feature 002Fh feature descriptor mmc5r03c.pdf 5.3.25 :
+#   bit1= DVD-RW supported
+#   bit2= Test Write available
+#   bit3= DVD-R DL supported
+#   bit6= Buffer Under-run Free recording available (page 05h BUFE)
+# Value -1 indicates that no 002Fh was current in the features list.
+-r -v int current_feat2fh_byte4
+
+# 0= drive is grabbed, 1= drive is not grabbed
+-v volatile int released
+
+# File descriptor of an eventual emulated drive
+-v int stdio_fd
+
+# >>> ???
+# (do we need a drive owned buffer to carry data from call to call or what ?)
+-v struct CevapbuffeR *buffer
+
+# List of profiles as reported by the drive
+-r -l struct CevapprofilE *profile
+-p -v struct CevapprofilE *eol_profile
+
+# Media currently loaded in the drive
+-r -m struct CevapmediA *media
+ 
+
+# >>> transport.h : toc_temp (what is this ? It belongs to BURN_WRITE_RAW)
+# >>>
+
+@
+=end Class
+
+
+Class=EquipMedia
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+EquipMedia represents an optical disc, including its type, its writeability,
+its formatting, its available formats and performances. 
+Subordinates=\
+EquipProfile*N,EquipFormat*N,EquipPerformance*N,EquipStatus,EquipMulticaps
+Boss=EquipDrive
+Cgen=\
+cevapmedia
+-r -v struct CevapdrivE *boss
+
+# Volatile and/or public properties of the media
+-r -m struct CevapstatuS *status
+
+# MMC-to-MMC feature info from 46h for DVD-RW.
+# Quite internal. Regard as opaque :)
+# 1 = incremental recording available, 0 = not available
+-r -v int current_has_feat21h
+
+# Link Size item number 0 from feature 0021h descriptor
+-r -v int current_feat21h_link_size
+
+# Wether a DVD-RW media holds an incomplete session
+# (which could need closing after write)
+-v int needs_close_session
+
+# From 51h READ DISC INFORMATION
+# 0=needs format start, 1=needs format restart
+-r -v int bg_format_status
+
+# From 23h READ FORMAT CAPACITY mmc5r03c.pdf 6.24
+# 1=unformatted, 2=formatted, 3=unclear
+-r -v int format_descr_type
+# meaning depends on format_descr_type
+-r -v off_t format_curr_max_size
+# dito
+-r -v unsigned int format_curr_blsas
+-r -v int best_format_type
+-r -v off_t best_format_size
+-r -l struct CevapformaT *format_descriptor
+-p -v struct CevapformaT *eol_format_descriptor
+
+# The specific capabilities and restrictions of the media
+-r -m struct CevapmcapS *multicaps
+
+# Results from ACh GET PERFORMANCE, Type 03h
+# (Speed values go into drive.mdata_*_*_speed)
+-r -l struct CevapperF *speed_descriptor
+-p -v struct CevapperF *eol_speed_descriptor
+
+# >>>
+
+@
+=end Class
+
+
+Class=EquipProfile
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+EquipProfile maps a MMC profile into libdax (See mmc5r03c.pdf chapter 5).
+A profile describes a set of features and may be either current, possible,
+disabled, or unavailable.
+Subordinates=EquipFeature*N
+Boss=EquipMedia
+Cgen=\
+-l cevapprofile
+-r -v struct CevapdrivE *boss
+-r -v int is_current
+-r -v int profile_code
+-r -v char *profile_text
+-r -v int is_cd_profile
+-r -v int is_supported_profile
+-r -l struct CevapfeaturE *feature
+-p -v struct CevapfeaturE *eol_feature
+@
+=end Class
+
+Class=EquipFeature
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=16.03.2007
+Documentation=\
+EquipFeature maps a MMC feature into libdax (See mmc5r03c.pdf chapter 5).
+A feature describes a set of SCSI commands and (implicitely) of use cases.
+Boss=EquipProfile
+Cgen=\
+-l cevapfeature
+-r -v struct CevapprofilE *boss
+
+# >>>
+
+@
+=end Class
+
+Class=EquipFormat
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=
+Documentation=\
+EquipFormat represents a single Formattable Capacity Descriptor
+as of mmc5r03c.pdf 6.24.3.3 .
+Boss=EquipMedia
+Cgen=\
+-l cevapformat
+-r -v struct CevapmediA *boss
+
+# format type: e.g 0x00 is "Full", 0x15 is "Quick"
+-r -v int type
+
+# the size in bytes derived from Number of Blocks
+-r -v off_t size
+
+# the Type Dependent Parameter (usually the write alignment size)
+-r -v unsigned int tdp
+
+# >>>
+
+@
+=end Class
+
+Class=EquipPerformance
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=
+Documentation=\
+>>> EquipPerformance
+Boss=EquipMedia
+Cgen=\
+-l cevapperf
+-r -v struct CevapmediA *boss
+
+# >>>
+
+@
+=end Class
+
+Class=EquipStatus
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=17.3.2007
+Documentation=\
+EquipStatus represents the status of media and drive. This includes 
+blank/appendable/closed, progress indicator.
+Boss=EquipMedia
+Cgen=\
+cevapstatus
+-r -v struct CevapmediA *boss
+-v int status
+-m char *status_text
+-v volatile int busy
+
+# From various sources : free space on media (in bytes)
+# With CD this might change after particular write
+# parameters have been set and nwa has been inquired.
+-v off_t media_capacity_remaining
+
+# Current write address during write jobs. (Next address to be written)
+# <<< does this belong to JOB ?
+-r -v int nwa
+
+# if > 0 : first lba on media that is too high for write
+-v int media_lba_limit
+
+-v struct CevapprogresS *progress
+
+# >>>
+
+@
+=end Class
+
+Class=EquipMulticaps
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=14.8.2007
+Documentation=\
+EquipMulticaps represents media dependent properties and media states which
+are either volatile or especially interesting to several other modules. This
+includes eventually existing sessions, closure status, profile dependent
+capabilities.
+Boss=EquipMedia
+Cgen=\
+cevapmcaps
+
+# The current profile out of the drive profile list
+-v struct CevapprofilE *current_profile
+
+# Wether the media is erasable (or overwriteable)
+-v int erasable
+
+# A description of the existing media content structure
+-r -m struct CevapdisC *disc
+
+# Start and end addresses out of ATIP.
+# From 43h READ TOC/PMA/ATIP , mmc5r03c.pdf , 6.26
+-r -v int start_lba
+-r -v int end_lba
+
+# From 51h READ DISC INFORMATION Number of Sessions (-1)
+-v int complete_sessions
+
+# From 51h READ DISC INFORMATION Last Track Number in Last Session
+-v int last_track_no
+
+# >>> libburn.h:struct burn_multi_caps
+
+@
+=end Class
+
+Class=EquipTocItem
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=14.8.2007
+Boss=
+Cgen=\
+-l cevaptocitem
+-r -v struct CevapdisC *boss
+-v int session
+-v int valid
+-v int control
+
+# obscure info from CD TOC : possibly length of track
+-v unsigned char point
+-v unsigned char min
+-v unsigned char sec
+-v unsigned char frame
+ 
+-v int pmin
+-v int psec
+-v int pframe
+
+-v int start_lba
+-v int track_blocks
+@
+=end Class
+
+
+
+=end ClassDiagram=Equip_overview
+
+
+ClassDiagram=Job_overview
+
+Class=JobTodo
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobTodo records what is to be done during a job. This includes peripheral
+actions like tray load/eject and central actions like blank, format, burn.
+Subordinates=JobDisc,JobOptions
+Cgen=\
+cevaptodo
+-v volatile int cancel
+
+# >>>
+
+@
+=end Class
+
+Class=JobDisc
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobDisc models a disc structure. Either one which already exists or
+one which is to be created in a job run.
+Subordinates=JobSession*N
+Boss=JobTodo
+Cgen=\
+cevapdisc
+-l struct CevapsessioN *session
+-p -v struct CevapsessioN *eol_session
+-l struct CevaptociteM *toc_entry
+-p -v struct CevaptociteM *eol_toc_entry
+
+# >>> take over services of struct burn_disc
+
+@
+=end Class
+
+Class=JobSession
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobSession represents a recording session. A session usually bundles
+several tracks. Traditionally the last session of a disc is recognized
+by operating systems as the thing to be mounted.
+Subordinates=JobTrack*N,JobFifo
+Boss=JobDisc
+Cgen=\
+-l cevapsession
+-r -v struct CevapdisC *boss
+
+# >>>
+
+-l struct CevaptracK *track
+-p -v struct CevaptracK *eol_track
+
+# >>>
+
+@
+=end Class
+
+Class=JobTrack
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobTrack represents a track to be recorded. A track mainly is associated with
+a data source but in many cases it also becomes a recognizable entity on the
+target media.
+Subordinates=JobBlock*N,JobTrackFilter,JobSource
+Boss=JobSession
+Cgen=\
+-l cevaptrack
+-r -v struct CevapsessioN *boss
+
+# >>>
+
+@
+=end Class
+
+Class=JobBlock
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobBlock represents a single output data transaction unit. On CD this is
+the same as an addressable media block resp. sector. On DVD this might be
+an addressable block od 2k or a packet of e.g. 32k.
+Boss=JobTrack
+Cgen=\
+cevapblock
+-v int alba
+-v int rlba
+
+# >>>
+
+@
+=end Class
+
+Class=JobSource
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=8.4.2007
+Documentation=\
+JobSource represents a data source for a track. Typically this is a disk
+file or a stream file descriptor like stdin.
+Subordinates=JobSourceBlock*N
+Boss=JobTrack
+=end Class
+
+Class=JobSourceBlock
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=8.4.2007
+Documentation=\
+JobSourceBlock represents a single input data transaction unit.
+Boss=JobSource
+=end Class
+
+Class=JobFifo
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=8.4.2007
+Documentation=\
+JobFifo reads data via JobTrackFilter and buffers them until JobBlock can
+accept them.
+Boss=JobSession
+=end Class
+
+Class=JobTrackFilter
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=8.4.2007
+Documentation=\
+JobTrackFilter reads data from JobSourceBlock, processes them and presents
+them to JobFifo or JobBlock. This includes stripping of .wav headers.
+Boss=JobTrack
+=end Class
+
+Class=JobOptions
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=18.3.2007
+Documentation=\
+JobOptions bundles the adjustable parameters of a job. This includes dummy
+mode, speed, appendability, blank mode, format selection, write mode, 
+underrun protection, random access addressing.
+Boss=JobTodo
+Cgen=\
+cevapjobopts
+
+# >>>
+
+# Keeping an eye on the drive buffer
+-v int wait_for_buffer_free
+-v unsigned int wfb_min_usec
+-v unsigned int wfb_max_usec
+-v unsigned int wfb_timeout_sec
+-v unsigned int wfb_min_percent
+-v unsigned int wfb_max_percent
+
+# >>> -m struct params params (used by disabled read cd funtionality)
+
+@
+=end Class
+
+Class=JobBuffer
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=13.8.2007
+Documentation=\
+JobBuffer is an intermediate storage for the content of several JobBlock
+or JobSourceBlock.
+Cgen=\
+cevapbuffer
+-r -m unsigned char *data
+-v int sectors
+-v int bytes
+@
+=end Class
+
+Class=JobProgress
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=13.8.2007
+Documentation=\
+JobProgress reflects the state and parts of the history of a job
+Cgen=\
+cevapprogress
+
+# Keeping an eye on the drive buffer
+-v int nominal_write_speed
+-v off_t pessimistic_buffer_free
+-v int pbf_altered
+-v unsigned int pessimistic_writes
+-v unsigned int waited_writes
+-v unsigned int waited_tries
+-v unsigned int waited_usec
+
+# >>> the info provided by struct burn_progress
+
+# >>> 
+@
+=end Class
+
+Class=
+Author=Thomas Schmitt <scdbackup@gmx.net>
+Version=1.0
+Since=
+Documentation=\
+=end Class
+
+=end ClassDiagram=Equip_overview
+
+
+ClassDiagram=Gestures_overview
+
+# >>>
+
+=end ClassDiagram=Gestures_overview
+
+
+
+=end Model=libdax
+
+----------------------------------------------------------------------------
+Notes:
+----------------------------------------------------------------------------
+
+ Compile cgen:
+   ( cd libcevap && cc -g -o cgen cgen.c ctyp.c smem.c )
+
+ Generate C stubs:
+   ( cd libcevap && ./libcevap_gen.sh )
+ Option -lowercase would generate all lowercase struct and function names
+
+ Compile test:
+   ( cd libcevap && ( rm a.out ; cc -g main.c cevap*.c smem.c ) )
+ Option -DCevap_lowercasE would tell main.c that -lowercase was used above.
+
+
+----------------------------------------------------------------------------
+
+For a description of CgeN see libcevap/cgen.txt
+
+The generated code uses smem.[ch] out of one of my BSD licensed projects.
+For a description see end of libcevap/smem.h .
+
+------------------------------------------------------------------------
