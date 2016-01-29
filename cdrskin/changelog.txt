@@ -13204,6 +13204,15 @@ Updated change log
 * Result of a Coverity audit: 40+ code changes, but no easy-to-trigger bugs
 
 
+2016.01.27.174553  [5653]
+cdrskin/cdrskin.c
+Bug fix: "failed to attach fifo" when burning from stdin. Regression of 1.4.2, rev 5522.
+
+------------------------------ release - cdrskin-1.4.2.pl01 - 2016.01.29.100001
+* Bug fix: "failed to attach fifo" when burning from stdin.
+           Regression of 1.4.2, rev 5522.
+
+
   []
 ChangeLog
 cdrskin/cdrskin_eng.html

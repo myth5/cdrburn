@@ -1,4 +1,9 @@
 
+libburn-1.4.2.pl01.tar.gz Fri Jan 29 2016
+===============================================================================
+* Bug fix: cdrskin "failed to attach fifo" when burning from stdin.
+           Regression of 1.4.2, rev 5522.
+
 libburn-1.4.2.tar.gz Sat Nov 28 2015
 ===============================================================================
 * Bug fix: burn_disc_get_media_id() returned BD identifiers 2 chars too long
