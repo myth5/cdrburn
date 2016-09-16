@@ -1,7 +1,10 @@
 
-SVN trunk (to become libburn-1.4.6 or higher)
+libburn-1.4.6.tar.gz Fri Sep 16 2016
 ===============================================================================
-- no novelties yet -
+* Bug fix: SAO CD could be perceived 2 blocks to short.
+           Regression in 1.4.4 by rev 5672.
+* New API call burn_drive_set_immed()
+* New cdrskin option use_immed_bit=
 
 libburn-1.4.4.tar.gz Fri Jul 01 2016
 ===============================================================================
