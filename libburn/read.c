@@ -498,7 +498,7 @@ int burn_read_data(struct burn_drive *d, off_t byte_address,
 			sprintf(msg,
 			  "Read start address %ds larger than number of readable blocks %d",
 			  (int) (byte_address / 2048 + !!(byte_address % 2048)),
-			  d->media_read_capacity);
+			  d->media_read_capacity + 1);
 			libdax_msgs_submit(libdax_messenger, d->global_index,
 				0x00020172, (flag & 32) ?
 				LIBDAX_MSGS_SEV_DEBUG : LIBDAX_MSGS_SEV_SORRY,
