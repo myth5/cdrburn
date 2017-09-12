@@ -6,12 +6,12 @@ This all is under GPL.
 ------------------------------------------------------------------------------
 libburnia-project.org
 By Mario Danic <mario.danic@gmail.com> and Thomas Schmitt <scdbackup@gmx.net>
-Copyright (C) 2006-2016 Mario Danic, Thomas Schmitt
+Copyright (C) 2006-2017 Mario Danic, Thomas Schmitt
 Still containing parts of Libburn. By Derek Foreman <derek@signalmarketing.com>
 and Ben Jansens <xor@orodu.net>
 Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
-     http://files.libburnia-project.org/releases/libburn-1.4.6.tar.gz
+     http://files.libburnia-project.org/releases/libburn-1.4.8.tar.gz
 
 ------------------------------------------------------------------------------
 
@@ -19,10 +19,10 @@ Copyright (C) 2002-2006  Derek Foreman and Ben Jansens
 
                                 From tarball
 
-Obtain libburn-1.4.6.tar.gz, take it to a directory of your choice and do:
+Obtain libburn-1.4.8.tar.gz, take it to a directory of your choice and do:
 
-   tar xzf libburn-1.4.6.tar.gz
-   cd libburn-1.4.6
+   tar xzf libburn-1.4.8.tar.gz
+   cd libburn-1.4.8
    ./configure --prefix=/usr
    make
 
@@ -769,6 +769,13 @@ Project history as far as known to me:
   reproducible-builds.org to prepare a default setting which leads to identical
   ISO images on identical input and identical constant options.
   Several moderately embarrassing bugs have been fixed.
+
+- Tue Sep 12 2017 release 1.4.8:
+  libburn now refuses to write to SRM+POW formatted BD-R, because it would
+  spoil them. libisofs got several bugs fixed and offers new API calls to
+  supoort new xorriso features. libisoburn and xorriso offer more detail
+  control with particular boot sector types. New bugs and a regression from
+  version 1.4.4 were fixed.
 
 
 ------------------------------------------------------------------------------
