@@ -1,12 +1,15 @@
-SVN trunk (to become libburn-1.4.8 or higher)
+libburn-1.4.8.tar.gz Tue Sep 12 2017
 ===============================================================================
-- no novelties yet -
-
+* Bug fix: Option -dummy did not affect writing by direct_write_amount=
+* New API call burn_drive_reset_simulate()
+* New API call burn_drive_get_bd_r_pow()
+* Refusing to write to BD-R if formatted to Pseudo Overwrite
 
 libburn-1.4.6.tar.gz Fri Sep 16 2016
 ===============================================================================
 * Bug fix: SAO CD could be perceived 2 blocks to short.
            Regression in 1.4.4 by rev 5672.
+* Now operating optical drives on OpenBSD. Thanks to SASANO Takayoshi.
 * New API call burn_drive_set_immed()
 * New cdrskin option use_immed_bit=
 

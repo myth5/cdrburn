@@ -4907,7 +4907,7 @@ Made postponed change in thread management
 configure.ac
 Some changes in the comments
 
-24 Dec 2008  [1338]
+24 Dec 2007  [1338]
 libburn/libburn.h
 libburn/source.h
 libburn/source.c
@@ -13589,7 +13589,7 @@ Made number transition to 1.4.7
 + cdrskin/add_ts_changes_to_libburn_1_4_7
 Updated cdrskin tarball generator
 
-16 Sep 2016  []
+16 Sep 2016  [5770]
 ChangeLog
 cdrskin/changelog.txt
 Updated change log
@@ -13597,13 +13597,118 @@ Updated change log
 ------------------------------------ cycle  - cdrskin-1.4.7 - 2016.09.16.190600
 
 
+16 Sep 2016  [5771]
+libburn release 1.4.6 is ready
+http://svn.libburnia-project.org/libburn/branches/1.4.6
+http://svn.libburnia-project.org/libburn/tags/1.4.6
+
+
+2016.11.18.131813  [80175e0] [5778]
+libburn/libburn.h
+libburn/transport.h
+libburn/drive.c
+libburn/write.c
+libburn/mmc.c
+libburn/libburn.ver
+Let random access writing obey simulation mode of previous sequential run.
+New API call burn_drive_reset_simulate().
+
+2016.11.18.132335  [19a1b8e] [5579]
+cdrskin/cdrskin.c
+Bug fix: Option -dummy did not affect writing by direct_write_amount=
+
+11 Jan 2017  [074f88f] [5791]
+cdrskin/cdrskin.1
+Corrected documentation of bytes/second value of 1x CD speed
+
+27 Jan 2017  [6b020a3] [5792]
+configure.ac
+acinclude.m4
+COPYRIGHT
+Detecting Linux systems without generic SCSI support by scsi/scsi.h
+
+27 Jan 2017  [6f6bf68] [5795]
+acinclude.m4
+Small adjustement for previous commit
+
+2017.01.28.200155  [724d518] [5797]
+libburn/file.h
+libburn/file.c
+libburn/async.h
+libburn/async.c
+Giving up use of function pthread_cancel()
+
+2017.01.28.200802  [858e42d] [5798]
+cdrskin/cdrskin.c
+cdrskin/cdrskin.1
+Corrected harmless typos found by lintian
+
+2017.02.06.135800  [d71d80d] [5800]
+libburn/libburn.h
+libburn/drive.c
+libburn/libburn.ver
+New API call burn_drive_get_bd_r_pow()
+
+2017.02.06.141213  [a4b688a] [5801]
+libburn/libburn.h
+libburn/options.c
+libburn/write.c
+Refusing to write to BD-R if formatted to Pseudo Overwrite
+
+2017.02.06.161439  [2bb8bf4] [5802]
+cdrskin/cdrskin.c
+Reporting POW formatted BD-R as unusable
+
+2017.07.15.194129  [113f587]
+libburn/read.c
+Fixed the block count in error message about read attempt after medium end
+
+2017.09.12.110001  [516dc2c]
+Makefile.am
+configure.ac
+README
+libburn/libburn.h
+cdrskin/cdrskin.c
+cdrskin/cdrskin.1
+cdrskin/README
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin_timestamp.h
+cdrskin/cdrskin_eng.html
+Made number transition to 1.4.8
+
+12 Sep 2017  [ea486a1]
+- cdrskin/add_ts_changes_to_libburn_1_4_6
+- cdrskin/add_ts_changes_to_libburn_1_4_7
++ cdrskin/add_ts_changes_to_libburn_1_4_8
++ cdrskin/add_ts_changes_to_libburn_1_4_9
+Updated cdrskin tarball generator
+
+12 Sep 2017  []
+ChangeLog
+cdrskin/changelog.txt
+Updated change log
+
+----------------------------------- release - cdrskin-1.4.8 - 2017.09.12.110001
+* Bug fix: Option -dummy did not affect writing by direct_write_amount=
+* New API call burn_drive_get_bd_r_pow()
+* Refusing to write to BD-R if formatted to Pseudo Overwrite
+
+
   []
 ChangeLog
 cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.4.7 - 
+------------------------------------ cycle  - cdrskin-1.5.0 - 
+
+  [] []
+libburn/spc.h
+libburn/spc.c
+libburn/sg-linux.c
+Making commands retryable after particular Linux kernel transport errors
+(currently as libburn/*.[ch].after_1_4_8)
+
 
   []
 ChangeLog
@@ -13611,7 +13716,7 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.4.7 - 
+------------------------------------ cycle  - cdrskin-1.5.0 - 
 
 
 **********************************************************************
