@@ -13683,7 +13683,7 @@ Made number transition to 1.4.8
 + cdrskin/add_ts_changes_to_libburn_1_4_9
 Updated cdrskin tarball generator
 
-12 Sep 2017  []
+12 Sep 2017  [260fc29]
 ChangeLog
 cdrskin/changelog.txt
 Updated change log
@@ -13693,22 +13693,41 @@ Updated change log
 * New API call burn_drive_get_bd_r_pow()
 * Refusing to write to BD-R if formatted to Pseudo Overwrite
 
+13 Sep 2017
+git tag "release-1.4.8"
 
-  []
+2017.09.13.075728  [f1fc16b]
+Makefile.am
+configure.ac
+libburn/libburn.h
+cdrskin/cdrskin.c
+cdrskin/cdrskin.1
+cdrskin/README
+cdrskin/cdrskin_timestamp.h
+Made number transition to 1.4.9
+
+13 Sep 2017  []
 ChangeLog
-cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.5.0 - 
+------------------------------------ cycle  - cdrskin-1.4.9 - 2017.09.13.075728
 
-  [] []
+  []
 libburn/spc.h
 libburn/spc.c
 libburn/sg-linux.c
 Making commands retryable after particular Linux kernel transport errors
 (currently as libburn/*.[ch].after_1_4_8)
 
+  []
+ChangeLog
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+Updated change log
+
+------------------------------------ cycle  - cdrskin-1.4.9 - 
+
 
   []
 ChangeLog
@@ -13716,7 +13735,7 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.5.0 - 
+------------------------------------ cycle  - cdrskin-1.4.9 - 
 
 
 **********************************************************************

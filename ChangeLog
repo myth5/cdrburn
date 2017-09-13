@@ -1,3 +1,9 @@
+git clone git@dev.lovelyhq.com:libburnia/libburn.git
+(to become libburn-1.5.0 or higher)
+===============================================================================
+- no novelties yet -
+
+
 libburn-1.4.8.tar.gz Tue Sep 12 2017
 ===============================================================================
 * Bug fix: Option -dummy did not affect writing by direct_write_amount=
