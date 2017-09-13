@@ -4,7 +4,7 @@
 cdrskin. By Thomas Schmitt <scdbackup@gmx.net>
 Integrated sub project of libburnia-project.org but also published via:
 http://scdbackup.sourceforge.net/cdrskin_eng.html
-http://scdbackup.sourceforge.net/cdrskin-1.4.8.tar.gz
+http://scdbackup.sourceforge.net/cdrskin-1.4.9.tar.gz
 
 Copyright (C) 2006-2017 Thomas Schmitt, provided under GPL version 2 or later.
 ------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ most of the libburn features from the command line.
 
 Currently it is fully supported on GNU/Linux with kernels >= 2.4, on FreeBSD,
 on OpenSolaris, and on NetBSD.
-IDE drives under Linux 2.4. need kernel module ide-scsi.
+IDE drives under Linux 2.4 need kernel module ide-scsi.
 ATA and SATA drives under FreeBSD need kernel module atapicam.
 On other X/Open compliant systems there will only be emulated drives, but no
 direct MMC operation on real CD/DVD/BD drives.
@@ -26,10 +26,10 @@ By using this software you agree to the disclaimer at the end of this text
 
                    Compilation, First Glimpse, Installation
 
-Obtain cdrskin-1.4.8.tar.gz, take it to a directory of your choice and do:
+Obtain cdrskin-1.4.9.tar.gz, take it to a directory of your choice and do:
 
-    tar xzf cdrskin-1.4.8.tar.gz
-    cd cdrskin-1.4.8
+    tar xzf cdrskin-1.4.9.tar.gz
+    cd cdrskin-1.4.9
 
 Within that directory execute:
 
