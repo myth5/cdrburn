@@ -1702,7 +1702,7 @@ int burn_disc_close_track_dvd_minus_r(struct burn_write_opts *o, int tnum)
 int burn_disc_finalize_dvd_plus_r(struct burn_write_opts *o)
 {
 	struct burn_drive *d = o->drive;
-	char msg[20 + 80]; /* filltext + profile */
+	char msg[40 + 80]; /* filltext + profile */
 
 	sprintf(msg, "Finalizing %s ...",
 		d->current_profile_text);
