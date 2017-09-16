@@ -3668,7 +3668,7 @@ int mmc_format_unit(struct burn_drive *d, off_t size, int flag)
 	int accept_count = 0;
 	off_t num_of_blocks = 0, diff, format_size, i_size, format_00_max_size;
 	off_t min_size = -1, max_size = -1;
-	char *msg = NULL, descr[80];
+	char *msg = NULL, descr[80 + 10 + 22]; /* profile+filltext+index */
 	int key, asc, ascq;
 	int full_format_type = 0x00; /* Full Format (or 0x10 for DVD-RW ?) */
 
