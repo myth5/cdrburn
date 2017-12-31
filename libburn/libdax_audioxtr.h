@@ -176,7 +176,10 @@ struct libdax_audioxtr {
  /* Format dependent parameters */
 
  /* MS WAVE Format */
- /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/ */
+ /* see description in: doc/waveformat.txt */
+
+ /* Offset to "data" subchunk */
+ unsigned int wav_data_location;
 
  /* == NumSamples * NumChannels * BitsPerSample/8
     This is the number of bytes in the data. */
