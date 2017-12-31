@@ -1,0 +1,84 @@
+
+        Sound extraction for CD-DA burning from .WAV audio file format
+
+Using information and text snippets
+from https://ccrma.stanford.edu/courses/422/projects/WaveFormat/
+     in may 2013. The link is now dead. An apparent copy of the page
+     is 2017 at: http://soundfile.sapp.org/doc/WaveFormat/
+from https://en.wikipedia.org/wiki/WAV
+
+For libburnia-project.org by Thomas Schmitt <scdbackup@gmx.net>
+December 2017
+
+
+The WAVE file format is an application of the Microsoft RIFF container format
+for multimedia files. A RIFF file consists of Chunks which contain Subchunks.
+The Chunks form a linked list within the file, the Subchunks form a linked
+list inside their Chunk.
+All numbers are stored in little-endian byte order.
+
+A .WAV file consists at least of one Chunk with id "RIFF", which contains
+one Subchunk with id "fmt " and one with id "data":
+
+Offset  Size  Name             Description
+
+ 0        4   ChunkID          Contains the letters "RIFF"
+ 4        4   ChunkSize        The size of the rest of the chunk following
+                               this field. I.e. the two fields ChunkID and
+                               ChunkSize are not included in this count.
+ 8        4   Format           Contains the letters "WAVE"
+
+
+The "fmt " subchunk describes the sound data's format:
+
+Offset  Size  Name             Description
+
+ 0        4   Subchunk1ID      Contains the letters "fmt "
+
+ 4        4   Subchunk1Size    The size of the rest of the Subchunk following
+                               this field. I.e. Subchunk1ID and Subchunk1Size
+                               are not included in this count.
+ 8        2   AudioFormat      PCM = 1 (i.e. Linear quantization)
+                               Values other than 1 indicate some 
+                               form of compression.
+10        2   NumChannels      Mono = 1, Stereo = 2, etc.
+12        4   SampleRate       8000, 44100, etc.
+16        4   ByteRate         == SampleRate * NumChannels * BitsPerSample/8
+20        2   BlockAlign       == NumChannels * BitsPerSample/8
+                               The number of bytes for one sample including
+                               all channels.
+22        2   BitsPerSample    8 bits = 8, 16 bits = 16, etc.
+More data may follow in this Subchunk if AudioFormat is not PCM.
+
+
+The "data" subchunk contains the size of the data and the actual sound:
+
+Offset  Size  Name             Description
+
+ 0        4   Subchunk2ID      Contains the letters "data"
+
+ 4        4   Subchunk2Size    == NumSamples * NumChannels * BitsPerSample/8
+                               The number of audio data bytes.
+ 8        *   Data             The audio data bytes.
+
+
+CD-DA prescribes these "fmt " parameters:
+  AudioFormat == 1
+  SampleRate == 44100
+  BitsPerSample == 16
+  NumChannels == 2 (stereo)
+  (little-endian byte order)
+
+If matching parameters are given in the .WAV file, one can directly use the
+data bytes of Subchunk "data" as payload for burning a CD-DA track.
+
+
+Above simple form can be expanded by other Chunks or Subchunks of Chunk "RIFF".
+A .wav file appeared which beared a Subchunk "LIST" inside Chunk "RIFF".
+Wikipedia mentions Chunks "INFO", "CSET", "JUNK", "PAD ".
+
+Therefore one should expect such Chunks before Chunk "RIFF" and Subchunks
+other than "fmt " and "data" inside the "RIFF" Chunk.
+Multiple Chunks "RIFF" and Subchunks "fmt " or "data" per file have not been
+seen yet. They would make extraction more cumbersome.
+

@@ -55,6 +55,7 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag)
  o->bits_per_sample= 0;
  o->msb_first= 0;
 
+ o->wav_data_location= 44;
  o->wav_subchunk2_size= 0;
 
  o->au_data_location= 0;
@@ -121,47 +122,123 @@ static int libdax_audioxtr_open(struct libdax_audioxtr *o, int flag)
  return(1);
 }
 
+/* @param flag: bit0= sequential file, skip by reading data
+*/
+static int libdax_audioxtr_skip(struct libdax_audioxtr *o,
+                                off_t *old_pos,
+                                off_t pos, int flag)
+{
+ int ret;
+ size_t to_read;
+ static char buf[256]; /* Thread safe because the content does not matter */
+
+ if((flag & 1) || o->fd == 0) { /* stdin */
+   while(pos - *old_pos > 0) {
+     to_read= pos - *old_pos;
+     if(to_read > sizeof(buf))
+       to_read= sizeof(buf);
+     ret= read(o->fd, buf, to_read);
+     if(ret < (int) to_read)
+       return(0);
+     *old_pos+= to_read;
+   }
+ } else {
+   ret= lseek(o->fd, pos, SEEK_SET);
+   if(ret == -1)
+     return(0);
+   *old_pos= pos;
+ }
+ return(1);
+}
 
 static int libdax_audioxtr_identify_wav(struct libdax_audioxtr *o, int flag)
 {
- int ret;
- char buf[45];
+ int ret, fmt_seen= 0, data_seen= 0;
+ off_t pos= 0, old_pos= 0, riff_end= 0;
+ char buf[16];
+ unsigned char *ubuf;
 
  /* check wether this is a MS WAVE file .wav */
- /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/ */
+ /* info used: http://ccrma.stanford.edu/courses/422/projects/WaveFormat/
+               https://en.wikipedia.org/wiki/WAV
+    see summary in: doc/waveformat.txt
+ */
+ ubuf= (unsigned char *) buf;
 
- if(o->fd!=0) {
-   ret= lseek(o->fd,0,SEEK_SET);
-   if(ret==-1)
+ /* Look for ChunkID "RIFF" , tolerate other known chunks */
+ while(1) {
+   ret= libdax_audioxtr_skip(o, &old_pos, pos, 0);
+   if(ret <= 0)
      return(0);
+   ret= read(o->fd, buf, 8);
+   if(ret < 8)
+     return(0);
+   old_pos+= 8;
+   pos= old_pos + libdax_audioxtr_to_int(o, ubuf + 4, 4, 0);
+   if(pos > 0xffffffff || pos - old_pos < 4) /* Too large or no Format word */
+     return(0);
+   if(strncmp(buf, "RIFF", 4) == 0)
+ break;
+   /* Wikipedia mentions these known ChunkId values */
+   if(strncmp(buf, "INFO", 4) == 0 ||
+      strncmp(buf, "CSET", 4) == 0 ||
+      strncmp(buf, "JUNK", 4) == 0 ||
+      strncmp(buf, "PAD ", 4) == 0)
+ continue;
+   return(0);
  }
- ret= read(o->fd, buf, 44);
- if(ret<44)
-   return(0);
- buf[44]= 0; /* as stopper for any string operations */
 
- if(strncmp(buf,"RIFF",4)!=0)                                     /* ChunkID */
+ /* Read RIFF Format header */
+ ret= read(o->fd, buf, 4);
+ if(ret < 4)
    return(0);
- if(strncmp(buf+8,"WAVE",4)!=0)                                    /* Format */ 
+ old_pos+= 4;
+ if(strncmp(buf, "WAVE", 4) != 0) /* Format */
    return(0);
- if(strncmp(buf+12,"fmt ",4)!=0)                              /* Subchunk1ID */
-   return(0);
- if(buf[16]!=16 || buf[17]!=0 || buf[18]!=0 || buf[19]!=0)  /* Subchunk1Size */
-   return(0);
- if(buf[20]!=1 || buf[21]!=0)  /* AudioFormat must be 1 (Linear quantization) */
-   return(0);
+ riff_end= pos;
 
- strcpy(o->fmt,".wav");
- o->msb_first= 0;
- o->num_channels=  libdax_audioxtr_to_int(o,(unsigned char *) buf+22,2,0);
- o->sample_rate= libdax_audioxtr_to_int(o,(unsigned char *) buf+24,4,0);
- o->bits_per_sample= libdax_audioxtr_to_int(o,(unsigned char *)buf+34,2,0);
- sprintf(o->fmt_info,
-         ".wav , num_channels=%d , sample_rate=%d , bits_per_sample=%d",
-         o->num_channels,o->sample_rate,o->bits_per_sample);
- o->wav_subchunk2_size= libdax_audioxtr_to_int(o,(unsigned char *)buf+40,4,0);
- o->data_size= o->wav_subchunk2_size;
- return(1);
+ /* Look for SubchunkID "fmt " and "data" */
+ pos= old_pos;
+ while(old_pos < riff_end) {
+   ret= libdax_audioxtr_skip(o, &old_pos, pos, 0);
+   if(ret <= 0)
+     return(0);
+   ret= read(o->fd, buf, 8);
+   if(ret < 8)
+     return(0);
+   old_pos= pos + 8;
+   pos= old_pos + libdax_audioxtr_to_int(o, ubuf + 4, 4, 0); /* SubchunkSize */
+
+   if(strncmp(buf,"fmt ", 4) == 0) {
+     if(pos - old_pos < 16)
+       return(0);
+     ret= read(o->fd, buf, 16);
+     if(ret < 16)
+       return(0);
+     old_pos+= 16;
+     if(buf[0]!=1 || buf[1]!=0) /* AudioFormat (1 = Linear quantization) */
+       return(0);
+     o->msb_first= 0;
+     o->num_channels= libdax_audioxtr_to_int(o, ubuf + 2 , 2, 0);
+     o->sample_rate= libdax_audioxtr_to_int(o, ubuf + 4, 4, 0);
+     o->bits_per_sample= libdax_audioxtr_to_int(o, ubuf + 14, 2, 0);
+     sprintf(o->fmt_info,
+             ".wav , num_channels=%d , sample_rate=%d , bits_per_sample=%d",
+             o->num_channels, o->sample_rate, o->bits_per_sample);
+     fmt_seen= 1;
+
+   } else if(strncmp(buf,"data", 4) == 0) {
+     o->wav_data_location= old_pos;
+     o->wav_subchunk2_size= pos - old_pos;
+     o->data_size= o->wav_subchunk2_size;
+     data_seen= 1;
+   }
+   if(fmt_seen && data_seen) {
+     strcpy(o->fmt,".wav");
+     return(1);
+   }
+ }
+ return(0);
 }
 
 
@@ -256,7 +333,7 @@ static int libdax_audioxtr_init_reading(struct libdax_audioxtr *o, int flag)
 
  o->extract_count= 0;
  if(strcmp(o->fmt,".wav")==0)
-   ret= lseek(o->fd,44,SEEK_SET);
+   ret= lseek(o->fd, o->wav_data_location, SEEK_SET);
  else if(strcmp(o->fmt,".au")==0)
    ret= lseek(o->fd,o->au_data_location,SEEK_SET);
  else
