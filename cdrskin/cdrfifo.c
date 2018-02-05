@@ -26,8 +26,9 @@
 #include <sys/select.h>
 
 #ifndef Cdrfifo_standalonE
-/* <<< until release of 0.7.4 : for Libburn_has_open_trac_srC */
+/* for burn_os_alloc_buffer() */
 #include "../libburn/libburn.h"
+#define Libburn_has_open_trac_srC 1
 #endif
 
 #include "cdrfifo.h"
