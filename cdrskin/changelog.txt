@@ -13706,12 +13706,52 @@ cdrskin/README
 cdrskin/cdrskin_timestamp.h
 Made number transition to 1.4.9
 
-13 Sep 2017  []
+13 Sep 2017  [ef0d713]
 ChangeLog
 cdrskin/changelog.txt
 Updated change log
 
 ------------------------------------ cycle  - cdrskin-1.4.9 - 2017.09.13.075728
+
+2017.09.16.095011  [2886b82]
+libburn/mmc.c
+Reacted on compiler warning about theoretical overflow of an sprintf
+
+2017.09.16.105142  [99e828c]
+libburn/write.c
+Reacted on compiler warning about theoretical overflow of an sprintf
+
+2017.09.16.105713  [b5b5cc1]
+libburn/write.c
+Reacted on compiler warning about theoretical overflow of an sprintf
+
+2017.12.31.111507  [ef2fa1d]
+libburn/libdax_audioxtr.c
++ doc/waveformat.txt
+Adapting to surplus chunks and subchunks in .wav files
+
+2017.12.31.114757  [95f5b1c]
+libburn/libdax_audioxtr.h
+Added missing header file for previous commit
+
+2018.02.05.103304  [84fad99]
+cdrskin/cdrfifo.c
+Bug fix: cdrskin threw errno 22 on data file input if libburn is configured --enable-track-src-odirect
+
+2018.02.05.103650  [c84889b]
+libburn/sg-linux.c
+Reporting in SCSI log when commands get repeated
+
+  []
+ChangeLog
+cdrskin/cdrskin_eng.html
+cdrskin/changelog.txt
+Updated change log
+
+------------------------------------ cycle  - cdrskin-1.4.9 - 
+* Bug fix: cdrskin threw errno 22 on data file input if libburn is
+           configured with --enable-track-src-odirect
+
 
   []
 libburn/spc.h

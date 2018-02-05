@@ -1,8 +1,8 @@
 git clone git@dev.lovelyhq.com:libburnia/libburn.git
 (to become libburn-1.5.0 or higher)
 ===============================================================================
-- no novelties yet -
-
+* Bug fix: cdrskin threw errno 22 on data file input if libburn is
+           configured with --enable-track-src-odirect
 
 libburn-1.4.8.tar.gz Tue Sep 12 2017
 ===============================================================================
