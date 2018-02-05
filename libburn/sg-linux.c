@@ -2231,6 +2231,10 @@ int sg_issue_command(struct burn_drive *d, struct command *c)
 		if (d->cancel)
 	break;
 		/* if ! done : loop for retry */;
+		if (!done && (burn_sg_log_scsi & 3)) {
+			scsi_log_text("+++ Repeating command", fp, 0);
+			scsi_log_cmd(c, fp, 0);
+		}
 	}
 
 	ret = 1;
