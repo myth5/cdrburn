@@ -613,6 +613,7 @@ Range "scdbackup"          :  0x00020000 to 0x0002ffff
  0x000201a8 (FAILURE,HIGH) = SCSI command yielded driver problem
  0x000201a9 (FAILURE,HIGH) = Implausible length from GET CONFIGURATION
  0x000201aa (FAILURE,HIGH) = No CD-TEXT packs in file
+ 0x000201ab (WARN,HIGH)    = Leaving burn_source_fifo object undisposed
 
 
  libdax_audioxtr:

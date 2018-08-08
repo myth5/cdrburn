@@ -331,8 +331,31 @@ static int fifo_set_size(struct burn_source *source, off_t size)
 static void fifo_free(struct burn_source *source)
 {
 	struct burn_source_fifo *fs = source->data;
+	int wait_count;
+	static int wait_max = 30, wait_usleep = 100000;
 
 	burn_fifo_abort(fs, 0);
+	for (wait_count = 0; wait_count <= wait_max; wait_count++) {
+		if (fs->thread_is_valid <= 0)
+	break;
+		if (wait_count < wait_max)
+			usleep(wait_usleep);
+	}
+	if (wait_count > wait_max) {
+		/* The shoveler thread might still be active. If so, it would
+		   use invalid or inappropriate memory if the fifo would be
+		   disposed now. A memory and resource leak is the better
+		   option here.
+		*/
+		libdax_msgs_submit(libdax_messenger, -1,
+				   0x000201ab,
+				   LIBDAX_MSGS_SEV_WARNING,
+				   LIBDAX_MSGS_PRIO_HIGH,
+				   "Leaving burn_source_fifo object undisposed because it is possibly stuck but alive",
+				   0, 0);
+		return;
+	}
+
 	if (fs->inp != NULL)
 		burn_source_free(fs->inp);
 
