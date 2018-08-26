@@ -1318,6 +1318,7 @@ int Cdrtrack_seek_isosize(struct CdrtracK *track, int fd, int flag)
                 bit1=open as source for direct write: 
                      no audio extract, no minimum track size
                 bit2=permission to use burn_os_open_track_src() (evtl O_DIRECT)
+                bit3=This is a CD. Enforce minimum track size if not bit1.
     @return <=0 error, 1 success
 */
 int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
@@ -1430,7 +1431,7 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
 
  track->source_fd= *fd;
  if(track->fixed_size < Cdrtrack_minimum_sizE * track->sector_size
-    && (track->fixed_size>0 || size_from_file) && !(flag&2)) {
+    && (track->fixed_size>0 || size_from_file) && (flag & 8) && !(flag&2)) {
    if(track->track_type == BURN_AUDIO) {
      /* >>> cdrecord: We differ in automatic padding with audio:
        Audio tracks must be at least 705600 bytes and a multiple of 2352.
@@ -1461,6 +1462,8 @@ int Cdrtrack_open_source_path(struct CdrtracK *track, int *fd, int flag)
                 bit1= Do not create and attach a new fifo 
                       but attach new follow-up fd pair to previous_fifo
                 bit2= Do not enforce fixed_size if not container extraction
+                bit3= This is a CD. Enforce minimum track size.
+                      (Forward to Cdrtrack_open_source_path)
     @return <=0 error, 1 success
 */
 int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd, 
@@ -1473,7 +1476,7 @@ int Cdrtrack_attach_fifo(struct CdrtracK *track, int *outlet_fd,
  if(track->fifo_size<=0)
    return(2);
  ret= Cdrtrack_open_source_path(track,&source_fd,
-                            (flag&1) | (4 * (track->fifo_size >= 256 * 1024)));
+                    (flag & (1 | 8)) | (4 * (track->fifo_size >= 256 * 1024)));
  if(ret<=0)
    return(ret);
  if(pipe(pipe_fds)==-1)
@@ -1701,6 +1704,7 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
  bit0= debugging verbosity
  bit1= apply padding hack (<<< should be unused for now)
  bit2= permission to use O_DIRECT (if enabled at compile time)
+ bit3= This is a CD. (Forward to Cdrtrack_open_source_path)
 */
 {
  struct burn_track *tr;
@@ -1723,7 +1727,7 @@ int Cdrtrack_add_to_session(struct CdrtracK *track, int trackno,
 
  /* Note: track->track_type may get set in here */
  if(track->source_fd==-1) {
-   ret= Cdrtrack_open_source_path(track, &source_fd, flag & (4 | 1));
+   ret= Cdrtrack_open_source_path(track, &source_fd, flag & (8 | 4 | 1));
    if(ret<=0)
      goto ex;
  }
@@ -3906,9 +3910,6 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
 {
  struct CdrfifO *ff= NULL;
  int ret,i,hflag;
-
-#ifdef Cdrskin_use_libburn_fifO
-
  int profile_number;
  char profile_name[80];
 
@@ -3916,9 +3917,12 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
  if(ret <= 0)
    return(ret);
 
- /* Refuse here and thus use libburn fifo only with single track, non-CD */
  ret= burn_disc_get_profile(skin->drives[skin->driveno].drive,
                             &profile_number, profile_name);
+
+#ifdef Cdrskin_use_libburn_fifO
+
+ /* Refuse here and thus use libburn fifo only with single track, non-CD */
  if(profile_number != 0x09 && profile_number != 0x0a &&
     skin->track_counter == 1)
    return(1);
@@ -3927,7 +3931,8 @@ int Cdrskin_attach_fifo(struct CdrskiN *skin, int flag)
 
  skin->fifo= NULL;
  for(i=0;i<skin->track_counter;i++) {
-   hflag= (skin->verbosity>=Cdrskin_verbose_debuG);
+   hflag= (skin->verbosity>=Cdrskin_verbose_debuG) |
+          ((profile_number == 0x09 || profile_number == 0x0a) << 3);
    if(i==skin->track_counter-1)
      hflag|= 4;
    if(skin->verbosity>=Cdrskin_verbose_cmD) {
@@ -7324,14 +7329,14 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  int source_fd, is_from_stdin;
  int text_flag= 4; /* Check CRCs and silently repair CRCs if all are 0 */
  unsigned char *text_packs= NULL;
- int num_packs= 0, start_block, block_no;
+ int num_packs= 0, start_block, block_no, profile_number;
 
 #ifndef Cdrskin_no_cdrfifO
  double put_counter, get_counter, empty_counter, full_counter;
  int total_min_fill, fifo_percent;
 #endif
  off_t free_space;
- char msg[80];
+ char msg[80], profile_name[80];
 
  if(skin->tell_media_space)
    doing= "estimating";
@@ -7351,6 +7356,7 @@ int Cdrskin_burn(struct CdrskiN *skin, int flag)
  s= burn_disc_get_status(drive);
  if(skin->verbosity>=Cdrskin_verbose_progresS)
    Cdrskin_report_disc_status(skin,s,1);
+ burn_disc_get_profile(drive, &profile_number, profile_name);
 
  disc= burn_disc_create();
  session= burn_session_create();
@@ -7406,7 +7412,9 @@ burn_failed:;
 
 /* if(skin->fifo_size >= 256 * 1024) */
 
-       hflag|= 4;
+     hflag|= 4;
+     if(profile_number == 0x09 || profile_number == 0x0a)
+       hflag|= 8;
 
      ret= Cdrtrack_add_to_session(skin->tracklist[i],i,session,hflag);
      if(ret<=0) {
