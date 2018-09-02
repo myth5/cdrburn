@@ -1041,22 +1041,18 @@ static int is_scsi_drive(char *fname, int fd_in, int *bus_no, int *host_no,
 		{ret = 0; goto ex;}
 	}
 
-	if (sid_ret == -1 || sid.scsi_id < 0) {
-		/* ts A61211 : employ a more general ioctl */
-		/* ts B11001 : re-use fd */
-		ret = sg_obtain_scsi_adr_fd(fname, fd, bus_no, host_no,
-					   channel_no, target_no, lun_no);
-		if (ret>0) {
-			sid.host_no = *host_no;
-			sid.channel = *channel_no;
-			sid.scsi_id = *target_no;
-			sid.lun = *lun_no;
-		} else {
-			if (linux_sg_enumerate_debug)
-				fprintf(stderr,
-					"sg_obtain_scsi_adr_fd() failed\n");
-			{ret = 0; goto ex;}
-		}
+	/* ts A61211 : employ a more general ioctl */
+	/* ts B11001 : re-use fd */
+	/* ts B80902 : call unconditionally because host_no differs
+	               between SG_GET_SCSI_ID and SCSI_IOCTL_GET_IDLUN
+	*/
+	ret = sg_obtain_scsi_adr_fd(fname, fd, bus_no, host_no,
+				    channel_no, target_no, lun_no);
+	if (ret <= 0) {
+		if (linux_sg_enumerate_debug)
+			fprintf(stderr,
+				"sg_obtain_scsi_adr_fd() failed\n");
+		{ret = 0; goto ex;}
 	}
 
 	/* ts A60927 : trying to do locking with growisofs */
@@ -1076,16 +1072,6 @@ static int is_scsi_drive(char *fname, int fd_in, int *bus_no, int *host_no,
 		sg_release_siblings(sibling_fds, sibling_fnames,
 							&sibling_count);
 	}
-#ifdef SCSI_IOCTL_GET_BUS_NUMBER
-	if(*bus_no == -1)
-		*bus_no = 1000 * (sid.host_no + 1) + sid.channel;
-#else
-	*bus_no = sid.host_no;
-#endif
-	*host_no= sid.host_no;
-	*channel_no= sid.channel;
-	*target_no= sid.scsi_id;
-	*lun_no= sid.lun;
 	ret = 1;
 ex:;
 	if (fd_in < 0 && fd >= 0) {
