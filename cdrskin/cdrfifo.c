@@ -108,6 +108,9 @@ struct CdrfifO {
  /* index of currently active (i.e. reading) follow-up */
  int follow_up_fd_idx;
 
+ /* short read encountered, take subsequent errno 22 with O_DIRECT as EOF */
+ int o_direct_was_short;
+
 
  /* (simultaneous) peer chaining */
  struct CdrfifO *next;
@@ -178,6 +181,7 @@ int Cdrfifo_new(struct CdrfifO **ff, int source_fd, int dest_fd,
  }
  o->follow_up_fd_counter= 0;
  o->follow_up_fd_idx= -1;
+ o->o_direct_was_short= 0;
  o->next= o->prev= NULL;
  o->chain_idx= 0;
 
@@ -697,8 +701,17 @@ after_write:;
    else if(can_read < Cdrfifo_o_direct_chunK)
      can_read= -1;
    ret= 0;
-   if(can_read>0)
+   if(can_read>0) {
      ret= read(o->source_fd,o->buffer+o->write_idx,can_read);
+     if(ret > 0) {
+       if(ret < can_read) {
+         /* Probably EOF. Prepare for errno = 22 in the next read. */
+         o->o_direct_was_short= 1;
+       } else {
+         o->o_direct_was_short= 0;
+       }
+     }
+   }
    if(can_read < 0) {
      /* waiting for a full Cdrfifo_o_direct_chunK to fit */
      if(can_write <= 0 && o->dest_fd >= 0) {
@@ -732,6 +745,8 @@ after_write:;
 #endif /* ! Libburn_has_open_trac_srC */
 
    if(ret==-1) {
+     if(o->o_direct_was_short && errno == 22)
+       goto have_eof;
 
      /* >>> handle input error */;
      fprintf(stderr,"\ncdrfifo %d: on read: errno=%d , \"%s\"\n",
@@ -740,6 +755,7 @@ after_write:;
 
      o->source_fd= -1;
    } else if(ret==0) { /* eof */
+have_eof:;
      /* activate eventual follow-up source fd */
      if(Cdrfifo_debuG || (flag&1))
        fprintf(stderr,"\ncdrfifo %d: on read(%d,buffer,%d): eof\n",
