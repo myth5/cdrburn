@@ -13796,9 +13796,16 @@ ChangeLog
 cdrskin/changelog.txt
 Updated change log
 
-  []
+15 Sep 2018  [ef3609e]
 cdrskin/cdrskin.c
+cdrskin/changelog.txt
 Fixed a typo that was made during version leap
+
+15 Sep 2018  []
+cdrskin/add_ts_changes_to_libburn_1_5_0
+cdrskin/add_ts_changes_to_libburn_1_5_1
+cdrskin/changelog.txt
+Added to cdrskin standalone scripts a compile run for unite_html_b_line.c
 
 ----------------------------------- release - cdrskin-1.5.0 - 2018.09.15.083001
 * Bug fix: cdrskin threw errno 22 on data file input if libburn is

@@ -229,6 +229,8 @@ tar czf "$cdrskin_tarball" "$target"
  fi
 #  "$compile_cmd" -libburn_svn -O2 -do_diet -do_strip
 #  cp "$compile_result" "../$bintarget_dynamic"_diet
+
+ ( cd cdrskin ; cc -g -Wall -o unite_html_b_line unite_html_b_line.c )
  "$man_to_html_cmd"
  mv "$man_page_html" ..
 )

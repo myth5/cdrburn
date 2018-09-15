@@ -229,6 +229,7 @@ tar czf "$cdrskin_tarball" "$target"
    "$compile_cmd" $compile_static_opts -O2 -do_strip
    cp "$compile_result" "../$bintarget_static"
  fi
+ ( cd cdrskin ; cc -g -Wall -o unite_html_b_line unite_html_b_line.c )
  "$man_to_html_cmd"
  mv "$man_page_html" ..
 )
