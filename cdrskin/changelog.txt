@@ -13791,10 +13791,14 @@ Made number transition to 1.5.0
 + cdrskin/add_ts_changes_to_libburn_1_5_1
 Updated cdrskin tarball generator
 
-  []
+15 Sep 2018  [9ee80ee]
 ChangeLog
 cdrskin/changelog.txt
 Updated change log
+
+  []
+cdrskin/cdrskin.c
+Fixed a typo that was made during version leap
 
 ----------------------------------- release - cdrskin-1.5.0 - 2018.09.15.083001
 * Bug fix: cdrskin threw errno 22 on data file input if libburn is
@@ -13805,12 +13809,6 @@ Updated change log
 * Bug fix: Device file comparison parameters were recorded wrong with Linux sg
 
 
-  []
-libburn/spc.h
-libburn/spc.c
-libburn/sg-linux.c
-Making commands retryable after particular Linux kernel transport errors
-(currently as libburn/*.[ch].after_1_4_8)
 
   []
 ChangeLog
@@ -13820,6 +13818,12 @@ Updated change log
 
 ------------------------------------ cycle  - cdrskin-1.5.1 - 
 
+  []
+libburn/spc.h
+libburn/spc.c
+libburn/sg-linux.c
+Making commands retryable after particular Linux kernel transport errors
+(currently as libburn/*.[ch].after_1_4_8)
 
   []
 ChangeLog

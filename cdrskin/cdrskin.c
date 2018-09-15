@@ -125,7 +125,7 @@ or
 #endif
 
 #ifdef Cdrskin_libburn_1_5_1
-#define Cdrskin_libburn_versioN "1.5.1
+#define Cdrskin_libburn_versioN "1.5.1"
 #endif
 
 #ifndef Cdrskin_libburn_versioN
