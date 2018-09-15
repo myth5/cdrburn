@@ -13742,15 +13742,67 @@ Bug fix: cdrskin threw errno 22 on data file input if libburn is configured --en
 libburn/sg-linux.c
 Reporting in SCSI log when commands get repeated
 
-  []
+05 Feb 2018  [e35995b]
 ChangeLog
 cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.4.9 - 
+------------------------------------ cycle  - cdrskin-1.4.9 - 2018.02.05.124100
 * Bug fix: cdrskin threw errno 22 on data file input if libburn is
            configured with --enable-track-src-odirect
+
+
+2018.08.08.152622  [ff039e8]
+libburn/libdax_msgs.h
+libburn/file.c
+Bug fix: SIGSEGV could happen if a track ended by reaching its fixed size
+         while the track source still was willing to deliver bytes
+
+2018.08.26.141619  [2fe4b3c]
+cdrskin/cdrskin.c
+Restricted enforcement of minimum track size to CD media profiles
+
+2018.09.02.200129  [3fdf118]
+libburn/sg-linux.c
+Bug fix: Device file comparison parameters were recorded wrong with Linux sg
+
+2018.09.06.100353  [d32bb30]
+cdrskin/cdrfifo.c
+With --enable-track-src-odirect, do not report error 22 due to unaligned EOF 
+
+2018.09.15.083001  [c75ad31]
+Makefile.am
+configure.ac
+README
+libburn/libburn.h
+cdrskin/cdrskin.c
+cdrskin/cdrskin.1
+cdrskin/README
+cdrskin/compile_cdrskin.sh
+cdrskin/cdrskin_timestamp.h
+cdrskin/cdrskin_eng.html
+Made number transition to 1.5.0
+
+15 Sep 2018  [255afdd]
+- cdrskin/add_ts_changes_to_libburn_1_4_8
+- cdrskin/add_ts_changes_to_libburn_1_4_9
++ cdrskin/add_ts_changes_to_libburn_1_5_0
++ cdrskin/add_ts_changes_to_libburn_1_5_1
+Updated cdrskin tarball generator
+
+  []
+ChangeLog
+cdrskin/changelog.txt
+Updated change log
+
+----------------------------------- release - cdrskin-1.5.0 - 2018.09.15.083001
+* Bug fix: cdrskin threw errno 22 on data file input if libburn is
+           configured with --enable-track-src-odirect
+* Bug fix: SIGSEGV could happen if a track ended by reaching its fixed size
+           while the track source still was willing to deliver bytes.
+           Thanks to user swordragon.
+* Bug fix: Device file comparison parameters were recorded wrong with Linux sg
 
 
   []
@@ -13766,7 +13818,7 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.4.9 - 
+------------------------------------ cycle  - cdrskin-1.5.1 - 
 
 
   []
@@ -13775,7 +13827,7 @@ cdrskin/cdrskin_eng.html
 cdrskin/changelog.txt
 Updated change log
 
------------------------------------- cycle  - cdrskin-1.4.9 - 
+------------------------------------ cycle  - cdrskin-1.5.1 - 
 
 
 **********************************************************************

@@ -1,8 +1,11 @@
-git clone git@dev.lovelyhq.com:libburnia/libburn.git
-(to become libburn-1.5.0 or higher)
+libburn-1.5.0.tar.gz Sat Sep 15 2018
 ===============================================================================
 * Bug fix: cdrskin threw errno 22 on data file input if libburn is
            configured with --enable-track-src-odirect
+* Bug fix: SIGSEGV could happen if a track ended by reaching its fixed size
+           while the track source still was willing to deliver bytes.
+           Thanks to user swordragon.
+* Bug fix: Device file comparison parameters were recorded wrong with Linux sg
 
 libburn-1.4.8.tar.gz Tue Sep 12 2017
 ===============================================================================
