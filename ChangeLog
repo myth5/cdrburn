@@ -1,3 +1,8 @@
+git clone git@dev.lovelyhq.com:libburnia/libburn.git
+(to become libburn-1.5.2 or higher)
+===============================================================================
+- no novelties yet -
+
 libburn-1.5.0.tar.gz Sat Sep 15 2018
 ===============================================================================
 * Bug fix: cdrskin threw errno 22 on data file input if libburn is

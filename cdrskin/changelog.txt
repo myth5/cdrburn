@@ -13801,7 +13801,7 @@ cdrskin/cdrskin.c
 cdrskin/changelog.txt
 Fixed a typo that was made during version leap
 
-15 Sep 2018  []
+15 Sep 2018  [c2bcf78]
 cdrskin/add_ts_changes_to_libburn_1_5_0
 cdrskin/add_ts_changes_to_libburn_1_5_1
 cdrskin/changelog.txt
@@ -13816,6 +13816,29 @@ Added to cdrskin standalone scripts a compile run for unite_html_b_line.c
 * Bug fix: Device file comparison parameters were recorded wrong with Linux sg
 
 
+2018.09.16.134959  [04f9a30]
+Makefile.am
+configure.ac
+libburn/libburn.h
+cdrskin/cdrskin.c
+cdrskin/cdrskin.1
+cdrskin/README
+cdrskin/cdrskin_timestamp.h
+Made number transition to 1.5.1
+
+  []
+ChangeLog
+cdrskin/changelog.txt
+Updated change log
+
+------------------------------------ cycle  - cdrskin-1.5.1 - 2018.09.16.134959
+
+  []
+libburn/spc.h
+libburn/spc.c
+libburn/sg-linux.c
+Making commands retryable after particular Linux kernel transport errors
+(currently as libburn/*.[ch].after_1_4_8)
 
   []
 ChangeLog
@@ -13824,13 +13847,6 @@ cdrskin/changelog.txt
 Updated change log
 
 ------------------------------------ cycle  - cdrskin-1.5.1 - 
-
-  []
-libburn/spc.h
-libburn/spc.c
-libburn/sg-linux.c
-Making commands retryable after particular Linux kernel transport errors
-(currently as libburn/*.[ch].after_1_4_8)
 
   []
 ChangeLog
