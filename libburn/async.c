@@ -122,6 +122,8 @@ struct w_list
 
 static struct w_list *workers = NULL;
 
+static void *fifo_worker_func(struct w_list *w);
+
 
 int burn_async_manage_lock(int mode)
 {
@@ -209,7 +211,7 @@ static void add_worker(int w_type, struct burn_drive *d,
 #endif /* Libburn_create_detached_threadS */
 
 	/* Worker specific locks are to be released early by the worker */
-	if (f == (WorkerFunc) burn_fifo_source_shoveller)
+	if (f == (WorkerFunc) fifo_worker_func)
 		burn_async_manage_lock(BURN_ASYNC_LOCK_OBTAIN);
 
 	if (pthread_create(&a->thread, attr_pt, f, a)) {
