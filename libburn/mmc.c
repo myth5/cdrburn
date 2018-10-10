@@ -2077,11 +2077,11 @@ regard_as_blank:;
 		d->end_lba = d->last_lead_out;
 		break;
 	case 1:
-		d->status = BURN_DISC_APPENDABLE;
-
 	case 2:
 		if (disc_status == 2)
 			d->status = BURN_DISC_FULL;
+		else
+			d->status = BURN_DISC_APPENDABLE;
 
 		/* ts A81210 */
 		ret = mmc_read_capacity(d);
@@ -4589,7 +4589,7 @@ int mmc_compose_mode_page_5(struct burn_drive *d, struct burn_session *s,
 				unsigned char *pd)
 {
 	unsigned char *catalog = NULL;
-	char isrc_text[13];
+	char isrc_text[13 + 21]; /* should suffice for 64 bit oversize */
 	struct isrc *isrc;
 
 	pd[0] = 5;
@@ -4727,9 +4727,11 @@ fprintf(stderr, "libburn_EXPERIMENTAL: block_type = %d, pd[4]= %u\n",
 					isrc_text[2] = isrc->owner[0];
 					isrc_text[3] = isrc->owner[1];
 					isrc_text[4] = isrc->owner[2];
-					sprintf(isrc_text + 5, "%-2.2u%-5.5u",
-						(unsigned int) isrc->year,
+					sprintf(isrc_text + 5, "%-2.2u",
+						(unsigned int) isrc->year);
+					sprintf(isrc_text + 7, "%-5.5u",
 						isrc->serial);
+					isrc_text[12]= 0;
 				}
 				if ((s->track[tnum]->mode & BURN_SCMS) &&
 				    !(s->track[tnum]->mode & BURN_COPY))
