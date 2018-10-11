@@ -440,7 +440,7 @@ static int add_isrc_cue(struct cue_sheet *sheet, unsigned char ctladr, int tno,
 {
 	unsigned char *unit;
 	int i, ret;
-	char text[8];
+	char text[8 + 21]; /* should suffice for 64 bit oversize */
 
 	ret = new_cue(sheet, 2, 0);
 	if (ret <= 0)
@@ -454,6 +454,9 @@ static int add_isrc_cue(struct cue_sheet *sheet, unsigned char ctladr, int tno,
 	unit[5] = isrc->owner[1];
 	unit[6] = isrc->owner[2];
 	sprintf(text, "%-2.2u%-5.5u", (unsigned int) isrc->year, isrc->serial);
+	sprintf(text, "%-2.2u", (unsigned int) isrc->year);
+	sprintf(text + 2, "%-5.5u", isrc->serial);
+	text[7] = 0;
 	unit[7] = text[0];
 	for (i = 1; i < 7; i++)
 		unit[9 + i] = text[i];
