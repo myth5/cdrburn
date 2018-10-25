@@ -14,13 +14,13 @@
 */
 #ifdef LIBDAX_AUDIOXTR_H_PUBLIC
 
-                            /* Public Macros */
+/* Public Macros */
 
 /* Maximum size for address paths and fmt_info strings */
 #define LIBDAX_AUDIOXTR_STRLEN 4096
 
 
-                          /* Public Opaque Handles */
+/* Public Opaque Handles */
 
 /** Extractor object encapsulating intermediate states of extraction.
     The clients of libdax_audioxtr shall only allocate pointers to this
@@ -30,12 +30,12 @@
 struct libdax_audioxtr;
 
 
-                            /* Public Functions */
+/* Public Functions */
 
-               /* Calls initiated from inside libdax/libburn */
+/* Calls initiated from inside libdax/libburn */
 
 
-     /* Calls from applications (to be forwarded by libdax/libburn) */
+/* Calls from applications (to be forwarded by libdax/libburn) */
 
 
 /** Open an audio file, check wether suitable, create extractor object.
@@ -56,9 +56,9 @@ int libdax_audioxtr_new(struct libdax_audioxtr **xtr, char *path, int flag);
     @param fmt Gets pointed to the audio file format id text: ".wav" , ".au"
     @param fmt_info Gets pointed to a format info text telling parameters
     @param num_channels     e.g. 1=mono, 2=stereo, etc
-    @param sample_rate      e.g. 11025, 44100 
+    @param sample_rate      e.g. 11025, 44100
     @param bits_per_sample  e.g. 8= 8 bits per sample, 16= 16 bits ...
-    @param msb_first Byte order of samples: 0=Intel 1=Motorola 
+    @param msb_first Byte order of samples: 0=Intel 1=Motorola
     @param flag Bitfield for control purposes (unused yet, submit 0)
     @return >0 success, <=0 failure
 */
@@ -137,68 +137,68 @@ int libdax_audioxtr_destroy(struct libdax_audioxtr **xtr, int flag);
 */
 #ifdef LIBDAX_AUDIOXTR_H_INTERNAL
 
-                       /* Internal Structures */
+/* Internal Structures */
 
 /** Extractor object encapsulating intermediate states of extraction */
 struct libdax_audioxtr {
 
- /* Source of the encoded audio data */
- char path[LIBDAX_AUDIOXTR_STRLEN];
+    /* Source of the encoded audio data */
+    char path[LIBDAX_AUDIOXTR_STRLEN];
 
- /* File descriptor to path. Anything else than 0 must be lseek-able */
- int fd;
+    /* File descriptor to path. Anything else than 0 must be lseek-able */
+    int fd;
 
- /* Format identifier. E.g. ".wav" */
- char fmt[80];
+    /* Format identifier. E.g. ".wav" */
+    char fmt[80];
 
- /* Format parameter info text */
- char fmt_info[LIBDAX_AUDIOXTR_STRLEN];
+    /* Format parameter info text */
+    char fmt_info[LIBDAX_AUDIOXTR_STRLEN];
 
- /* 1= mono, 2= stereo, etc. */
- int num_channels;
+    /* 1= mono, 2= stereo, etc. */
+    int num_channels;
 
- /* 8000, 44100, etc. */
- int sample_rate;
+    /* 8000, 44100, etc. */
+    int sample_rate;
 
- /* 8 bits = 8, 16 bits = 16, etc. */
- int bits_per_sample;
+    /* 8 bits = 8, 16 bits = 16, etc. */
+    int bits_per_sample;
 
- /* Byte order of samples: 0=Intel 1=Motorola */
- int msb_first;
+    /* Byte order of samples: 0=Intel 1=Motorola */
+    int msb_first;
 
- /* Number of bytes to extract (0= unknown/unlimited) */
- off_t data_size;
+    /* Number of bytes to extract (0= unknown/unlimited) */
+    off_t data_size;
 
- /* Number of extracted data bytes */
- off_t extract_count;
-
-
- /* Format dependent parameters */
-
- /* MS WAVE Format */
- /* see description in: doc/waveformat.txt */
-
- /* Offset to "data" subchunk */
- unsigned int wav_data_location;
-
- /* == NumSamples * NumChannels * BitsPerSample/8
-    This is the number of bytes in the data. */
- unsigned wav_subchunk2_size;
+    /* Number of extracted data bytes */
+    off_t extract_count;
 
 
- /* Sun Audio, .au */
- /* info used: http://www.opengroup.org/public/pubs/external/auformat.html */
+    /* Format dependent parameters */
 
- /* Number of bytes in non-payload header part */
- unsigned au_data_location;
+    /* MS WAVE Format */
+    /* see description in: doc/waveformat.txt */
 
- /* Number of payload bytes or 0xffffffff */
- unsigned au_data_size;
+    /* Offset to "data" subchunk */
+    unsigned int wav_data_location;
+
+    /* == NumSamples * NumChannels * BitsPerSample/8
+       This is the number of bytes in the data. */
+    unsigned wav_subchunk2_size;
+
+
+    /* Sun Audio, .au */
+    /* info used: http://www.opengroup.org/public/pubs/external/auformat.html */
+
+    /* Number of bytes in non-payload header part */
+    unsigned au_data_location;
+
+    /* Number of payload bytes or 0xffffffff */
+    unsigned au_data_size;
 
 };
 
 
-                             /* Internal Functions */
+/* Internal Functions */
 
 /** Open the audio source pointed to by .path and evaluate suitability.
     @return -1 failure to open, 0 unsuitable format, 1 success
@@ -223,7 +223,7 @@ static int libdax_audioxtr_identify_au(struct libdax_audioxtr *o, int flag);
     @return The resulting number
 */
 static unsigned libdax_audioxtr_to_int(struct libdax_audioxtr *o,
-                                      unsigned char *bytes, int len, int flag);
+                                       unsigned char *bytes, int len, int flag);
 
 
 /** Prepare for reading of first buffer.

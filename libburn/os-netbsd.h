@@ -84,7 +84,7 @@
    device enumeration.
 */
 struct burn_drive_enumerator_struct {
-	int cdno;
+    int cdno;
 };
 
 #define BURN_OS_DEFINE_DRIVE_ENUMERATOR_T \

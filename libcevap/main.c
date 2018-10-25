@@ -1,6 +1,6 @@
 
 /*
-   cc -g -DCevap_lowercasE -c main.c  
+   cc -g -DCevap_lowercasE -c main.c
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,28 +12,28 @@
 int main(int argc, char **argv)
 {
 #ifdef Cevap_lowercasE
- struct cevapi *cevap= NULL;
+    struct cevapi *cevap= NULL;
 #else
- struct CevapI *cevap= NULL;
+    struct CevapI *cevap= NULL;
 #endif
- int ret;
+    int ret;
 
- /* full memory supervision */
- Smem_set_record_items(1);
+    /* full memory supervision */
+    Smem_set_record_items(1);
 
- /* one short trip for testing */ 
+    /* one short trip for testing */
 #ifdef Cevap_lowercasE
- ret= cevapi_new(&cevap,0);
- if(ret>0)
-   cevapi_destroy(&cevap,0);
+    ret= cevapi_new(&cevap,0);
+    if(ret>0)
+        cevapi_destroy(&cevap,0);
 #else /* Cevap_lowercasE */
- ret= Cevapi_new(&cevap,0);
- if(ret>0)
-   Cevapi_destroy(&cevap,0);
+    ret= Cevapi_new(&cevap,0);
+    if(ret>0)
+        Cevapi_destroy(&cevap,0);
 #endif /* ! Cevap_lowercasE */
 
- /* report any leaked memory */
- Smem_stderr(1|2);
+    /* report any leaked memory */
+    Smem_stderr(1|2);
 
- exit(ret<=0);
+    exit(ret<=0);
 }

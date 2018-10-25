@@ -17,12 +17,12 @@ void spc_allow(struct burn_drive *);
 void spc_sense_caps(struct burn_drive *);
 void spc_sense_error_params(struct burn_drive *);
 void spc_select_error_params(struct burn_drive *,
-			     const struct burn_read_opts *);
+                             const struct burn_read_opts *);
 void spc_getcaps(struct burn_drive *d);
 void spc_sense_write_params(struct burn_drive *);
 void spc_select_write_params(struct burn_drive *,
-			     struct burn_session *, int,
-			     const struct burn_write_opts *);
+                             struct burn_session *, int,
+                             const struct burn_write_opts *);
 
 #ifdef Libburn_enable_scsi_cmd_ABh
 int spc_read_media_serial_number(struct burn_drive *d);
@@ -35,14 +35,14 @@ int spc_get_erase_progress(struct burn_drive *d);
 
 /* ts A70315 : test_unit_ready with result parameters */
 int spc_test_unit_ready_r(struct burn_drive *d, int *key, int *asc, int *ascq,
-				int *progress);
+                          int *progress);
 
 int spc_test_unit_ready(struct burn_drive *d);
 
 /* ts A70315 */
 /** Wait until the drive state becomes clear in or until max_sec elapsed */
 int spc_wait_unit_attention(struct burn_drive *d, int max_sec, char *cmd_text,
-				int flag);
+                            int flag);
 
 /* ts A61021 : the spc specific part of sg.c:enumerate_common()
 */
@@ -53,7 +53,7 @@ int spc_setup_drive(struct burn_drive *d);
                bit0= do not setup spc/sbc/mmc
 */
 int burn_scsi_setup_drive(struct burn_drive *d, int bus_no, int host_no,
-			int channel_no, int target_no, int lun_no, int flag);
+                          int channel_no, int target_no, int lun_no, int flag);
 
 /* ts A61115 moved from sg-*.h */
 enum response { RETRY, FAIL, GO_ON };
@@ -67,7 +67,7 @@ enum response scsi_error_msg(struct burn_drive *d, unsigned char *sense,
 /* ts A61030 */
 /* @param flag bit0=do report conditions which are considered not an error */
 int scsi_notify_error(struct burn_drive *, struct command *c,
-			unsigned char *sense, int senselen, int flag);
+                      unsigned char *sense, int senselen, int flag);
 
 /* ts A70519 */
 int scsi_init_command(struct command *c, unsigned char *opcode, int oplen);
@@ -91,7 +91,7 @@ int scsi_log_cmd(struct command *c, void *fp, int flag);
 
 /* ts B11110 */
 /** Logs outcome of a sg command.
-    @param flag  bit0 causes an error message 
+    @param flag  bit0 causes an error message
                  bit1 do not print duration
 */
 int scsi_log_reply(unsigned char *opcode, int data_dir, unsigned char *data,
@@ -104,7 +104,7 @@ int scsi_log_reply(unsigned char *opcode, int data_dir, unsigned char *data,
                  bit1 do not print duration
 */
 int scsi_log_err(struct burn_drive *d, struct command *c,
-                 void *fp, unsigned char sense[18], 
+                 void *fp, unsigned char sense[18],
                  int sense_len, int flag);
 
 /* ts B31112 */
@@ -121,9 +121,9 @@ int spc_decode_sense(unsigned char *sense, int senselen,
     @return 0 = not yet done , 1 = done , -1 = error
 */
 int scsi_eval_cmd_outcome(struct burn_drive *d, struct command *c, void *fp_in,
-                        unsigned char *sense, int sense_len,
-                        time_t start_time, int timeout_ms,
-			int loop_count, int flag);
+                          unsigned char *sense, int sense_len,
+                          time_t start_time, int timeout_ms,
+                          int loop_count, int flag);
 
 /* ts B40204 */
 /* Verify by INQUIRY that the drive is indeed a MMC device.

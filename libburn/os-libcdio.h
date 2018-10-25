@@ -40,7 +40,7 @@
 #define BURN_OS_SIG_WINCH ,SIGWINCH
 #define BURN_OS_SIG_WINCH_CNT 1
 #else
-#define BURN_OS_SIG_WINCH 
+#define BURN_OS_SIG_WINCH
 #define BURN_OS_SIG_WINCH_CNT 0
 #endif
 
@@ -48,7 +48,7 @@
 #define BURN_OS_SIG_URG ,SIGURG
 #define BURN_OS_SIG_URG_CNT 1
 #else
-#define BURN_OS_SIG_URG 
+#define BURN_OS_SIG_URG
 #define BURN_OS_SIG_URG_CNT 0
 #endif
 
@@ -78,8 +78,8 @@ BURN_OS_SIG_WINCH BURN_OS_SIG_URG
    device enumeration.
 */
 struct burn_drive_enumerator_struct {
-	char **ppsz_cd_drives;
-	char **pos;
+    char **ppsz_cd_drives;
+    char **pos;
 };
 
 #define BURN_OS_DEFINE_DRIVE_ENUMERATOR_T \

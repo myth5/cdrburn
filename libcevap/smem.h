@@ -19,12 +19,12 @@
 
 struct SmemiteM {
 
- char *data;
- size_t size;
+    char *data;
+    size_t size;
 
- struct SmemiteM *prev,*next;
+    struct SmemiteM *prev,*next;
 
- struct SmemiteM *hash_prev,*hash_next;
+    struct SmemiteM *hash_prev,*hash_next;
 
 };
 
@@ -100,31 +100,31 @@ extern double Smem_record_byteS;
 
  Functions to replace  malloc()  and  free() in order to get more control
  over memory leaks or spurious errors caused by faulty usage of malloc()
- and free(). 
+ and free().
 
 
  Sourcecode provisions:
- 
+
  Use only the following macros for memory management:
-    TSOB_FELD(type,count)  creates an array of items of given type 
+    TSOB_FELD(type,count)  creates an array of items of given type
     Smem_malloC()          analogue of malloc()
     Smem_freE()            analogue of free()
- One may #define malloc Smem_malloC resp. #define free Smem_freE 
+ One may #define malloc Smem_malloC resp. #define free Smem_freE
  but better would be to review (and often to streamline) the sourcecode
- in respect to those two functions. 
+ in respect to those two functions.
 
 
  Speed versus control:
 
  In production versions, where maximum speed is required, one may undefine
- the macro  Smem_own_functionS  in  smem.h . 
+ the macro  Smem_own_functionS  in  smem.h .
  This causes the above macros to directly invoke malloc() and free() without
  any speed reduction (and without any additional use).
  Undefinitio can be done globaly by modifying smem.h or locally by defining
   Smem_no_own_functionS  before including smem.h .
 
  If Smem_own_functionS remains defined, then the functions
-   Smem_malloc() 
+   Smem_malloc()
    Smem_free()
  are used rather than malloc() and free().
  They count the number of calls to maintain a rough overview of memory usage.
@@ -151,7 +151,7 @@ extern double Smem_record_byteS;
 
  The function Smem_is_recorded() can be used to check wether a pointer is
  valid according to the list. It returns :
-   0 = is not in list , 1 = is in list , 2 = recording is off 
+   0 = is not in list , 1 = is in list , 2 = recording is off
 
  If one decides to start recording malloc() results in the midst of a program
  run, one has to be aware of false protests of Smem_free() if a memory piece
@@ -160,6 +160,6 @@ extern double Smem_record_byteS;
  that was not obtained by malloc or was already freed previously can result in
  deferred SIGSEGV or similar trouble, depending on OS and library.)
  Also in that case one should stop recording before ending the program, to
- avoid a lot of false complaints about longliving memory objects.    
+ avoid a lot of false complaints about longliving memory objects.
 
 */

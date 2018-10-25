@@ -63,11 +63,11 @@ void burn_drive_free_all(void);
 
 /* @param flag bit0= reset global drive list */
 int burn_drive_scan_sync(struct burn_drive_info *drives[],
-			 unsigned int *n_drives, int flag);
+                         unsigned int *n_drives, int flag);
 
 void burn_disc_erase_sync(struct burn_drive *d, int fast);
 int burn_drive_get_block_types(struct burn_drive *d,
-			       enum burn_write_types write_type);
+                               enum burn_write_types write_type);
 
 int burn_drive_is_open(struct burn_drive *d);
 int burn_drive_is_occupied(struct burn_drive *d);
@@ -91,8 +91,8 @@ int burn_drive_mark_unready(struct burn_drive *d, int flag);
 
 /* ts A61226 */
 int burn_speed_descriptor_new(struct burn_speed_descriptor **s,
-				struct burn_speed_descriptor *prev,
-				struct burn_speed_descriptor *next, int flag);
+                              struct burn_speed_descriptor *prev,
+                              struct burn_speed_descriptor *next, int flag);
 
 /* ts A61226 */
 /* @param flag bit0= destroy whole next-chain of descriptors */
@@ -109,29 +109,29 @@ void burn_disc_format_sync(struct burn_drive *d, off_t size, int flag);
 
 /* ts A70207 : evaluate write mode related peculiarities of a disc */
 struct burn_disc_mode_demands {
-	int multi_session;
-	int multi_track;
-	int unknown_track_size; /* 0=known, 1=unknown, 2=unknown+defaulted */
-	int mixed_mode;
-	int audio;
-	int exotic_track;
-	int block_types;
-	int will_append; /* because of media state or multi session disc */
+    int multi_session;
+    int multi_track;
+    int unknown_track_size; /* 0=known, 1=unknown, 2=unknown+defaulted */
+    int mixed_mode;
+    int audio;
+    int exotic_track;
+    int block_types;
+    int will_append; /* because of media state or multi session disc */
 };
 int burn_disc_get_write_mode_demands(struct burn_disc *disc,
-			struct burn_write_opts *opts,
-			struct burn_disc_mode_demands *result, int flag);
+                                     struct burn_write_opts *opts,
+                                     struct burn_disc_mode_demands *result, int flag);
 
 
 /* ts A70924 : convert a special stdio address into fd number.
-   @return >0 is a valid fd , -1 indicates unsuitable address string. 
+   @return >0 is a valid fd , -1 indicates unsuitable address string.
 */
 int burn_drive__fd_from_special_adr(char *adr);
 
 
 /* ts A70929 : Find the drive which is being worked on by pid , tid */
 int burn_drive_find_by_thread_pid(struct burn_drive **d, pid_t pid,
-					pthread_t tid);
+                                  pthread_t tid);
 
 
 /* ts A51221 - A80731 : Whitelist inquiry functions */
@@ -147,10 +147,10 @@ int burn_drive_is_listed(char *path, struct burn_drive **found, int flag);
 /* ts B00226 : Outsourced backend of burn_abort()
    @param elapsed  to be subtracted from start time
    @param flag     bit0= do not shutdown the library
-*/ 
+*/
 int burn_abort_5(int patience,
-               int (*pacifier_func)(void *handle, int patience, int elapsed),
-               void *handle, int elapsed, int flag);
+                 int (*pacifier_func)(void *handle, int patience, int elapsed),
+                 void *handle, int elapsed, int flag);
 
 /* ts B10730 */
 /* Send a default mode page 05 to CD and DVD-R-oids */

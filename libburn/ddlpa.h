@@ -19,31 +19,31 @@
 
 struct ddlpa_lock {
 
-	/* Recorded input parameters of locking call */
-	char *path;
-	int  path_is_valid;
-	int  in_bus, in_target, in_lun;
-	int  inbtl_is_valid;
-	int  ddlpa_flags;
-	int  o_flags;
+    /* Recorded input parameters of locking call */
+    char *path;
+    int  path_is_valid;
+    int  in_bus, in_target, in_lun;
+    int  inbtl_is_valid;
+    int  ddlpa_flags;
+    int  o_flags;
 
-	/* Result of locking call */
-	char std_path[DDLPA_MAX_STD_LEN + 1];
-	int  fd;
-	dev_t rdev;
-	dev_t dev;
-	ino_t ino;
-	int  host, channel, id, lun, bus;
-	int  hcilb_is_valid;
-	int  num_siblings;
-	char sibling_paths[DDLPA_MAX_SIBLINGS][DDLPA_MAX_STD_LEN + 1];
-	int  sibling_fds[DDLPA_MAX_SIBLINGS];
-	dev_t sibling_rdevs[DDLPA_MAX_SIBLINGS];
-	dev_t sibling_devs[DDLPA_MAX_SIBLINGS];
-	ino_t sibling_inodes[DDLPA_MAX_SIBLINGS];
+    /* Result of locking call */
+    char std_path[DDLPA_MAX_STD_LEN + 1];
+    int  fd;
+    dev_t rdev;
+    dev_t dev;
+    ino_t ino;
+    int  host, channel, id, lun, bus;
+    int  hcilb_is_valid;
+    int  num_siblings;
+    char sibling_paths[DDLPA_MAX_SIBLINGS][DDLPA_MAX_STD_LEN + 1];
+    int  sibling_fds[DDLPA_MAX_SIBLINGS];
+    dev_t sibling_rdevs[DDLPA_MAX_SIBLINGS];
+    dev_t sibling_devs[DDLPA_MAX_SIBLINGS];
+    ino_t sibling_inodes[DDLPA_MAX_SIBLINGS];
 
-	/* Is NULL if all goes well. Else it may contain a text message. */
-	char *errmsg;
+    /* Is NULL if all goes well. Else it may contain a text message. */
+    char *errmsg;
 };
 
 
@@ -61,14 +61,14 @@ struct ddlpa_lock {
                        DDLPA_ALLOW_MISSING_SGRCD allows to grant a lock
                        although not all three, a sg, a sr and a scd device
                        file have been found during sibling search. Normally
-                       this is counted as failure due to EBUSY. 
+                       this is counted as failure due to EBUSY.
     @param lockbundle  gets allocated and then represents the locking state
     @param errmsg      if *errmsg is not NULL after the call, it contains an
                        error message. Then to be released by free(3).
                        It is NULL in case of success or lack of memory.
     @return            0=success , else an errno compatible error number
 */
-int ddlpa_lock_path(char *path, int  o_flags, int ddlpa_flags, 
+int ddlpa_lock_path(char *path, int  o_flags, int ddlpa_flags,
                     struct ddlpa_lock **lockbundle, char **errmsg);
 
 
@@ -90,7 +90,7 @@ int ddlpa_lock_btl(int bus, int target, int lun,
 
 
 /** Release the lock by closing all filedescriptors and freeing memory.
-    @param lockbundle  the lock which is to be released. 
+    @param lockbundle  the lock which is to be released.
                        *lockbundle will be set to NULL by this call.
     @return            0=success , 1=failure
 */

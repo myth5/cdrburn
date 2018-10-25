@@ -18,24 +18,24 @@ int dec_to_bcd(int);
 
 int sector_toc(struct burn_write_opts *, int mode);
 int sector_pregap(struct burn_write_opts *, unsigned char tno,
-		   unsigned char control, int mode);
+                  unsigned char control, int mode);
 int sector_postgap(struct burn_write_opts *, unsigned char tno,
-		    unsigned char control, int mode);
+                   unsigned char control, int mode);
 int sector_lout(struct burn_write_opts *, unsigned char control, int mode);
 int sector_data(struct burn_write_opts *, struct burn_track *t, int psub);
 
 /* ts B20113 */
 int sector_write_buffer(struct burn_drive *d,
-			struct burn_track *track, int flag);
+                        struct burn_track *track, int flag);
 
 /* ts A61009 */
 int sector_headers_is_ok(struct burn_write_opts *o, int mode);
 
 int sector_headers(struct burn_write_opts *, unsigned char *,
-		    int mode, int leadin);
+                   int mode, int leadin);
 void subcode_user(struct burn_write_opts *, unsigned char *s,
-		  unsigned char tno, unsigned char control,
-		  unsigned char index, struct isrc *isrc, int psub);
+                  unsigned char tno, unsigned char control,
+                  unsigned char index, struct isrc *isrc, int psub);
 
 int sector_identify(unsigned char *);
 

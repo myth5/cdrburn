@@ -29,7 +29,7 @@ int mmc_function_spy(struct burn_drive *d, char * text);
 /* START STOP UNIT as of SBC-1 and SBC-2
    0:  Opcode 0x1B
    1:  bit0= Immed
-       bit1-7= reserved 
+       bit1-7= reserved
    2:  reserved
    3:  reserved
    4:  bit0= Start (else Stop unit)
@@ -54,49 +54,49 @@ static unsigned char SBC_STOP_UNIT[] = { 0x1b, 0, 0, 0, 0, 0 };
 
 void sbc_load(struct burn_drive *d)
 {
-	struct command *c;
+    struct command *c;
 
-	c = &(d->casual_command);
-	if (mmc_function_spy(d, "load") <= 0)
-		return;
+    c = &(d->casual_command);
+    if (mmc_function_spy(d, "load") <= 0)
+        return;
 
-	scsi_init_command(c, SBC_LOAD, sizeof(SBC_LOAD));
-	c->retry = 1;
+    scsi_init_command(c, SBC_LOAD, sizeof(SBC_LOAD));
+    c->retry = 1;
 
-	/* ts A70921 : Had to revoke Immed because of LG GSA-4082B */
-	/* c->opcode[1] |= 1; / * ts A70918 : Immed */
+    /* ts A70921 : Had to revoke Immed because of LG GSA-4082B */
+    /* c->opcode[1] |= 1; / * ts A70918 : Immed */
 
-	c->dir = NO_TRANSFER;
-	c->timeout = Libburn_mmc_load_timeouT;
-	d->issue_command(d, c);
-	if (c->error)
-		return;
-	/* ts A70923 : Needed regardless of Immed bit. Was once 1 minute, now
+    c->dir = NO_TRANSFER;
+    c->timeout = Libburn_mmc_load_timeouT;
+    d->issue_command(d, c);
+    if (c->error)
+        return;
+    /* ts A70923 : Needed regardless of Immed bit. Was once 1 minute, now
            5 minutes for loading. If this does not suffice then other commands
-	   shall fail righteously. */
-	spc_wait_unit_attention(d, 300, "waiting after START UNIT (+ LOAD)",0);
+       shall fail righteously. */
+    spc_wait_unit_attention(d, 300, "waiting after START UNIT (+ LOAD)",0);
 }
 
 void sbc_eject(struct burn_drive *d)
 {
-	struct command *c;
+    struct command *c;
 
-	c = &(d->casual_command);
-	if (mmc_function_spy(d, "eject") <= 0)
-		return;
+    c = &(d->casual_command);
+    if (mmc_function_spy(d, "eject") <= 0)
+        return;
 
-	scsi_init_command(c, SBC_UNLOAD, sizeof(SBC_UNLOAD));
-	/* c->opcode[1] |= 1; / * ts A70918 : Immed , ts B00109 : revoked */
-	c->page = NULL;
-	c->dir = NO_TRANSFER;
-	d->issue_command(d, c);
-	/* ts A70918 : Wait long. A late eject could surprise or hurt user.
-	   ts B00109 : Asynchronous eject revoked, as one cannot reliably
-	               distinguish out from unready.
-	if (c->error)
-		return;
-	spc_wait_unit_attention(d, 1800, "STOP UNIT (+ EJECT)", 0);
-	*/
+    scsi_init_command(c, SBC_UNLOAD, sizeof(SBC_UNLOAD));
+    /* c->opcode[1] |= 1; / * ts A70918 : Immed , ts B00109 : revoked */
+    c->page = NULL;
+    c->dir = NO_TRANSFER;
+    d->issue_command(d, c);
+    /* ts A70918 : Wait long. A late eject could surprise or hurt user.
+       ts B00109 : Asynchronous eject revoked, as one cannot reliably
+                   distinguish out from unready.
+    if (c->error)
+    	return;
+    spc_wait_unit_attention(d, 1800, "STOP UNIT (+ EJECT)", 0);
+    */
 }
 
 
@@ -105,69 +105,69 @@ void sbc_eject(struct burn_drive *d)
 */
 int sbc_start_unit_flag(struct burn_drive *d, int flag)
 {
-	struct command *c;
-	int ret;
+    struct command *c;
+    int ret;
 
-	c = &(d->casual_command);
-	if (mmc_function_spy(d, "start_unit") <= 0)
-		return 0;
+    c = &(d->casual_command);
+    if (mmc_function_spy(d, "start_unit") <= 0)
+        return 0;
 
-	scsi_init_command(c, SBC_START_UNIT, sizeof(SBC_START_UNIT));
-	c->retry = 1;
-	if (d->do_no_immed && (flag & 1))
-		c->timeout = 1800 * 1000;
-	else
-		c->opcode[1] |= (flag & 1); /* ts A70918 : Immed */
-	c->dir = NO_TRANSFER;
-	d->issue_command(d, c);
-	if (c->error)
-		return 0;
-	if (d->do_no_immed || !(flag & 1))
-		return 1;
-	/* ts A70918 : asynchronous */
-	ret = spc_wait_unit_attention(d, 1800, "START UNIT", 0);
-	return ret;
+    scsi_init_command(c, SBC_START_UNIT, sizeof(SBC_START_UNIT));
+    c->retry = 1;
+    if (d->do_no_immed && (flag & 1))
+        c->timeout = 1800 * 1000;
+    else
+        c->opcode[1] |= (flag & 1); /* ts A70918 : Immed */
+    c->dir = NO_TRANSFER;
+    d->issue_command(d, c);
+    if (c->error)
+        return 0;
+    if (d->do_no_immed || !(flag & 1))
+        return 1;
+    /* ts A70918 : asynchronous */
+    ret = spc_wait_unit_attention(d, 1800, "START UNIT", 0);
+    return ret;
 }
 
 
 int sbc_start_unit(struct burn_drive *d)
 {
-	int ret;
+    int ret;
 
-	d->is_stopped = 0; /* no endless starting attempts */
+    d->is_stopped = 0; /* no endless starting attempts */
 
-	/* Asynchronous, not to block controller by waiting */
-	ret = sbc_start_unit_flag(d, 1);
-	if (ret <= 0)
-		return ret;
-	/* Synchronous to catch Pioneer DVR-216D which is ready too early.
-	   A pending START UNIT can prevent ejecting of the tray.
-	*/
-	ret = sbc_start_unit_flag(d, 0);
-	return ret;
+    /* Asynchronous, not to block controller by waiting */
+    ret = sbc_start_unit_flag(d, 1);
+    if (ret <= 0)
+        return ret;
+    /* Synchronous to catch Pioneer DVR-216D which is ready too early.
+       A pending START UNIT can prevent ejecting of the tray.
+    */
+    ret = sbc_start_unit_flag(d, 0);
+    return ret;
 }
 
 
 /* ts A90824 : Trying to reduce drive noise */
 int sbc_stop_unit(struct burn_drive *d)
 {
-	struct command *c;
-	int ret;
+    struct command *c;
+    int ret;
 
-	c = &(d->casual_command);
-	if (mmc_function_spy(d, "stop_unit") <= 0)
-		return 0;
+    c = &(d->casual_command);
+    if (mmc_function_spy(d, "stop_unit") <= 0)
+        return 0;
 
-	scsi_init_command(c, SBC_STOP_UNIT, sizeof(SBC_STOP_UNIT));
-	c->retry = 0;
-	c->opcode[1] |= 1; /* Immed */
-	c->dir = NO_TRANSFER;
-	d->issue_command(d, c);
-	if (c->error)
-		return 0;
-	ret = spc_wait_unit_attention(d, 1800, "STOP UNIT", 0);
-	d->is_stopped = 1;
-	return ret;
+    scsi_init_command(c, SBC_STOP_UNIT, sizeof(SBC_STOP_UNIT));
+    c->retry = 0;
+    c->opcode[1] |= 1; /* Immed */
+    c->dir = NO_TRANSFER;
+    d->issue_command(d, c);
+    if (c->error)
+        return 0;
+    ret = spc_wait_unit_attention(d, 1800, "STOP UNIT", 0);
+    d->is_stopped = 1;
+    return ret;
 }
 
 
@@ -176,11 +176,11 @@ int sbc_stop_unit(struct burn_drive *d)
 */
 int sbc_setup_drive(struct burn_drive *d)
 {
-	d->eject = sbc_eject;
-	d->load = sbc_load;
-	d->start_unit = sbc_start_unit;
-	d->stop_unit = sbc_stop_unit;
-	d->is_stopped = 0;
-	return 1;
+    d->eject = sbc_eject;
+    d->load = sbc_load;
+    d->start_unit = sbc_start_unit;
+    d->stop_unit = sbc_stop_unit;
+    d->is_stopped = 0;
+    return 1;
 }
 

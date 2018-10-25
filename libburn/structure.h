@@ -9,11 +9,11 @@
 
 struct isrc
 {
-	int has_isrc;
-	char country[2];	/* each must be 0-9, A-Z */
-	char owner[3];		/* each must be 0-9, A-Z */
-	unsigned char year;	/* must be 0-99 */
-	unsigned int serial;	/* must be 0-99999 */
+    int has_isrc;
+    char country[2];	/* each must be 0-9, A-Z */
+    char owner[3];		/* each must be 0-9, A-Z */
+    unsigned char year;	/* must be 0-99 */
+    unsigned int serial;	/* must be 0-99999 */
 };
 
 /* ts B11206 */
@@ -27,129 +27,129 @@ struct isrc
 
 struct burn_cdtext
 {
-	unsigned char *(payload[Libburn_pack_num_typeS]);
-	int length[Libburn_pack_num_typeS];
-	int flags;                   /* bit0 - bit15= double byte characters */
+    unsigned char *(payload[Libburn_pack_num_typeS]);
+    int length[Libburn_pack_num_typeS];
+    int flags;                   /* bit0 - bit15= double byte characters */
 };
 
 struct burn_track
 {
-	int refcnt;
-	struct burn_toc_entry *entry;
-	unsigned char indices;
-	/* lba address of the index. CD only. 0x7fffffff means undefined index.
-	   To be programmed relative to track source start before burning,
+    int refcnt;
+    struct burn_toc_entry *entry;
+    unsigned char indices;
+    /* lba address of the index. CD only. 0x7fffffff means undefined index.
+       To be programmed relative to track source start before burning,
            but to hold absolute addresses after burning or reading.
-	*/
-	int index[100];
-	/** number of 0 bytes to write before data */
-	int offset;
-	/** how much offset has been used */
-	int offsetcount;
-	/** Number of zeros to write after data */
-	int tail;
-	/** how much tail has been used */
-	int tailcount;
-	/** 1 means Pad with zeros, 0 means start reading the next track */
-	int pad;
+    */
+    int index[100];
+    /** number of 0 bytes to write before data */
+    int offset;
+    /** how much offset has been used */
+    int offsetcount;
+    /** Number of zeros to write after data */
+    int tail;
+    /** how much tail has been used */
+    int tailcount;
+    /** 1 means Pad with zeros, 0 means start reading the next track */
+    int pad;
 
-	/* ts A70213 : wether to expand this track to full available media */
-	int fill_up_media;
+    /* ts A70213 : wether to expand this track to full available media */
+    int fill_up_media;
 
-	/* ts A70218 : a track size to use if it is mandarory to have some */
-	off_t default_size;
+    /* ts A70218 : a track size to use if it is mandarory to have some */
+    off_t default_size;
 
-	/** Data source */
-	struct burn_source *source;
-	/** End of Source flag */
-	int eos;
+    /** Data source */
+    struct burn_source *source;
+    /** End of Source flag */
+    int eos;
 
-	/* ts A61101 */
-	off_t sourcecount;
-	off_t writecount;
-	off_t written_sectors;
+    /* ts A61101 */
+    off_t sourcecount;
+    off_t writecount;
+    off_t written_sectors;
 
-	/* ts A61031 */
-	/** Source is of undefined length */
-	int open_ended;
-	/** End of open ended track flag : offset+payload+tail are delivered */
-	int track_data_done;
-	/* ts B10103 */
-	/** End track writing on premature End-of-input if source is of
-	    defined length.
-	    0= normal operation in case of eoi
-	    1= be ready to end track writing on eoi
-	    2= eoi was encountered with previously set value of 1
-	*/
-	int end_on_premature_eoi;
+    /* ts A61031 */
+    /** Source is of undefined length */
+    int open_ended;
+    /** End of open ended track flag : offset+payload+tail are delivered */
+    int track_data_done;
+    /* ts B10103 */
+    /** End track writing on premature End-of-input if source is of
+        defined length.
+        0= normal operation in case of eoi
+        1= be ready to end track writing on eoi
+        2= eoi was encountered with previously set value of 1
+    */
+    int end_on_premature_eoi;
 
-	/** The audio/data mode for the entry. Derived from control and
-	    possibly from reading the track's first sector. */
-	int mode;
-	/** The track contains interval one of a pregap */
-	int pregap1;
-	/** The track contains interval two of a pregap */
-	int pregap2;
+    /** The audio/data mode for the entry. Derived from control and
+        possibly from reading the track's first sector. */
+    int mode;
+    /** The track contains interval one of a pregap */
+    int pregap1;
+    /** The track contains interval two of a pregap */
+    int pregap2;
 
-	/* ts B20110 */
-	/** The number of sectors in pre-gap 2, if .pregap2 is set */
-	int pregap2_size;
+    /* ts B20110 */
+    /** The number of sectors in pre-gap 2, if .pregap2 is set */
+    int pregap2_size;
 
-	/** The track contains a postgap */
-	int postgap;
+    /** The track contains a postgap */
+    int postgap;
 
-	/* ts B20111 */
-	/** The number of sectors in post-gap, if .postgap is set */
-	int postgap_size;
+    /* ts B20111 */
+    /** The number of sectors in post-gap, if .postgap is set */
+    int postgap_size;
 
-	struct isrc isrc;
+    struct isrc isrc;
 
-	/* ts A61024 */
-	/** Byte swapping on source data stream : 0=none , 1=pairwise */
-	int swap_source_bytes;
+    /* ts A61024 */
+    /** Byte swapping on source data stream : 0=none , 1=pairwise */
+    int swap_source_bytes;
 
-	/* ts A90910 : conversions from CD XA prepared input */
-	int cdxa_conversion; /* 0=none, 1=remove -xa1 headers (first 8 bytes)*/
+    /* ts A90910 : conversions from CD XA prepared input */
+    int cdxa_conversion; /* 0=none, 1=remove -xa1 headers (first 8 bytes)*/
 
-	/* ts B11206 */
-	struct burn_cdtext *cdtext[8];
+    /* ts B11206 */
+    struct burn_cdtext *cdtext[8];
 
 };
 
 struct burn_session
 {
-	unsigned char firsttrack;
-	unsigned char lasttrack;
-	int hidefirst;
-	unsigned char start_m;
-	unsigned char start_s;
-	unsigned char start_f;
-	struct burn_toc_entry *leadout_entry;
+    unsigned char firsttrack;
+    unsigned char lasttrack;
+    int hidefirst;
+    unsigned char start_m;
+    unsigned char start_s;
+    unsigned char start_f;
+    struct burn_toc_entry *leadout_entry;
 
-	int tracks;
-	struct burn_track **track;
-	int refcnt;
+    int tracks;
+    struct burn_track **track;
+    int refcnt;
 
-	/* ts B11206 */
-	struct burn_cdtext *cdtext[8];
-	unsigned char cdtext_char_code[8];
-	unsigned char cdtext_copyright[8];
-	unsigned char cdtext_language[8];
+    /* ts B11206 */
+    struct burn_cdtext *cdtext[8];
+    unsigned char cdtext_char_code[8];
+    unsigned char cdtext_copyright[8];
+    unsigned char cdtext_language[8];
 
-	/* ts B11226 */
-	unsigned char mediacatalog[14]; /* overrideable by burn_write_opts */
+    /* ts B11226 */
+    unsigned char mediacatalog[14]; /* overrideable by burn_write_opts */
 };
 
 struct burn_disc
 {
-	int sessions;
-	struct burn_session **session;
+    int sessions;
+    struct burn_session **session;
 
 #ifdef Libburn_disc_with_incomplete_sessioN
-        int incomplete_sessions;
+    int incomplete_sessions;
 #endif
 
-	int refcnt;
+    int refcnt;
 };
 
 int burn_track_get_shortage(struct burn_track *t);

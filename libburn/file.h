@@ -10,11 +10,11 @@
 
 struct burn_source_file
 {
-	char magic[4];
+    char magic[4];
 
-	int datafd;
-	int subfd;
-	off_t fixed_size;
+    int datafd;
+    int subfd;
+    off_t fixed_size;
 };
 
 /* ts A70126 : burn_source_file obsoleted burn_source_fd */
@@ -22,51 +22,51 @@ struct burn_source_file
 
 /* ts A70930 */
 struct burn_source_fifo {
-	char magic[4];
+    char magic[4];
 
-	/* The fifo stays inactive and unequipped with eventual resources
-	   until its read() method is called for the first time.
-	   Only then burn_fifo_start() gets called, allocates the complete
-	   resources, starts a thread with burn_fifo_source_shoveller()
-	   which shovels data and finally destroys the resources.
-	   This late start is to stay modest in case of multiple tracks
-	   in one disc.
-	*/
-	int is_started;
+    /* The fifo stays inactive and unequipped with eventual resources
+       until its read() method is called for the first time.
+       Only then burn_fifo_start() gets called, allocates the complete
+       resources, starts a thread with burn_fifo_source_shoveller()
+       which shovels data and finally destroys the resources.
+       This late start is to stay modest in case of multiple tracks
+       in one disc.
+    */
+    int is_started;
 
-	void *thread_handle; /* actually a pointer to a thread_t */
-	int thread_pid;
-	int thread_is_valid;
+    void *thread_handle; /* actually a pointer to a thread_t */
+    int thread_pid;
+    int thread_is_valid;
 
-	/* The shoveller aborts if this is 1. Resource leaks are possible. */
-	volatile int do_abort;
+    /* The shoveller aborts if this is 1. Resource leaks are possible. */
+    volatile int do_abort;
 
-	/* the burn_source for which this fifo is acting as proxy */
-	struct burn_source *inp;
-	int inp_read_size;
+    /* the burn_source for which this fifo is acting as proxy */
+    struct burn_source *inp;
+    int inp_read_size;
 
-	/* <<< up to now it was only a pipe. This is on its way out. */
-	int outlet[2];
+    /* <<< up to now it was only a pipe. This is on its way out. */
+    int outlet[2];
 
-	/* The ring buffer mechanism */
-	int chunksize;
-	int chunks;
-	char *buf;
-	volatile int buf_writepos;
-	volatile int buf_readpos;
-	volatile int end_of_input;
-	volatile int input_error;
-	volatile int end_of_consumption;
+    /* The ring buffer mechanism */
+    int chunksize;
+    int chunks;
+    char *buf;
+    volatile int buf_writepos;
+    volatile int buf_readpos;
+    volatile int end_of_input;
+    volatile int input_error;
+    volatile int end_of_consumption;
 
-	off_t in_counter;
-	off_t out_counter;
+    off_t in_counter;
+    off_t out_counter;
 
-	int total_min_fill;
-	int interval_min_fill;
-	int put_counter;
-	int get_counter;
-	int empty_counter;
-	int full_counter;
+    int total_min_fill;
+    int interval_min_fill;
+    int put_counter;
+    int get_counter;
+    int empty_counter;
+    int full_counter;
 
 };
 
@@ -80,22 +80,22 @@ int burn_fifo_source_shoveller(struct burn_source *source, int flag);
 /* ts B00922 */
 struct burn_source_offst {
 
-	/* See burn_offst_source_new() */
-	struct burn_source *inp;
-	struct burn_source *prev;
-	off_t start;
-	off_t size;
-	int size_adjustable;
+    /* See burn_offst_source_new() */
+    struct burn_source *inp;
+    struct burn_source *prev;
+    off_t start;
+    off_t size;
+    int size_adjustable;
 
-	/* for set_size/get_size */
-	int nominal_size;
+    /* for set_size/get_size */
+    int nominal_size;
 
-	/* To help offst_free() */
-	struct burn_source *next;
+    /* To help offst_free() */
+    struct burn_source *next;
 
-	/* The current reading position */
-	int running;
-	off_t pos;
+    /* The current reading position */
+    int running;
+    off_t pos;
 
 };
 

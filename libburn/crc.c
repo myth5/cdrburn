@@ -30,7 +30,7 @@
     The generating polynomial shall be
        G(x) = x^16 + x^12 + x^5 + 1
    "
-   Also known as CRC-16-CCITT, CRC-CCITT 
+   Also known as CRC-16-CCITT, CRC-CCITT
 
    Used in libburn for raw write modes in sector.c.
    There is also disabled code in read.c which would use it.
@@ -40,7 +40,7 @@
    "CRC Field consists of 2 bytes. Initiator system may use these bytes
     to check errors in the Pack. The polynomial is x^16 + x^12 + x^5 + 1.
     All bits shall be inverted."
-   
+
    libburn/cdtext.c uses a simple bit shifting function : crc_11021()
 
 
@@ -151,16 +151,16 @@
 */
 static int crc_11021(unsigned char *data, int count, int flag)
 {
-        int acc = 0, i;
+    int acc = 0, i;
 
-        for (i = 0; i < count * 8 + 16; i++) {
-                acc = (acc << 1);
-                if (i < count * 8)
-                        acc |= ((data[i / 8] >> (7 - (i % 8))) & 1);
-                if (acc & 0x10000)
-                        acc ^= 0x11021; 
-        }
-        return acc;
+    for (i = 0; i < count * 8 + 16; i++) {
+        acc = (acc << 1);
+        if (i < count * 8)
+            acc |= ((data[i / 8] >> (7 - (i % 8))) & 1);
+        if (acc & 0x10000)
+            acc ^= 0x11021;
+    }
+    return acc;
 }
 
 
@@ -170,33 +170,33 @@ static int crc_11021(unsigned char *data, int count, int flag)
 */
 unsigned short crc_ccitt(unsigned char *data, int count)
 {
-	static unsigned short crc_tab[256], tab_initialized = 0;
-	unsigned short acc = 0;
-	unsigned char b[1];
-	int i;
+    static unsigned short crc_tab[256], tab_initialized = 0;
+    unsigned short acc = 0;
+    unsigned char b[1];
+    int i;
 
-	if (!tab_initialized) {
-		/* Create table of byte residues */
-		for (i = 0; i < 256; i++) {
-			b[0] = i;
-			crc_tab[i] = crc_11021(b, 1, 0);
-		}
-		tab_initialized = 1;
-	}
-	/* There seems to be a speed advantage on amd64 if (acc << 8) is the
-	   second operant of exor, and *(data++) seems faster than data[i].
-	*/
-	for (i = 0; i < count; i++)
-		acc = crc_tab[(acc >> 8) ^ *(data++)] ^ (acc << 8);
+    if (!tab_initialized) {
+        /* Create table of byte residues */
+        for (i = 0; i < 256; i++) {
+            b[0] = i;
+            crc_tab[i] = crc_11021(b, 1, 0);
+        }
+        tab_initialized = 1;
+    }
+    /* There seems to be a speed advantage on amd64 if (acc << 8) is the
+       second operant of exor, and *(data++) seems faster than data[i].
+    */
+    for (i = 0; i < count; i++)
+        acc = crc_tab[(acc >> 8) ^ *(data++)] ^ (acc << 8);
 
-	/* ECMA-130 22.3.6 and MMC-3 Annex J (CD-TEXT) want the result with
-	   inverted bits
-	*/
-	return ~acc;
+    /* ECMA-130 22.3.6 and MMC-3 Annex J (CD-TEXT) want the result with
+       inverted bits
+    */
+    return ~acc;
 }
 
 
-/* 
+/*
    This was the function inherited with libburn-0.2.
 
    static unsigned short ccitt_table[256] = {
@@ -233,11 +233,11 @@ unsigned short crc_ccitt(unsigned char *data, int count)
    	0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
    	0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
    };
-   
+
    unsigned short crc_ccitt(unsigned char *q, int len)
    {
    	unsigned short crc = 0;
-   
+
    	while (len-- > 0)
    		crc = ccitt_table[(crc >> 8 ^ *q++) & 0xff] ^ (crc << 8);
    	return ~crc;
@@ -252,19 +252,19 @@ unsigned short crc_ccitt(unsigned char *data, int count)
     The error detection code shall be a 32-bit CRC applied on bytes 0 to 2063.
     The least significant bit of a data byte is used first. The EDC codeword
     must be divisible by the check polynomial:
-       P(x) = (x^16 + x^15 + x^2 + 1) . (x^16 + x^2 + x + 1)   
+       P(x) = (x^16 + x^15 + x^2 + 1) . (x^16 + x^2 + x + 1)
     The least significant parity bit (x^0) is stored in the most significant
     bit position of byte 2067.
    "
 
    Used for raw writing in sector.c
 
-   
+
    ts B20211:
    Discussion why function crc_32() implements above prescription of ECMA-130.
    See end of this file for the ofunction inherited with libburn-0.2.
 
-   The mentioned polynomial product 
+   The mentioned polynomial product
      (x^16 + x^15 + x^2 + 1) . (x^16 + x^2 + x + 1)
    yields this sum of x exponents
        32 31    18    16
@@ -297,17 +297,17 @@ unsigned short crc_ccitt(unsigned char *data, int count)
 */
 
 
-/* Overall bit mirroring of a 32 bit word */ 
+/* Overall bit mirroring of a 32 bit word */
 unsigned int rfl32(unsigned int acc)
 {
-	unsigned int inv_acc;
-	int i;
+    unsigned int inv_acc;
+    int i;
 
-	inv_acc = 0; 
-	for (i = 0; i < 32; i++)
-		if (acc & (1 << i))
-			inv_acc |= 1 << (31 - i);
-	return inv_acc;
+    inv_acc = 0;
+    for (i = 0; i < 32; i++)
+        if (acc & (1 << i))
+            inv_acc |= 1 << (31 - i);
+    return inv_acc;
 }
 
 
@@ -322,34 +322,34 @@ unsigned int rfl32(unsigned int acc)
 */
 static unsigned int crc_18001801b(unsigned char *data, int count, int flag)
 {
-	unsigned int acc = 0, top;
-	long int i;
-	unsigned int inv_acc;
+    unsigned int acc = 0, top;
+    long int i;
+    unsigned int inv_acc;
 
-	for (i = 0; i < count * 8 + 32; i++) {
-		top = acc & 0x80000000;
-		acc = (acc << 1);
-		if (i < count * 8) {
-			if (flag & 1)
-				/* Normal bit sequence of input bytes */
-				acc |= ((data[i / 8] >> (7 - (i % 8))) & 1);
-			else
-				/* Bit sequence of input bytes mirrored */
-				acc |= ((data[i / 8] >> (i % 8)) & 1);
-		}
-		if (top)
-			acc ^= 0x8001801b;
-	}
+    for (i = 0; i < count * 8 + 32; i++) {
+        top = acc & 0x80000000;
+        acc = (acc << 1);
+        if (i < count * 8) {
+            if (flag & 1)
+                /* Normal bit sequence of input bytes */
+                acc |= ((data[i / 8] >> (7 - (i % 8))) & 1);
+            else
+                /* Bit sequence of input bytes mirrored */
+                acc |= ((data[i / 8] >> (i % 8)) & 1);
+        }
+        if (top)
+            acc ^= 0x8001801b;
+    }
 
-	if (flag & 1)
-		return (unsigned int) (acc & 0xffffffff);
+    if (flag & 1)
+        return (unsigned int) (acc & 0xffffffff);
 
-	/* The bits of the whole 32 bit result are mirrored for ECMA-130
-	   output compliance and for sector.c habit to store CRC little endian
-	   although ECMA-130 prescribes it big endian.
-	*/
-	inv_acc = rfl32((unsigned int) acc);
-	return inv_acc;
+    /* The bits of the whole 32 bit result are mirrored for ECMA-130
+       output compliance and for sector.c habit to store CRC little endian
+       although ECMA-130 prescribes it big endian.
+    */
+    inv_acc = rfl32((unsigned int) acc);
+    return inv_acc;
 }
 
 
@@ -377,7 +377,7 @@ static unsigned int crc_18001801b(unsigned char *data, int count, int flag)
    Regrettably this does not yet account for the byte-internal mirroring of
    bits during the conversion from bit pattern to polynomial, and during
    conversion from polynomial residue to bit pattern.
-   
+
    Be rfl8(D) the result of byte-internal mirroring of bit pattern D,
    and mirr8(d) its corresponding polynom.
 
@@ -411,52 +411,52 @@ static unsigned int crc_18001801b(unsigned char *data, int count, int flag)
 */
 unsigned int rfl8(unsigned int acc)
 {
-	unsigned int inv_acc;
-	int i, j;
+    unsigned int inv_acc;
+    int i, j;
 
-	inv_acc = 0;
-	for (j = 0; j < 4; j++)
-		for (i = 0; i < 8; i++)
-			if (acc & (1 << (i + 8 * j)))
-				inv_acc |= 1 << ((7 - i) + 8 * j);
-	return inv_acc;
+    inv_acc = 0;
+    for (j = 0; j < 4; j++)
+        for (i = 0; i < 8; i++)
+            if (acc & (1 << (i + 8 * j)))
+                inv_acc |= 1 << ((7 - i) + 8 * j);
+    return inv_acc;
 }
 
 
 #ifdef Libburn_with_crc_illustratioN
 /* Not needed for libburn. The new implementation of function crc_32() is the
    one that is used.
-*/ 
+*/
 
 unsigned int crc32_by_tab(unsigned char *data, int count, int flag)
 {
-	static unsigned int crc_tab[256], tab_initialized = 0;
-	static unsigned char mirr_tab[256];
-	unsigned int acc, inv_acc;
-	unsigned char b[1];
-	int i;
+    static unsigned int crc_tab[256], tab_initialized = 0;
+    static unsigned char mirr_tab[256];
+    unsigned int acc, inv_acc;
+    unsigned char b[1];
+    int i;
 
-	if (!tab_initialized) {
-		for (i = 0; i < 256; i++) {
-			b[0] = i;
-			/* Create table of non-mirrored 0x18001801b residues */
-			crc_tab[i] = crc_18001801b(b, 1, 1);
-			/* Create table of mirrored byte values */
-			mirr_tab[i] = rfl8(i);
-		}
-		tab_initialized = 1;
-	}
+    if (!tab_initialized) {
+        for (i = 0; i < 256; i++) {
+            b[0] = i;
+            /* Create table of non-mirrored 0x18001801b residues */
+            crc_tab[i] = crc_18001801b(b, 1, 1);
+            /* Create table of mirrored byte values */
+            mirr_tab[i] = rfl8(i);
+        }
+        tab_initialized = 1;
+    }
 
-	acc = 0;
-	for (i = 0; i < count; i++)
-		acc = (acc << 8) ^ crc_tab[(acc >> 24) ^ mirr_tab[data[i]]];
+    acc = 0;
+    for (i = 0; i < count; i++)
+        acc = (acc << 8) ^ crc_tab[(acc >> 24) ^ mirr_tab[data[i]]];
 
-	/* The bits of the whole 32 bit result are mirrored for ECMA-130
-	   output compliance and for sector.c habit to store CRC little endian
-	   although ECMA-130 prescribes it big endian.
-	*/
-	inv_acc = rfl32((unsigned int) acc);
-	return inv_acc;
+    /* The bits of the whole 32 bit result are mirrored for ECMA-130
+       output compliance and for sector.c habit to store CRC little endian
+       although ECMA-130 prescribes it big endian.
+    */
+    inv_acc = rfl32((unsigned int) acc);
+    return inv_acc;
 }
 
 #endif /* Libburn_with_crc_illustratioN */
@@ -487,7 +487,7 @@ unsigned int crc32_by_tab(unsigned char *data, int count, int flag)
    computation. This affects input (which is desired), intermediate state
    (which is as good as unmirrored), and final output (which would be slightly
    undesirable if libburn could not use the mirrored result anyway).
-   
+
    Instead of the high byte (crc >> 24), the abbreviated algorithm uses
    the low byte of the mirrored intermediate checksum (crc & 0xffL).
    Instead of shifting the other three intermediate bytes to the left
@@ -500,13 +500,13 @@ unsigned int crc32_by_tab(unsigned char *data, int count, int flag)
    would eat up the gain of not mirroring the input bytes. But this mirroring
    can be pre-computed into the table by exchanging each value with the value
    of its mirrored index.
-   
+
    So this relation exists between the CRC table crc_tab[] of crc32_by_tab()
    and the table crc32_table[] of the abbreviated algorithm crc_32():
 
      crc_tab[i] == rfl32(crc32_table[rfl8(i)])
 
-   for i={0..255}. 
+   for i={0..255}.
 
    I compared the generated table in crc32_by_tab() by this test
                 for (i = 0; i < 256; i++) {
@@ -529,29 +529,29 @@ unsigned int crc32_by_tab(unsigned char *data, int count, int flag)
 */
 unsigned int crc_32(unsigned char *data, int count)
 {
-	static unsigned int crc_tab[256], tab_initialized = 0;
-	unsigned int acc = 0;
-	unsigned char b[1];
-	int i;
+    static unsigned int crc_tab[256], tab_initialized = 0;
+    unsigned int acc = 0;
+    unsigned char b[1];
+    int i;
 
-	if (!tab_initialized) {
-		/* Create table of mirrored 0x18001801b residues in
-		   bit-mirrored index positions.
-		*/
-		for (i = 0; i < 256; i++) {
-			b[0] = i;
-			crc_tab[rfl8(i)] = rfl32(crc_18001801b(b, 1, 1));
-		}
-		tab_initialized = 1;
-	}
-	for (i = 0; i < count; i++)
-		acc = (acc >> 8) ^ crc_tab[(acc & 0xff) ^ data[i]];
+    if (!tab_initialized) {
+        /* Create table of mirrored 0x18001801b residues in
+           bit-mirrored index positions.
+        */
+        for (i = 0; i < 256; i++) {
+            b[0] = i;
+            crc_tab[rfl8(i)] = rfl32(crc_18001801b(b, 1, 1));
+        }
+        tab_initialized = 1;
+    }
+    for (i = 0; i < count; i++)
+        acc = (acc >> 8) ^ crc_tab[(acc & 0xff) ^ data[i]];
 
-	/* The bits of the whole 32 bit result stay mirrored for ECMA-130
-	   output 8-bit mirroring and for sector.c habit to store the CRC
-	   little endian although ECMA-130 prescribes it big endian.
-	*/
-	return acc;
+    /* The bits of the whole 32 bit result stay mirrored for ECMA-130
+       output 8-bit mirroring and for sector.c habit to store the CRC
+       little endian although ECMA-130 prescribes it big endian.
+    */
+    return acc;
 }
 
 
@@ -637,6 +637,6 @@ unsigned int crc_32(unsigned char *data, int count)
 		crc = crc32_table[(crc ^ *data++) & 0xffL] ^ (crc >> 8);
 	return crc;
    }
-*/ 
+*/
 
 

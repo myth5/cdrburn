@@ -6,7 +6,7 @@
 
    Derived 2014 from libburn/sg-solaris.c with information learned from
    dvd+rw-tools, http://fxr.watson.org/fxr/source/sys/scsiio.h?v=NETBSD,
-   http://netbsd.gw.com/cgi-bin/man-cgi?scsi+4+NetBSD-current, 
+   http://netbsd.gw.com/cgi-bin/man-cgi?scsi+4+NetBSD-current,
    and experiments made by Freddy Fisker.
    Adapted 2016 to OpenBSD by help of SASANO Takayoshi <uaa@mx5.nisiq.net>.
 
@@ -54,7 +54,7 @@ sg_initialize()         performs global initialization of the SCSI transport
 sg_shutdown()           performs global finalizations and releases golbally
                         acquired resources.
 
-sg_give_next_adr()      iterates over the set of potentially useful drive 
+sg_give_next_adr()      iterates over the set of potentially useful drive
                         address strings.
 
 scsi_enumerate_drives() brings all available, not-whitelist-banned, and
@@ -63,7 +63,7 @@ scsi_enumerate_drives() brings all available, not-whitelist-banned, and
 sg_dispose_drive()      finalizes adapter specifics of struct burn_drive
                         on destruction. Releases resources which were acquired
                         underneath scsi_enumerate_drives().
- 
+
 sg_drive_is_open()      tells wether libburn has the given drive in use.
 
 sg_grab()               opens the drive for SCSI commands and ensures
@@ -144,7 +144,7 @@ extern struct libdax_msgs *libdax_messenger;
 /* is in portable part of libburn */
 int burn_drive_is_banned(char *device_address);
 int burn_drive_resolve_link(char *path, char adr[],
-			 int *recursion_count, int flag); /* drive.c */
+                            int *recursion_count, int flag); /* drive.c */
 
 /* Whether to log SCSI commands:
    bit0= log in /tmp/libburn_sg_command_log
@@ -173,12 +173,12 @@ extern int burn_sg_open_o_excl;
 
 static int sg_close_drive(struct burn_drive * d)
 {
-	if (d->fd != -1) {
-		close(d->fd);
-		d->fd = -1;
-		return 1;
-	}
-	return 0;
+    if (d->fd != -1) {
+        close(d->fd);
+        d->fd = -1;
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -194,45 +194,45 @@ static int sg_close_drive(struct burn_drive * d)
     libburn drive list.
 */
 static void enumerate_common(char *fname,
-				int bus_no, int host_no,
-				int channel_no, int target_no, int lun_no)
+                             int bus_no, int host_no,
+                             int channel_no, int target_no, int lun_no)
 {
-	int ret;
-	struct burn_drive out;
+    int ret;
+    struct burn_drive out;
 
-	/* General libburn drive setup */
-	burn_setup_drive(&out, fname);
+    /* General libburn drive setup */
+    burn_setup_drive(&out, fname);
 
-	/* This transport adapter uses SCSI-family commands and models
-	   (seems the adapter would know better than its boss, if ever) */
-	ret = burn_scsi_setup_drive(&out, bus_no, host_no, channel_no,
-                                 target_no, lun_no, 0);
-        if (ret <= 0)
-                return;
+    /* This transport adapter uses SCSI-family commands and models
+       (seems the adapter would know better than its boss, if ever) */
+    ret = burn_scsi_setup_drive(&out, bus_no, host_no, channel_no,
+                                target_no, lun_no, 0);
+    if (ret <= 0)
+        return;
 
-	/* PORTING: ------------------- non portable part --------------- */
+    /* PORTING: ------------------- non portable part --------------- */
 
-	/* Transport adapter is NetBSD/OpenBSD ioctl SCIOCCOMMAND */
-	/* Adapter specific handles and data */
+    /* Transport adapter is NetBSD/OpenBSD ioctl SCIOCCOMMAND */
+    /* Adapter specific handles and data */
 
-	out.fd = -1;
+    out.fd = -1;
 
-	/* PORTING: ---------------- end of non portable part ------------ */
+    /* PORTING: ---------------- end of non portable part ------------ */
 
-	/* Adapter specific functions with standardized names */
-	out.grab = sg_grab;
-	out.release = sg_release;
-	out.drive_is_open = sg_drive_is_open;
-	out.issue_command = sg_issue_command;
-	/* Finally register drive and inquire drive information */
-	burn_drive_finish_enum(&out);
+    /* Adapter specific functions with standardized names */
+    out.grab = sg_grab;
+    out.release = sg_release;
+    out.drive_is_open = sg_drive_is_open;
+    out.issue_command = sg_issue_command;
+    /* Finally register drive and inquire drive information */
+    burn_drive_finish_enum(&out);
 }
 
 
 static int start_enum_rcdNx(burn_drive_enumerator_t *idx, int flag)
 {
-	idx->cdno = -1;
-	return 1;
+    idx->cdno = -1;
+    return 1;
 }
 
 
@@ -242,27 +242,27 @@ static int start_enum_rcdNx(burn_drive_enumerator_t *idx, int flag)
 static int next_enum_rcdNx(burn_drive_enumerator_t *idx,
                            char adr[], int adr_size, int flag)
 {
-	static char suffix[2] = {'d', 'c'};
-	struct stat stbuf;
-	int i, stat_ret;
-	char path[16];
+    static char suffix[2] = {'d', 'c'};
+    struct stat stbuf;
+    int i, stat_ret;
+    char path[16];
 
-	while (idx->cdno < Libburn_netbsd_max_cdnuM) {
-		idx->cdno++;
-		for (i = 0; i < 2; i++) {
-			sprintf(path, "/dev/rcd%d%c", idx->cdno, suffix[i]);
-			stat_ret = stat(path, &stbuf);
-			if (stat_ret == -1)
-		continue;
-			if (!S_ISCHR(stbuf.st_mode))
-		continue;
-			if ((int) strlen(path) >= adr_size)
-		continue;
-			strcpy(adr, path);
-			return 1;
-		}
-	}
-	return 0;
+    while (idx->cdno < Libburn_netbsd_max_cdnuM) {
+        idx->cdno++;
+        for (i = 0; i < 2; i++) {
+            sprintf(path, "/dev/rcd%d%c", idx->cdno, suffix[i]);
+            stat_ret = stat(path, &stbuf);
+            if (stat_ret == -1)
+                continue;
+            if (!S_ISCHR(stbuf.st_mode))
+                continue;
+            if ((int) strlen(path) >= adr_size)
+                continue;
+            strcpy(adr, path);
+            return 1;
+        }
+    }
+    return 0;
 }
 
 
@@ -270,31 +270,31 @@ static int next_enum_rcdNx(burn_drive_enumerator_t *idx,
 */
 static int guess_size_by_seek_set(int fd, off_t *bytes, int flag)
 {
-	static off_t abs_limit = ((off_t) 1024) * 1024 * 1024 * 1024 * 1024;
-	off_t i, step = ((off_t) 1024) * 1024 * 1024 * 1024, ret;
-	char buf[1];
+    static off_t abs_limit = ((off_t) 1024) * 1024 * 1024 * 1024 * 1024;
+    off_t i, step = ((off_t) 1024) * 1024 * 1024 * 1024, ret;
+    char buf[1];
 
-	*bytes = 0;
-	for (i = step; i < abs_limit; i += step) {
-		ret = lseek(fd, i, SEEK_SET);
-		if (ret == -1) {
-			i -= step;
-			step = step >> 1;
-			if (step > 0)
-	continue;
-			return 1;
-		}
-		ret = read(fd, buf, 1);
-		if (ret == -1) {
-			i -= step;
-			step = step >> 1;
-			if (step > 0)
-	continue;
-			return 1;
-		}
-		*bytes = i + 1;
-	}
-	return 0;
+    *bytes = 0;
+    for (i = step; i < abs_limit; i += step) {
+        ret = lseek(fd, i, SEEK_SET);
+        if (ret == -1) {
+            i -= step;
+            step = step >> 1;
+            if (step > 0)
+                continue;
+            return 1;
+        }
+        ret = read(fd, buf, 1);
+        if (ret == -1) {
+            i -= step;
+            step = step >> 1;
+            if (step > 0)
+                continue;
+            return 1;
+        }
+        *bytes = i + 1;
+    }
+    return 0;
 }
 
 
@@ -315,11 +315,11 @@ static int guess_size_by_seek_set(int fd, off_t *bytes, int flag)
 int sg_id_string(char msg[1024], int flag)
 {
 #ifdef __OpenBSD__
-	sprintf(msg, "internal OpenBSD SCIOCCOMMAND adapter sg-netbsd");
+    sprintf(msg, "internal OpenBSD SCIOCCOMMAND adapter sg-netbsd");
 #else
-	sprintf(msg, "internal NetBSD SCIOCCOMMAND adapter sg-netbsd");
+    sprintf(msg, "internal NetBSD SCIOCCOMMAND adapter sg-netbsd");
 #endif
-	return 1;
+    return 1;
 }
 
 
@@ -329,10 +329,10 @@ int sg_id_string(char msg[1024], int flag)
     @param msg   returns ids and/or error messages of eventual helpers
     @param flag  unused yet, submit 0
     @return      1 = success, <=0 = failure
-*/ 
+*/
 int sg_initialize(char msg[1024], int flag)
 {
-	return sg_id_string(msg, 0);
+    return sg_id_string(msg, 0);
 }
 
 
@@ -340,10 +340,10 @@ int sg_initialize(char msg[1024], int flag)
     needed operating system facilities. Releases globally acquired resources.
     @param flag  unused yet, submit 0
     @return      1 = success, <=0 = failure
-*/ 
+*/
 int sg_shutdown(int flag)
 {
-	return 1;
+    return 1;
 }
 
 
@@ -358,7 +358,7 @@ int sg_shutdown(int flag)
 */
 int sg_dispose_drive(struct burn_drive *d, int flag)
 {
-	return 1;
+    return 1;
 }
 
 
@@ -378,19 +378,19 @@ int sg_dispose_drive(struct burn_drive *d, int flag)
            -1 = severe error (e.g. adr_size too small)
 */
 int sg_give_next_adr(burn_drive_enumerator_t *idx,
-		     char adr[], int adr_size, int initialize)
+                     char adr[], int adr_size, int initialize)
 {
-	int ret;
+    int ret;
 
-	if (initialize == 1) {
-		ret = start_enum_rcdNx(idx, 0);
-		if (ret <= 0)
-			return ret;
-	} else if (initialize == -1) {
-		return 0;
-	}
-	ret = next_enum_rcdNx(idx, adr, adr_size, 0);
-	return ret;
+    if (initialize == 1) {
+        ret = start_enum_rcdNx(idx, 0);
+        if (ret <= 0)
+            return ret;
+    } else if (initialize == -1) {
+        return 0;
+    }
+    ret = next_enum_rcdNx(idx, adr, adr_size, 0);
+    return ret;
 }
 
 
@@ -399,31 +399,32 @@ int sg_give_next_adr(burn_drive_enumerator_t *idx,
 */
 int scsi_enumerate_drives(void)
 {
-	burn_drive_enumerator_t idx;
-	int initialize = 1, ret, i_bus_no = -1, buf_size = 4096;
-        int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
-	char *buf = NULL;
+    burn_drive_enumerator_t idx;
+    int initialize = 1, ret, i_bus_no = -1, buf_size = 4096;
+    int i_host_no = -1, i_channel_no = -1, i_target_no = -1, i_lun_no = -1;
+    char *buf = NULL;
 
-	BURN_ALLOC_MEM(buf, char, buf_size);
+    BURN_ALLOC_MEM(buf, char, buf_size);
 
-	while(1) {
-		ret = sg_give_next_adr(&idx, buf, buf_size, initialize);
-		initialize = 0;
-		if (ret <= 0)
-	break;
-		if (burn_drive_is_banned(buf))
-	continue; 
-		sg_obtain_scsi_adr(buf, &i_bus_no, &i_host_no,
-				&i_channel_no, &i_target_no, &i_lun_no);
-		enumerate_common(buf,
-				i_bus_no, i_host_no, i_channel_no,
-				i_target_no, i_lun_no);
-	}
-	sg_give_next_adr(&idx, buf, buf_size, -1);
-	ret = 1;
-ex:;
-	BURN_FREE_MEM(buf);
-	return ret;
+    while(1) {
+        ret = sg_give_next_adr(&idx, buf, buf_size, initialize);
+        initialize = 0;
+        if (ret <= 0)
+            break;
+        if (burn_drive_is_banned(buf))
+            continue;
+        sg_obtain_scsi_adr(buf, &i_bus_no, &i_host_no,
+                           &i_channel_no, &i_target_no, &i_lun_no);
+        enumerate_common(buf,
+                         i_bus_no, i_host_no, i_channel_no,
+                         i_target_no, i_lun_no);
+    }
+    sg_give_next_adr(&idx, buf, buf_size, -1);
+    ret = 1;
+ex:
+    ;
+    BURN_FREE_MEM(buf);
+    return ret;
 }
 
 
@@ -434,7 +435,7 @@ ex:;
 /** Published as burn_drive.drive_is_open() */
 int sg_drive_is_open(struct burn_drive * d)
 {
-	return (d->fd != -1);
+    return (d->fd != -1);
 }
 
 
@@ -442,71 +443,82 @@ int sg_drive_is_open(struct burn_drive * d)
     to external interference on your system - obtains an exclusive access lock
     on the drive. (Note: this is not physical tray locking.)
     A drive that has been opened with sg_grab() will eventually be handed
-    over to sg_release() for closing and unreserving. 
+    over to sg_release() for closing and unreserving.
 */
 int sg_grab(struct burn_drive *d)
 {
-	char *msg = NULL;
-	int os_errno, ret;
+    char *msg = NULL;
+    int os_errno, ret;
 
-	BURN_ALLOC_MEM(msg, char, 4096);
+    BURN_ALLOC_MEM(msg, char, 4096);
 
-	if (d->fd != -1) {
-		d->released = 0;
-		{ret = 1; goto ex;}
-	}
-	d->fd = open(d->devname, O_RDWR | O_NDELAY);
-	if (d->fd == -1) {
-		os_errno = errno;
-		sprintf(msg, "Could not grab drive '%s'", d->devname);
-		/* (errno == ENXIO is a device file with no drive attached) */
-		libdax_msgs_submit(libdax_messenger, d->global_index,
-			0x00020003,
-			errno == ENXIO ? LIBDAX_MSGS_SEV_DEBUG :
-			                 LIBDAX_MSGS_SEV_SORRY,
-			LIBDAX_MSGS_PRIO_HIGH,
-			msg, os_errno, 0);
-		{ret = 0; goto ex;}
-	}
+    if (d->fd != -1) {
+        d->released = 0;
+        {
+            ret = 1;
+            goto ex;
+        }
+    }
+    d->fd = open(d->devname, O_RDWR | O_NDELAY);
+    if (d->fd == -1) {
+        os_errno = errno;
+        sprintf(msg, "Could not grab drive '%s'", d->devname);
+        /* (errno == ENXIO is a device file with no drive attached) */
+        libdax_msgs_submit(libdax_messenger, d->global_index,
+                           0x00020003,
+                           errno == ENXIO ? LIBDAX_MSGS_SEV_DEBUG :
+                           LIBDAX_MSGS_SEV_SORRY,
+                           LIBDAX_MSGS_PRIO_HIGH,
+                           msg, os_errno, 0);
+        {
+            ret = 0;
+            goto ex;
+        }
+    }
 
-	d->released = 0;
+    d->released = 0;
 
-	/* Make sure by INQUIRY that this is really a MMC drive */
-	ret = spc_confirm_cd_drive(d, 0);
-	if (ret <= 0)
-		goto revoke;
+    /* Make sure by INQUIRY that this is really a MMC drive */
+    ret = spc_confirm_cd_drive(d, 0);
+    if (ret <= 0)
+        goto revoke;
 
-/* # define Libburn_sg_netbsd_scsi_debuG */
+    /* # define Libburn_sg_netbsd_scsi_debuG */
 #ifdef Libburn_sg_netbsd_scsi_debuG
-	{
-		static int sc_db = SC_DB_CMDS | SC_DB_FLOW;
+    {
+        static int sc_db = SC_DB_CMDS | SC_DB_FLOW;
 
-		ret = ioctl(d->fd, SCIOCDEBUG, &sc_db);
-		if (ret == -1)
-			fprintf(stderr,
-      "libburn_DEBUG: ioctl(%d, SCIOCDEBUG, &(0x%X)) returns %d, errno = %d\n",
-			 d->fd, (unsigned int) sc_db, ret, errno);
-	}
+        ret = ioctl(d->fd, SCIOCDEBUG, &sc_db);
+        if (ret == -1)
+            fprintf(stderr,
+                    "libburn_DEBUG: ioctl(%d, SCIOCDEBUG, &(0x%X)) returns %d, errno = %d\n",
+                    d->fd, (unsigned int) sc_db, ret, errno);
+    }
 #endif
 
 
-	{ret = 1; goto ex;}
+    {
+        ret = 1;
+        goto ex;
+    }
 
-revoke:;
-	sprintf(msg, "Could not grab drive '%s'.", d->devname);
-	libdax_msgs_submit(libdax_messenger, d->global_index,
-			0x00020003,
-			LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
-			msg, 0, 0);
-	if (d->fd >= 0) {
-		close(d->fd);
-		d->fd = -1;
-		d->released = 1;
-	}
-	ret = 0;
-ex:;
-	BURN_FREE_MEM(msg);
-	return ret;
+revoke:
+    ;
+    sprintf(msg, "Could not grab drive '%s'.", d->devname);
+    libdax_msgs_submit(libdax_messenger, d->global_index,
+                       0x00020003,
+                       LIBDAX_MSGS_SEV_SORRY, LIBDAX_MSGS_PRIO_HIGH,
+                       msg, 0, 0);
+    if (d->fd >= 0) {
+        close(d->fd);
+        d->fd = -1;
+        d->released = 1;
+    }
+    ret = 0;
+ex:
+    ;
+    BURN_FREE_MEM(msg);
+    return ret;
 }
 
 
@@ -514,14 +526,14 @@ ex:;
              implements the demanded functionality.
 */
 /** Gives up the drive for SCSI commands and releases eventual access locks.
-    (Note: this is not physical tray locking.) 
+    (Note: this is not physical tray locking.)
 */
 int sg_release(struct burn_drive *d)
 {
-	if (d->fd < 0)
-		return 0;
-	sg_close_drive(d);
-	return 0;
+    if (d->fd < 0)
+        return 0;
+    sg_close_drive(d);
+    return 0;
 }
 
 
@@ -536,141 +548,141 @@ int sg_release(struct burn_drive *d)
 */
 int sg_issue_command(struct burn_drive *d, struct command *c)
 {
-	int i, timeout_ms, ret, key, asc, ascq, done = 0, sense_len, max_sl;
-	time_t start_time;
-	scsireq_t req;
-	char msg[160];
-        static FILE *fp = NULL;
+    int i, timeout_ms, ret, key, asc, ascq, done = 0, sense_len, max_sl;
+    time_t start_time;
+    scsireq_t req;
+    char msg[160];
+    static FILE *fp = NULL;
 
-	c->error = 0;
+    c->error = 0;
 
-	if (d->fd == -1)
-		return 0;
+    if (d->fd == -1)
+        return 0;
 
-	if (burn_sg_log_scsi & 1) {
-		if (fp == NULL) {
-			fp= fopen("/tmp/libburn_sg_command_log", "a");
-			fprintf(fp,
-			    "\n-----------------------------------------\n");
-		}
-	}
-	if (burn_sg_log_scsi & 3)
-		scsi_log_cmd(c,fp,0);
+    if (burn_sg_log_scsi & 1) {
+        if (fp == NULL) {
+            fp= fopen("/tmp/libburn_sg_command_log", "a");
+            fprintf(fp,
+                    "\n-----------------------------------------\n");
+        }
+    }
+    if (burn_sg_log_scsi & 3)
+        scsi_log_cmd(c,fp,0);
 
-	if (c->timeout > 0)
-		timeout_ms = c->timeout;
-	else
-		timeout_ms = 200000;
+    if (c->timeout > 0)
+        timeout_ms = c->timeout;
+    else
+        timeout_ms = 200000;
 
-	memset (&req, 0, sizeof(req));
-	memcpy(req.cmd, c->opcode, c->oplen);
-	req.cmdlen = c->oplen;
-	req.databuf = (caddr_t) c->page->data;
-	req.flags = SCCMD_ESCAPE; /* probably to make req.cmdlen significant */
-	req.timeout = timeout_ms;
-	max_sl = sizeof(c->sense) > SENSEBUFLEN ?
-	                                        SENSEBUFLEN : sizeof(c->sense);
-	req.senselen = max_sl;
-	if (c->dir == TO_DRIVE) {
-		req.datalen = c->page->bytes;
-		req.flags |= SCCMD_WRITE;
-	} else if (c->dir == FROM_DRIVE) {
-		req.flags |= SCCMD_READ;
-		if (c->dxfer_len >= 0)
-			req.datalen = c->dxfer_len;
-		else
-			req.datalen = BUFFER_SIZE;
-		/* touch page so we can use valgrind */
-		memset(c->page->data, 0, BUFFER_SIZE);
-	} else {
-		req.flags |= SCCMD_READ;
-		req.datalen = 0;
-	}
+    memset (&req, 0, sizeof(req));
+    memcpy(req.cmd, c->opcode, c->oplen);
+    req.cmdlen = c->oplen;
+    req.databuf = (caddr_t) c->page->data;
+    req.flags = SCCMD_ESCAPE; /* probably to make req.cmdlen significant */
+    req.timeout = timeout_ms;
+    max_sl = sizeof(c->sense) > SENSEBUFLEN ?
+             SENSEBUFLEN : sizeof(c->sense);
+    req.senselen = max_sl;
+    if (c->dir == TO_DRIVE) {
+        req.datalen = c->page->bytes;
+        req.flags |= SCCMD_WRITE;
+    } else if (c->dir == FROM_DRIVE) {
+        req.flags |= SCCMD_READ;
+        if (c->dxfer_len >= 0)
+            req.datalen = c->dxfer_len;
+        else
+            req.datalen = BUFFER_SIZE;
+        /* touch page so we can use valgrind */
+        memset(c->page->data, 0, BUFFER_SIZE);
+    } else {
+        req.flags |= SCCMD_READ;
+        req.datalen = 0;
+    }
 
-	/* retry-loop */
-	start_time = time(NULL);
-	for(i = 0; !done; i++) {
-		memset(c->sense, 0, sizeof(c->sense));
-		c->start_time = burn_get_time(0);
+    /* retry-loop */
+    start_time = time(NULL);
+    for(i = 0; !done; i++) {
+        memset(c->sense, 0, sizeof(c->sense));
+        c->start_time = burn_get_time(0);
 
-		ret = ioctl(d->fd, SCIOCCOMMAND, &req);
+        ret = ioctl(d->fd, SCIOCCOMMAND, &req);
 
-/* <<< Fault mock-up
-if (c->opcode[0] == 0x28) {
-	ret = -1;
-	errno = 9;
-}
-*/
+        /* <<< Fault mock-up
+        if (c->opcode[0] == 0x28) {
+        	ret = -1;
+        	errno = 9;
+        }
+        */
 
-		c->end_time = burn_get_time(0);
+        c->end_time = burn_get_time(0);
 
-/* #define Libburn_debug_sg_netbsD */
+        /* #define Libburn_debug_sg_netbsD */
 #ifdef Libburn_debug_sg_netbsD
-		fprintf(stderr, "libburn_DEBUG: ret= %d, retsts = 0x%X, senselen_used = %d, status = 0x%X, error= 0x%X\n", ret, (unsigned int) req.retsts, (int) req.senselen_used, (unsigned int) req.status, req.error);
-		fprintf(stderr, "libburn_DEBUG: datalen_used = %u\n",
-			(unsigned int) req.datalen_used);
+        fprintf(stderr, "libburn_DEBUG: ret= %d, retsts = 0x%X, senselen_used = %d, status = 0x%X, error= 0x%X\n", ret, (unsigned int) req.retsts, (int) req.senselen_used, (unsigned int) req.status, req.error);
+        fprintf(stderr, "libburn_DEBUG: datalen_used = %u\n",
+                (unsigned int) req.datalen_used);
 #endif
 
-		if (ret != 0 ||
-		    (req.retsts != SCCMD_SENSE && req.retsts != SCCMD_OK)) {
-			sprintf(msg, "Failed to transfer command to drive. (ioctl(%d, SCIOCCOMMAND) = %d, scsireq_t.retsts = 0x%X, errno= %d)",
-				d->fd, ret, (unsigned int) req.retsts, errno);
-			if (burn_sg_log_scsi & 3)
-				scsi_log_message(d, fp, msg, 0);
-			libdax_msgs_submit(libdax_messenger,
-				d->global_index, 0x0002010c,
-				LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
-				msg, errno, 0);
-			sg_close_drive(d);
-			d->released = 1;
-			d->busy = BURN_DRIVE_IDLE;
-			c->error = 1;
-			return -1;
-		}
+        if (ret != 0 ||
+                (req.retsts != SCCMD_SENSE && req.retsts != SCCMD_OK)) {
+            sprintf(msg, "Failed to transfer command to drive. (ioctl(%d, SCIOCCOMMAND) = %d, scsireq_t.retsts = 0x%X, errno= %d)",
+                    d->fd, ret, (unsigned int) req.retsts, errno);
+            if (burn_sg_log_scsi & 3)
+                scsi_log_message(d, fp, msg, 0);
+            libdax_msgs_submit(libdax_messenger,
+                               d->global_index, 0x0002010c,
+                               LIBDAX_MSGS_SEV_FATAL, LIBDAX_MSGS_PRIO_HIGH,
+                               msg, errno, 0);
+            sg_close_drive(d);
+            d->released = 1;
+            d->busy = BURN_DRIVE_IDLE;
+            c->error = 1;
+            return -1;
+        }
 
-		sense_len = 0;
-		if (req.retsts == SCCMD_SENSE) {
-			memcpy(c->sense, req.sense, max_sl);
-			sense_len = req.senselen > max_sl ?
-			                                 max_sl : req.senselen;
-		}
-		spc_decode_sense(c->sense, sense_len, &key, &asc, &ascq);
-		if (key || asc || ascq)
-			sense_len = req.senselen;
-		else
-			sense_len = 0;
+        sense_len = 0;
+        if (req.retsts == SCCMD_SENSE) {
+            memcpy(c->sense, req.sense, max_sl);
+            sense_len = req.senselen > max_sl ?
+                        max_sl : req.senselen;
+        }
+        spc_decode_sense(c->sense, sense_len, &key, &asc, &ascq);
+        if (key || asc || ascq)
+            sense_len = req.senselen;
+        else
+            sense_len = 0;
 
-/* <<< Fault mock-up
-if (c->opcode[0] == 0x5a) {
-	req.datalen_used = 0;
-	memset(c->page->data, 0, BUFFER_SIZE);
-}
-*/
+        /* <<< Fault mock-up
+        if (c->opcode[0] == 0x5a) {
+        	req.datalen_used = 0;
+        	memset(c->page->data, 0, BUFFER_SIZE);
+        }
+        */
 
-		if (c->dir == FROM_DRIVE && sense_len == 0 &&
-		    req.datalen > 0 && req.datalen_used < req.datalen) {
-			sprintf(msg, "Short reply from SCSI command %2.2X: expected: %d, got: %d, req.retsts: 0x%X",
-				(unsigned int) c->opcode[0],
-				(int) req.datalen, (int) req.datalen_used,
-				(unsigned int) req.retsts);
-			if (burn_sg_log_scsi & 3)
-				scsi_log_message(d, fp, msg, 0);
-			libdax_msgs_submit(libdax_messenger,
-				d->global_index, 0x00000002,
-				LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
-				msg, 0, 0);
-			if (req.datalen_used == 0)
-				c->error = 1;
-			c->dxfer_len = req.datalen_used;
-		}
+        if (c->dir == FROM_DRIVE && sense_len == 0 &&
+                req.datalen > 0 && req.datalen_used < req.datalen) {
+            sprintf(msg, "Short reply from SCSI command %2.2X: expected: %d, got: %d, req.retsts: 0x%X",
+                    (unsigned int) c->opcode[0],
+                    (int) req.datalen, (int) req.datalen_used,
+                    (unsigned int) req.retsts);
+            if (burn_sg_log_scsi & 3)
+                scsi_log_message(d, fp, msg, 0);
+            libdax_msgs_submit(libdax_messenger,
+                               d->global_index, 0x00000002,
+                               LIBDAX_MSGS_SEV_DEBUG, LIBDAX_MSGS_PRIO_HIGH,
+                               msg, 0, 0);
+            if (req.datalen_used == 0)
+                c->error = 1;
+            c->dxfer_len = req.datalen_used;
+        }
 
-		done = scsi_eval_cmd_outcome(d, c, fp, c->sense, sense_len,
-						start_time, timeout_ms, i, 0);
-		if (d->cancel)
-			done = 1;
-	} /* end of retry-loop */
+        done = scsi_eval_cmd_outcome(d, c, fp, c->sense, sense_len,
+                                     start_time, timeout_ms, i, 0);
+        if (d->cancel)
+            done = 1;
+    } /* end of retry-loop */
 
-	return 1;
+    return 1;
 }
 
 
@@ -680,39 +692,46 @@ if (c->opcode[0] == 0x5a) {
 int sg_obtain_scsi_adr(char *path, int *bus_no, int *host_no, int *channel_no,
                        int *target_no, int *lun_no)
 {
-	int ret, fd = -1;
-	struct scsi_addr addr;
+    int ret, fd = -1;
+    struct scsi_addr addr;
 
-	fd = open(path, O_RDWR | O_NDELAY);
-	if (fd == -1)
-		return 0;
-	*bus_no = *host_no = *channel_no = *target_no = *lun_no = 0;
-	memset(&addr, 0, sizeof(addr));
-	ret = ioctl(fd, SCIOCIDENTIFY, &addr);
-	if (ret != 0)
-		{ret = 0; goto ex;}
-	if (addr.type != TYPE_SCSI)
-		{ret = 0; goto ex;}
+    fd = open(path, O_RDWR | O_NDELAY);
+    if (fd == -1)
+        return 0;
+    *bus_no = *host_no = *channel_no = *target_no = *lun_no = 0;
+    memset(&addr, 0, sizeof(addr));
+    ret = ioctl(fd, SCIOCIDENTIFY, &addr);
+    if (ret != 0)
+    {
+        ret = 0;
+        goto ex;
+    }
+    if (addr.type != TYPE_SCSI)
+    {
+        ret = 0;
+        goto ex;
+    }
 
 #ifdef __OpenBSD__
 
-	*bus_no = *host_no = addr.scbus;
-	*target_no = addr.target;
-	*lun_no = addr.lun;
+    *bus_no = *host_no = addr.scbus;
+    *target_no = addr.target;
+    *lun_no = addr.lun;
 
 #else /* __OpenBSD__ */
 
-	*bus_no = *host_no = addr.addr.scsi.scbus;
-	*target_no = addr.addr.scsi.target;
-	*lun_no = addr.addr.scsi.lun;
+    *bus_no = *host_no = addr.addr.scsi.scbus;
+    *target_no = addr.addr.scsi.target;
+    *lun_no = addr.addr.scsi.lun;
 
 #endif /* ! __OpenBSD__ */
 
-	ret = 1;
-ex:;
-	if (fd != -1)
-		close(fd);
-	return (0);
+    ret = 1;
+ex:
+    ;
+    if (fd != -1)
+        close(fd);
+    return (0);
 }
 
 
@@ -721,75 +740,76 @@ ex:;
 */
 int sg_is_enumerable_adr(char* adr)
 {
-	burn_drive_enumerator_t idx;
-	int initialize = 1, ret;
-	char buf[64];
+    burn_drive_enumerator_t idx;
+    int initialize = 1, ret;
+    char buf[64];
 
-	while(1) {
-		ret = sg_give_next_adr(&idx, buf, sizeof(buf), initialize);
-		initialize = 0;
-		if (ret <= 0)
-	break;
-		if (strcmp(adr, buf) == 0) {
-			sg_give_next_adr(&idx, buf, sizeof(buf), -1);
-			return 1;
-		}
-	}
-	sg_give_next_adr(&idx, buf, sizeof(buf), -1);
-	return (0);
+    while(1) {
+        ret = sg_give_next_adr(&idx, buf, sizeof(buf), initialize);
+        initialize = 0;
+        if (ret <= 0)
+            break;
+        if (strcmp(adr, buf) == 0) {
+            sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+            return 1;
+        }
+    }
+    sg_give_next_adr(&idx, buf, sizeof(buf), -1);
+    return (0);
 }
 
 
 /* Return 1 if the given path leads to a regular file or a device that can be
-   fseeked, read, and possibly written with 2 kB granularity. 
+   fseeked, read, and possibly written with 2 kB granularity.
 */
 int burn_os_is_2k_seekrw(char *path, int flag)
 {
-	struct stat stbuf;
-	int l, i, dev, tl;
-	char try[16];
+    struct stat stbuf;
+    int l, i, dev, tl;
+    char try[16];
 
-	/* >>> ??? Is this a comprehensive list of lseek()-capable devices ? */
-	/* http://www.netbsd.org/docs/guide/en/chap-rmmedia.html */
-	static char dev_names[][4] = {
-				 "fd", "rfd", "sd" , "cd", "rcd", "wd", ""};
+    /* >>> ??? Is this a comprehensive list of lseek()-capable devices ? */
+    /* http://www.netbsd.org/docs/guide/en/chap-rmmedia.html */
+    static char dev_names[][4] = {
+        "fd", "rfd", "sd", "cd", "rcd", "wd", ""
+    };
 
-	if (path[0] == 0)
-		return 0;
-	if (stat(path, &stbuf) == -1)
-		return 0;
-	if (S_ISREG(stbuf.st_mode))
-		return 1;
-	if (S_ISBLK(stbuf.st_mode))
-		return 1;
+    if (path[0] == 0)
+        return 0;
+    if (stat(path, &stbuf) == -1)
+        return 0;
+    if (S_ISREG(stbuf.st_mode))
+        return 1;
+    if (S_ISBLK(stbuf.st_mode))
+        return 1;
 
-	/* Look for known device names which promise the desired capabilities */
-	if (strncmp(path, "/dev/", 5) != 0)
-		return 0;
-	l = strlen(path);
-	for (dev = 0; dev_names[dev][0] != 0; dev++) {
-		sprintf(try, "/dev/%s", dev_names[dev]);
-		tl = strlen(try);
-		if (strncmp(path, try, tl) != 0)
-	continue;
-		l -= tl;
-		for (i = 0; i < Libburn_netbsd_max_cdnuM; i++) {
-			sprintf(try + tl, "%d", i);
-			if (strncmp(path, try, strlen(try)) == 0)
-		break;
-		}
-		if (i >= Libburn_netbsd_max_cdnuM)
-	continue;
-		tl += strlen(try + tl);
-		if (l == tl)
-			return 1;
-		if (l > tl + 1)
-	continue;
-		if (path[l - 1] >= 'a' && path[l - 1] <= 'z')
-			return 1;
-	}
+    /* Look for known device names which promise the desired capabilities */
+    if (strncmp(path, "/dev/", 5) != 0)
+        return 0;
+    l = strlen(path);
+    for (dev = 0; dev_names[dev][0] != 0; dev++) {
+        sprintf(try, "/dev/%s", dev_names[dev]);
+        tl = strlen(try);
+        if (strncmp(path, try, tl) != 0)
+            continue;
+        l -= tl;
+        for (i = 0; i < Libburn_netbsd_max_cdnuM; i++) {
+            sprintf(try + tl, "%d", i);
+            if (strncmp(path, try, strlen(try)) == 0)
+                break;
+        }
+        if (i >= Libburn_netbsd_max_cdnuM)
+            continue;
+        tl += strlen(try + tl);
+        if (l == tl)
+            return 1;
+        if (l > tl + 1)
+            continue;
+        if (path[l - 1] >= 'a' && path[l - 1] <= 'z')
+            return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -805,72 +825,91 @@ int burn_os_is_2k_seekrw(char *path, int flag)
 */
 int burn_os_stdio_capacity(char *path, off_t write_start, off_t *bytes)
 {
-	struct stat stbuf;
-	int ret;
+    struct stat stbuf;
+    int ret;
 
 #ifdef Libburn_os_has_statvfS
-	struct statvfs vfsbuf;
+    struct statvfs vfsbuf;
 #endif
 
-	char *testpath = NULL, *cpt;
-	off_t add_size = 0;
+    char *testpath = NULL, *cpt;
+    off_t add_size = 0;
 
-	BURN_ALLOC_MEM(testpath, char, 4096);
+    BURN_ALLOC_MEM(testpath, char, 4096);
 
-	testpath[0] = 0;
-	if (stat(path, &stbuf) == -1) {
-		strcpy(testpath, path);
-		cpt = strrchr(testpath, '/');
-		if(cpt == NULL)
-			strcpy(testpath, ".");
-		else if(cpt == testpath)
-			testpath[1] = 0;
-		else
-			*cpt = 0;
-		if (stat(testpath, &stbuf) == -1)
-			{ret = -1; goto ex;}
+    testpath[0] = 0;
+    if (stat(path, &stbuf) == -1) {
+        strcpy(testpath, path);
+        cpt = strrchr(testpath, '/');
+        if(cpt == NULL)
+            strcpy(testpath, ".");
+        else if(cpt == testpath)
+            testpath[1] = 0;
+        else
+            *cpt = 0;
+        if (stat(testpath, &stbuf) == -1)
+        {
+            ret = -1;
+            goto ex;
+        }
 
-	} else if(S_ISBLK(stbuf.st_mode)) {
-		int open_mode = O_RDONLY, fd;
+    } else if(S_ISBLK(stbuf.st_mode)) {
+        int open_mode = O_RDONLY, fd;
 
-		fd = open(path, open_mode);
-		if (fd == -1)
-			{ret = -2; goto ex;}
-		*bytes = lseek(fd, 0, SEEK_END);
-		if (*bytes <= 0)
-			guess_size_by_seek_set(fd, bytes, 0);
-		close(fd);
-		if (*bytes == -1) {
-			*bytes = 0;
-			{ret = 0; goto ex;}
-		}
+        fd = open(path, open_mode);
+        if (fd == -1)
+        {
+            ret = -2;
+            goto ex;
+        }
+        *bytes = lseek(fd, 0, SEEK_END);
+        if (*bytes <= 0)
+            guess_size_by_seek_set(fd, bytes, 0);
+        close(fd);
+        if (*bytes == -1) {
+            *bytes = 0;
+            {
+                ret = 0;
+                goto ex;
+            }
+        }
 
-	} else if(S_ISREG(stbuf.st_mode)) {
-		add_size = burn_sparse_file_addsize(write_start, &stbuf);
-		strcpy(testpath, path);
-	} else
-		{ret = 0; goto ex;}
+    } else if(S_ISREG(stbuf.st_mode)) {
+        add_size = burn_sparse_file_addsize(write_start, &stbuf);
+        strcpy(testpath, path);
+    } else
+    {
+        ret = 0;
+        goto ex;
+    }
 
-	if (testpath[0]) {	
+    if (testpath[0]) {
 
 #ifdef Libburn_os_has_statvfS
 
-		if (statvfs(testpath, &vfsbuf) == -1)
-			{ret = -2; goto ex;}
-		*bytes = add_size + ((off_t) vfsbuf.f_frsize) *
-						(off_t) vfsbuf.f_bavail;
+        if (statvfs(testpath, &vfsbuf) == -1)
+        {
+            ret = -2;
+            goto ex;
+        }
+        *bytes = add_size + ((off_t) vfsbuf.f_frsize) *
+                 (off_t) vfsbuf.f_bavail;
 
 #else /* Libburn_os_has_statvfS */
 
-		{ret = 0; goto ex;}
+        {
+            ret = 0;
+            goto ex;
+        }
 
 #endif /* ! Libburn_os_has_stavtfS */
 
-	}
-	ret = 1;
-ex:;
-	BURN_FREE_MEM(testpath);
-	return ret;
+    }
+    ret = 1;
+ex:
+    ;
+    BURN_FREE_MEM(testpath);
+    return ret;
 }
 
 
@@ -878,34 +917,34 @@ ex:;
 
 #ifdef Libburn_read_o_direcT
 
-	/* No special O_DIRECT-like precautions are implemented here */
+/* No special O_DIRECT-like precautions are implemented here */
 
 #endif /* Libburn_read_o_direcT */
 
 
 int burn_os_open_track_src(char *path, int open_flags, int flag)
 {
-	int fd;
+    int fd;
 
-	fd = open(path, open_flags);
-	return fd;
+    fd = open(path, open_flags);
+    return fd;
 }
 
 
 void *burn_os_alloc_buffer(size_t amount, int flag)
 {
-	void *buf = NULL;
+    void *buf = NULL;
 
-	buf = calloc(1, amount);
-	return buf;
+    buf = calloc(1, amount);
+    return buf;
 }
 
 
 int burn_os_free_buffer(void *buffer, size_t amount, int flag)
 {
-	if (buffer == NULL)
-		return 0;
-	free(buffer);
-	return 1;
+    if (buffer == NULL)
+        return 0;
+    free(buffer);
+    return 1;
 }
 

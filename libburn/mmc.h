@@ -48,7 +48,7 @@ void mmc_get_configuration(struct burn_drive *);
    @return 1=nwa is valid , 0=nwa is not valid , -1=error */
 int mmc_get_nwa(struct burn_drive *d, int trackno, int *lba, int *nwa);
 
-/* ts B11228 : changed from void to int */ 
+/* ts B11228 : changed from void to int */
 int mmc_send_cue_sheet(struct burn_drive *, struct cue_sheet *);
 
 /* ts A61023 : get size and free space of drive buffer */
@@ -68,7 +68,7 @@ int mmc_get_write_performance(struct burn_drive *d);
 
 /* ts A61229 : outsourced from spc_select_write_params() */
 /* Note: Page data is not zeroed here to allow preset defaults. Thus
-           memset(pd, 0, 2 + d->mdata->write_page_length); 
+           memset(pd, 0, 2 + d->mdata->write_page_length);
          is the eventual duty of the caller.
 */
 int mmc_compose_mode_page_5(struct burn_drive *d,
@@ -104,8 +104,8 @@ char *mmc_obtain_profile_name(int profile_number);
 /* MMC backend of API call burn_get_media_product_id()
 */
 int mmc_get_media_product_id(struct burn_drive *d,
-        char **product_id, char **media_code1, char **media_code2,
-	char **book_type, int flag);
+                             char **product_id, char **media_code1, char **media_code2,
+                             char **book_type, int flag);
 
 
 /* ts A60910 (estimated) */
@@ -116,12 +116,12 @@ int mmc_start_if_needed(struct burn_drive *d, int flag);
 
 /* ts B00924 */
 int mmc_get_bd_spare_info(struct burn_drive *d,
-                                int *alloc_blocks, int *free_blocks, int flag);
+                          int *alloc_blocks, int *free_blocks, int flag);
 
 /* ts B10801 */
 int mmc_get_phys_format_info(struct burn_drive *d, int *disk_category,
-                        char **book_name, int *part_version, int *num_layers,
-                        int *num_blocks, int flag);
+                             char **book_name, int *part_version, int *num_layers,
+                             int *num_blocks, int flag);
 
 /* ts B11201 */
 int mmc_get_leadin_text(struct burn_drive *d,

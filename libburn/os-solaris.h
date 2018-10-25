@@ -50,7 +50,7 @@ SIGKILL, SIGCHLD, SIGSTOP, SIGTSTP, SIGCONT, SIGTTIN, SIGTTOU, SIGURG, SIGWINCH
    device enumeration.
 */
 struct burn_drive_enumerator_struct {
-	void *dir;
+    void *dir;
 };
 
 #define BURN_OS_DEFINE_DRIVE_ENUMERATOR_T \

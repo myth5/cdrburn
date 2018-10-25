@@ -1,7 +1,7 @@
 
 /* sg.c
    Switcher for operating system dependent transport level modules of libburn.
-   Copyright (C) 2009 - 2016 Thomas Schmitt <scdbackup@gmx.net>, 
+   Copyright (C) 2009 - 2016 Thomas Schmitt <scdbackup@gmx.net>,
    provided under GPLv2+
 */
 
@@ -67,17 +67,17 @@
 */
 static int intentional_compiler_warning(void)
 {
- int INTENTIONAL_COMPILER_WARNING_;
- int Cannot_recognize_supported_operating_system_;
- int Like_GNU_Linux_or_FreeBSD_or_Solaris_or_NetBSD_;
- int Have_to_use_dummy_MMC_transport_adapter_;
- int This_libburn_will_not_be_able_to_operate_on_real_CD_drives;
- int Have_to_use_dummy_MMC_transport_adapter;
- int Like_GNU_Linux_or_FreeBSD_or_Solaris_or_NetBSD;
- int Cannot_recognize_supported_operating_system;
- int INTENTIONAL_COMPILER_WARNING;
+    int INTENTIONAL_COMPILER_WARNING_;
+    int Cannot_recognize_supported_operating_system_;
+    int Like_GNU_Linux_or_FreeBSD_or_Solaris_or_NetBSD_;
+    int Have_to_use_dummy_MMC_transport_adapter_;
+    int This_libburn_will_not_be_able_to_operate_on_real_CD_drives;
+    int Have_to_use_dummy_MMC_transport_adapter;
+    int Like_GNU_Linux_or_FreeBSD_or_Solaris_or_NetBSD;
+    int Cannot_recognize_supported_operating_system;
+    int INTENTIONAL_COMPILER_WARNING;
 
- return(0);
+    return(0);
 }
 
 #include "sg-dummy.c"

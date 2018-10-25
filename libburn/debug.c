@@ -22,7 +22,7 @@ static int burn_verbosity = 0;
 
 void burn_set_verbosity(int v)
 {
-	burn_verbosity = v;
+    burn_verbosity = v;
 }
 
 

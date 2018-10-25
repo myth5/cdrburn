@@ -4,12 +4,12 @@
 /* Provided under GPL, see also "License and copyright aspects" at file end */
 
 
-/**                               Overview 
-  
+/**                               Overview
+
   libburner is a minimal demo application for the library libburn as provided
   on  http://libburnia-project.org . It can list the available devices, can
   blank a CD-RW or DVD-RW, can format DVD-RW and BD, can burn to CD-R,
-  CD-RW, DVD-R, DVD+R, DVD+R/DL, DVD+RW, DVD-RW, DVD-RAM, BD-R, BD-RE. 
+  CD-RW, DVD-R, DVD+R, DVD+R/DL, DVD+RW, DVD-RW, DVD-RAM, BD-R, BD-RE.
   Not supported yet: DVD-R/DL.
 
   It's main purpose, nevertheless, is to show you how to use libburn and also
@@ -18,11 +18,11 @@
   stay upward compatible for a good while.
   There is another demo program, test/telltoc.c, which inspects drive, media
   state, and media contents.
-  
+
   Before you can do anything, you have to initialize libburn by
      burn_initialize()
   and provide some signal and abort handling, e.g. by the builtin handler, by
-     burn_set_signal_handling("libburner : ", NULL, 0x0) 
+     burn_set_signal_handling("libburner : ", NULL, 0x0)
   as it is done in main() at the end of this file.
   Then you acquire a drive in an appropriate way conforming to the API. The two
   main approaches are shown here in application functions:
@@ -124,19 +124,19 @@ int libburner_aquire_by_driveno(int *drive_no);
 */
 int libburner_aquire_drive(char *drive_adr, int *driveno)
 {
-	int ret;
+    int ret;
 
-	if(drive_adr != NULL && drive_adr[0] != 0)
-		ret = libburner_aquire_by_adr(drive_adr);
-	else
-		ret = libburner_aquire_by_driveno(driveno);
-	if (ret <= 0 || *driveno <= 0)
-		return ret;
-	burn_disc_get_profile(drive_list[0].drive, &current_profile,
-				 current_profile_name);
-	if (current_profile_name[0])
-		printf("Detected media type: %s\n", current_profile_name);
-	return 1;
+    if(drive_adr != NULL && drive_adr[0] != 0)
+        ret = libburner_aquire_by_adr(drive_adr);
+    else
+        ret = libburner_aquire_by_driveno(driveno);
+    if (ret <= 0 || *driveno <= 0)
+        return ret;
+    burn_disc_get_profile(drive_list[0].drive, &current_profile,
+                          current_profile_name);
+    if (current_profile_name[0])
+        printf("Detected media type: %s\n", current_profile_name);
+    return 1;
 }
 
 
@@ -146,34 +146,34 @@ int libburner_aquire_drive(char *drive_adr, int *driveno)
 */
 int libburner_aquire_by_adr(char *drive_adr)
 {
-	int ret;
-	char libburn_drive_adr[BURN_DRIVE_ADR_LEN];
+    int ret;
+    char libburn_drive_adr[BURN_DRIVE_ADR_LEN];
 
-	/* Some not-so-harmless drive addresses get blocked in this demo */
-	if (strncmp(drive_adr, "stdio:/dev/fd/", 14) == 0 ||
-		strcmp(drive_adr, "stdio:-") == 0) {
-		fprintf(stderr, "Will not work with pseudo-drive '%s'\n",
-			drive_adr);
-		return 0;
-	}
+    /* Some not-so-harmless drive addresses get blocked in this demo */
+    if (strncmp(drive_adr, "stdio:/dev/fd/", 14) == 0 ||
+            strcmp(drive_adr, "stdio:-") == 0) {
+        fprintf(stderr, "Will not work with pseudo-drive '%s'\n",
+                drive_adr);
+        return 0;
+    }
 
-	/* This tries to resolve links or alternative device files */
-	ret = burn_drive_convert_fs_adr(drive_adr, libburn_drive_adr);	
-	if (ret<=0) {
-		fprintf(stderr, "Address does not lead to a CD burner: '%s'\n",
-				 drive_adr);
-		return 0;
-	}
-	fprintf(stderr,"Aquiring drive '%s' ...\n", libburn_drive_adr);
-	ret = burn_drive_scan_and_grab(&drive_list, libburn_drive_adr, 1);
-	if (ret <= 0) {
-		fprintf(stderr,"FAILURE with persistent drive address  '%s'\n",
-			libburn_drive_adr);
-	} else {
-		fprintf(stderr,"Done\n");
-		drive_is_grabbed = 1;
-	}
-	return ret;
+    /* This tries to resolve links or alternative device files */
+    ret = burn_drive_convert_fs_adr(drive_adr, libburn_drive_adr);
+    if (ret<=0) {
+        fprintf(stderr, "Address does not lead to a CD burner: '%s'\n",
+                drive_adr);
+        return 0;
+    }
+    fprintf(stderr,"Aquiring drive '%s' ...\n", libburn_drive_adr);
+    ret = burn_drive_scan_and_grab(&drive_list, libburn_drive_adr, 1);
+    if (ret <= 0) {
+        fprintf(stderr,"FAILURE with persistent drive address  '%s'\n",
+                libburn_drive_adr);
+    } else {
+        fprintf(stderr,"Done\n");
+        drive_is_grabbed = 1;
+    }
+    return ret;
 }
 
 
@@ -191,96 +191,96 @@ int libburner_aquire_by_adr(char *drive_adr)
 */
 int libburner_aquire_by_driveno(int *driveno)
 {
-	char adr[BURN_DRIVE_ADR_LEN];
-	int ret, i;
+    char adr[BURN_DRIVE_ADR_LEN];
+    int ret, i;
 
-	printf("Beginning to scan for devices ...\n");
-	while (!burn_drive_scan(&drive_list, &drive_count))
-		usleep(100002);
-	if (drive_count <= 0 && *driveno >= 0) {
-		printf("FAILED (no drives found)\n");
-		return 0;
-	}
-	printf("Done\n");
+    printf("Beginning to scan for devices ...\n");
+    while (!burn_drive_scan(&drive_list, &drive_count))
+        usleep(100002);
+    if (drive_count <= 0 && *driveno >= 0) {
+        printf("FAILED (no drives found)\n");
+        return 0;
+    }
+    printf("Done\n");
 
-	/*
-	Interactive programs may choose the drive number at this moment.
+    /*
+    Interactive programs may choose the drive number at this moment.
 
-	drive[0] to drive[drive_count-1] are struct burn_drive_info
-	as defined in  libburn/libburn.h  . This structure is part of API
-	and thus will strive for future compatibility on source level.
-	Have a look at the info offered.
-	Caution: do not take .location for drive address. Always use
-		burn_drive_get_adr() or you might become incompatible
-		in future.
-	Note: bugs with struct burn_drive_info - if any - will not be
-		easy to fix. Please report them but also strive for
-		workarounds on application level.
-	*/
-	printf("\nOverview of accessible drives (%d found) :\n",
-		drive_count);
-	printf("-----------------------------------------------------------------------------\n");
-	for (i = 0; i < (int) drive_count; i++) {
-		if (burn_drive_get_adr(&(drive_list[i]), adr) <=0)
-			strcpy(adr, "-get_adr_failed-");
-		printf("%d  --drive '%s'  :  '%s'  '%s'\n",
-			i,adr,drive_list[i].vendor,drive_list[i].product);
-	}
-	printf("-----------------------------------------------------------------------------\n\n");
+    drive[0] to drive[drive_count-1] are struct burn_drive_info
+    as defined in  libburn/libburn.h  . This structure is part of API
+    and thus will strive for future compatibility on source level.
+    Have a look at the info offered.
+    Caution: do not take .location for drive address. Always use
+    	burn_drive_get_adr() or you might become incompatible
+    	in future.
+    Note: bugs with struct burn_drive_info - if any - will not be
+    	easy to fix. Please report them but also strive for
+    	workarounds on application level.
+    */
+    printf("\nOverview of accessible drives (%d found) :\n",
+           drive_count);
+    printf("-----------------------------------------------------------------------------\n");
+    for (i = 0; i < (int) drive_count; i++) {
+        if (burn_drive_get_adr(&(drive_list[i]), adr) <=0)
+            strcpy(adr, "-get_adr_failed-");
+        printf("%d  --drive '%s'  :  '%s'  '%s'\n",
+               i,adr,drive_list[i].vendor,drive_list[i].product);
+    }
+    printf("-----------------------------------------------------------------------------\n\n");
 
-	/*
-	On multi-drive systems save yourself from sysadmins' revenge.
+    /*
+    On multi-drive systems save yourself from sysadmins' revenge.
 
-	Be aware that you hold reserved all available drives at this point.
-	So either make your choice quick enough not to annoy other system
-	users, or set free the drives for a while.
+    Be aware that you hold reserved all available drives at this point.
+    So either make your choice quick enough not to annoy other system
+    users, or set free the drives for a while.
 
-	The tested way of setting free all drives is to shutdown the library
-	and to restart when the choice has been made. The list of selectable
-	drives should also hold persistent drive addresses as obtained
-	above by burn_drive_get_adr(). By such an address one may use
-	burn_drive_scan_and_grab() to finally acquire exactly one drive.
+    The tested way of setting free all drives is to shutdown the library
+    and to restart when the choice has been made. The list of selectable
+    drives should also hold persistent drive addresses as obtained
+    above by burn_drive_get_adr(). By such an address one may use
+    burn_drive_scan_and_grab() to finally acquire exactly one drive.
 
-	A not yet tested shortcut should be to call burn_drive_info_free()
-	and to call either burn_drive_scan() or burn_drive_scan_and_grab()
-	before accessing any drives again.
+    A not yet tested shortcut should be to call burn_drive_info_free()
+    and to call either burn_drive_scan() or burn_drive_scan_and_grab()
+    before accessing any drives again.
 
-	In both cases you have to be aware that the desired drive might get
-	acquired in the meantime by another user or libburn process.
-	*/
+    In both cases you have to be aware that the desired drive might get
+    acquired in the meantime by another user or libburn process.
+    */
 
-	/* We already made our choice via command line. (default is 0)
-	   So we just have to keep our desired drive and drop all others.
-	   No other libburn instance will have a chance to steal our drive.
-	 */
-	if (*driveno < 0) {
-		printf("Pseudo-drive \"-\" given : bus scanning done.\n");
-		return 2; /* the program will end after this */
-	}
-	if ((int) drive_count <= *driveno) {
-		fprintf(stderr,
-			"Found only %d drives. Number %d not available.\n",
-			drive_count, *driveno);
-		return 0; /* the program will end after this */
-	}
+    /* We already made our choice via command line. (default is 0)
+       So we just have to keep our desired drive and drop all others.
+       No other libburn instance will have a chance to steal our drive.
+     */
+    if (*driveno < 0) {
+        printf("Pseudo-drive \"-\" given : bus scanning done.\n");
+        return 2; /* the program will end after this */
+    }
+    if ((int) drive_count <= *driveno) {
+        fprintf(stderr,
+                "Found only %d drives. Number %d not available.\n",
+                drive_count, *driveno);
+        return 0; /* the program will end after this */
+    }
 
-	/* Drop all drives which we do not want to use */
-	for (i = 0; i < (int) drive_count; i++) {
-		if (i == *driveno) /* the one drive we want to keep */
-	continue;
-		ret = burn_drive_info_forget(&(drive_list[i]),0);
-		if (ret != 1)
-			fprintf(stderr, "Cannot drop drive %d. Please report \"ret=%d\" to libburn-hackers@pykix.org\n",
-				i, ret);
-		else
-			printf("Dropped unwanted drive %d\n",i);
-	}
-	/* Make the one we want ready for blanking or burning */
-	ret= burn_drive_grab(drive_list[*driveno].drive, 1);
-	if (ret != 1)
-		return 0;
-	drive_is_grabbed = 1;
-	return 1;
+    /* Drop all drives which we do not want to use */
+    for (i = 0; i < (int) drive_count; i++) {
+        if (i == *driveno) /* the one drive we want to keep */
+            continue;
+        ret = burn_drive_info_forget(&(drive_list[i]),0);
+        if (ret != 1)
+            fprintf(stderr, "Cannot drop drive %d. Please report \"ret=%d\" to libburn-hackers@pykix.org\n",
+                    i, ret);
+        else
+            printf("Dropped unwanted drive %d\n",i);
+    }
+    /* Make the one we want ready for blanking or burning */
+    ret= burn_drive_grab(drive_list[*driveno].drive, 1);
+    if (ret != 1)
+        return 0;
+    drive_is_grabbed = 1;
+    return 1;
 }
 
 
@@ -294,56 +294,56 @@ int libburner_aquire_by_driveno(int *driveno)
 */
 int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 {
-	enum burn_disc_status disc_state;
-	struct burn_progress p;
-	double percent = 1.0;
+    enum burn_disc_status disc_state;
+    struct burn_progress p;
+    double percent = 1.0;
 
-	disc_state = burn_disc_get_status(drive);
-	printf(
-	    "Drive media status:  %d  (see  libburn/libburn.h  BURN_DISC_*)\n",
-	    disc_state);
-	if (current_profile == 0x13) {
-		; /* formatted DVD-RW will get blanked to sequential state */
-	} else if (disc_state == BURN_DISC_BLANK) {
-		fprintf(stderr,
-		  "IDLE: Blank media detected. Will leave it untouched\n");
-		return 2;
-	} else if (disc_state == BURN_DISC_FULL ||
-		   disc_state == BURN_DISC_APPENDABLE) {
-		; /* this is what libburner is willing to blank */
-	} else if (disc_state == BURN_DISC_EMPTY) {
-		fprintf(stderr,"FATAL: No media detected in drive\n");
-		return 0;
-	} else {
-		fprintf(stderr,
-			"FATAL: Unsuitable drive and media state\n");
-		return 0;
-	}
-	if(!burn_disc_erasable(drive)) {
-		fprintf(stderr,
-			"FATAL : Media is not of erasable type\n");
-		return 0;
-	}
-	/* Switch to asynchronous signal handling for the time of waiting */
-	burn_set_signal_handling("libburner : ", NULL, 0x30);
+    disc_state = burn_disc_get_status(drive);
+    printf(
+        "Drive media status:  %d  (see  libburn/libburn.h  BURN_DISC_*)\n",
+        disc_state);
+    if (current_profile == 0x13) {
+        ; /* formatted DVD-RW will get blanked to sequential state */
+    } else if (disc_state == BURN_DISC_BLANK) {
+        fprintf(stderr,
+                "IDLE: Blank media detected. Will leave it untouched\n");
+        return 2;
+    } else if (disc_state == BURN_DISC_FULL ||
+               disc_state == BURN_DISC_APPENDABLE) {
+        ; /* this is what libburner is willing to blank */
+    } else if (disc_state == BURN_DISC_EMPTY) {
+        fprintf(stderr,"FATAL: No media detected in drive\n");
+        return 0;
+    } else {
+        fprintf(stderr,
+                "FATAL: Unsuitable drive and media state\n");
+        return 0;
+    }
+    if(!burn_disc_erasable(drive)) {
+        fprintf(stderr,
+                "FATAL : Media is not of erasable type\n");
+        return 0;
+    }
+    /* Switch to asynchronous signal handling for the time of waiting */
+    burn_set_signal_handling("libburner : ", NULL, 0x30);
 
-	printf("Beginning to %s-blank media.\n", (blank_fast?"fast":"full"));
-	burn_disc_erase(drive, blank_fast);
+    printf("Beginning to %s-blank media.\n", (blank_fast?"fast":"full"));
+    burn_disc_erase(drive, blank_fast);
 
-	sleep(1);
-	while (burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
-		if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
-			percent = 1.0 + ((double) p.sector+1.0)
-					 / ((double) p.sectors) * 98.0;
-		printf("Blanking  ( %.1f%% done )\n", percent);
-		sleep(1);
-	}
-	if (burn_is_aborting(0) > 0)
-		return -1;
-	/* Back to synchronous handling */
-	burn_set_signal_handling("libburner : ", NULL, 0x0);
-	printf("Done\n");
-	return 1;
+    sleep(1);
+    while (burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
+        if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
+            percent = 1.0 + ((double) p.sector+1.0)
+                      / ((double) p.sectors) * 98.0;
+        printf("Blanking  ( %.1f%% done )\n", percent);
+        sleep(1);
+    }
+    if (burn_is_aborting(0) > 0)
+        return -1;
+    /* Back to synchronous handling */
+    burn_set_signal_handling("libburner : ", NULL, 0x0);
+    printf("Done\n");
+    return 1;
 }
 
 
@@ -361,66 +361,66 @@ int libburner_blank_disc(struct burn_drive *drive, int blank_fast)
 */
 int libburner_format(struct burn_drive *drive)
 {
-	struct burn_progress p;
-	double percent = 1.0;
-	int ret, status, num_formats, format_flag= 0;
-	off_t size = 0;
-	unsigned dummy;
-	enum burn_disc_status disc_state;
+    struct burn_progress p;
+    double percent = 1.0;
+    int ret, status, num_formats, format_flag= 0;
+    off_t size = 0;
+    unsigned dummy;
+    enum burn_disc_status disc_state;
 
-	if (current_profile == 0x13) {
-		fprintf(stderr, "IDLE: DVD-RW media is already formatted\n");
-		return 2;
-	} else if (current_profile == 0x41 || current_profile == 0x43) {
-		disc_state = burn_disc_get_status(drive);
-		if (disc_state != BURN_DISC_BLANK && current_profile == 0x41) {
-			fprintf(stderr,
-				"FATAL: BD-R is not blank. Cannot format.\n");
-			return 0;
-		}
-		ret = burn_disc_get_formats(drive, &status, &size, &dummy,
-								&num_formats);
-		if (ret > 0 && status != BURN_FORMAT_IS_UNFORMATTED) {
-			fprintf(stderr,
-				"IDLE: BD media is already formatted\n");
-			return 2;
-		}
-		size = 0;           /* does not really matter */
-		format_flag = 3<<1; /* format to default size, no quick */
-	} else if (current_profile == 0x14) { /* sequential DVD-RW */
-		size = 128 * 1024 * 1024;
-		format_flag = 1; /* write initial 128 MiB */
-	} else {
-		fprintf(stderr, "FATAL: Can only format DVD-RW or BD\n");
-		return 0;
-	}
-	burn_set_signal_handling("libburner : ", NULL, 0x30);
+    if (current_profile == 0x13) {
+        fprintf(stderr, "IDLE: DVD-RW media is already formatted\n");
+        return 2;
+    } else if (current_profile == 0x41 || current_profile == 0x43) {
+        disc_state = burn_disc_get_status(drive);
+        if (disc_state != BURN_DISC_BLANK && current_profile == 0x41) {
+            fprintf(stderr,
+                    "FATAL: BD-R is not blank. Cannot format.\n");
+            return 0;
+        }
+        ret = burn_disc_get_formats(drive, &status, &size, &dummy,
+                                    &num_formats);
+        if (ret > 0 && status != BURN_FORMAT_IS_UNFORMATTED) {
+            fprintf(stderr,
+                    "IDLE: BD media is already formatted\n");
+            return 2;
+        }
+        size = 0;           /* does not really matter */
+        format_flag = 3<<1; /* format to default size, no quick */
+    } else if (current_profile == 0x14) { /* sequential DVD-RW */
+        size = 128 * 1024 * 1024;
+        format_flag = 1; /* write initial 128 MiB */
+    } else {
+        fprintf(stderr, "FATAL: Can only format DVD-RW or BD\n");
+        return 0;
+    }
+    burn_set_signal_handling("libburner : ", NULL, 0x30);
 
-	printf("Beginning to format media.\n");
-	burn_disc_format(drive, size, format_flag);
+    printf("Beginning to format media.\n");
+    burn_disc_format(drive, size, format_flag);
 
-	sleep(1);
-	while (burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
-		if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
-			percent = 1.0 + ((double) p.sector+1.0)
-					 / ((double) p.sectors) * 98.0;
-		printf("Formatting  ( %.1f%% done )\n", percent);
-		sleep(1);
-	}
-	if (burn_is_aborting(0) > 0)
-		return -1;
-	burn_set_signal_handling("libburner : ", NULL, 0x0);
-	burn_disc_get_profile(drive_list[0].drive, &current_profile,
-				 current_profile_name);
-	if (current_profile == 0x14 || current_profile == 0x13)
-		printf("Media type now: %4.4xh  \"%s\"\n",
-				 current_profile, current_profile_name);
-	if (current_profile == 0x14) {
-		fprintf(stderr,
-		  "FATAL: Failed to change media profile to desired value\n");
-		return 0;
-	}
-	return 1;
+    sleep(1);
+    while (burn_drive_get_status(drive, &p) != BURN_DRIVE_IDLE) {
+        if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
+            percent = 1.0 + ((double) p.sector+1.0)
+                      / ((double) p.sectors) * 98.0;
+        printf("Formatting  ( %.1f%% done )\n", percent);
+        sleep(1);
+    }
+    if (burn_is_aborting(0) > 0)
+        return -1;
+    burn_set_signal_handling("libburner : ", NULL, 0x0);
+    burn_disc_get_profile(drive_list[0].drive, &current_profile,
+                          current_profile_name);
+    if (current_profile == 0x14 || current_profile == 0x13)
+        printf("Media type now: %4.4xh  \"%s\"\n",
+               current_profile, current_profile_name);
+    if (current_profile == 0x14) {
+        fprintf(stderr,
+                "FATAL: Failed to change media profile to desired value\n");
+        return 0;
+    }
+    return 1;
 }
 
 
@@ -436,196 +436,215 @@ int libburner_format(struct burn_drive *drive)
     In case of external signals expect abort handling of an ongoing burn to
     last up to a minute. Wait the normal burning timespan before any kill -9.
 */
-int libburner_payload(struct burn_drive *drive, 
-		      char source_adr[][4096], int source_adr_count,
-		      int multi, int simulate_burn, int all_tracks_type)
+int libburner_payload(struct burn_drive *drive,
+                      char source_adr[][4096], int source_adr_count,
+                      int multi, int simulate_burn, int all_tracks_type)
 {
-	struct burn_source *data_src = NULL, *fifo_src[99];
-	struct burn_disc *target_disc = NULL;
-	struct burn_session *session = NULL;
-	struct burn_write_opts *burn_options = NULL;
-	enum burn_disc_status disc_state;
-	struct burn_track *track, *tracklist[99];
-	struct burn_progress progress;
-	time_t start_time;
-	int last_sector = 0, padding = 0, trackno, unpredicted_size = 0, fd;
-	int fifo_chunksize = 2352, fifo_chunks = 1783; /* ~ 4 MB fifo */
-	int ret;
-	off_t fixed_size;
-	char *adr, reasons[BURN_REASONS_LEN];
-	struct stat stbuf;
+    struct burn_source *data_src = NULL, *fifo_src[99];
+    struct burn_disc *target_disc = NULL;
+    struct burn_session *session = NULL;
+    struct burn_write_opts *burn_options = NULL;
+    enum burn_disc_status disc_state;
+    struct burn_track *track, *tracklist[99];
+    struct burn_progress progress;
+    time_t start_time;
+    int last_sector = 0, padding = 0, trackno, unpredicted_size = 0, fd;
+    int fifo_chunksize = 2352, fifo_chunks = 1783; /* ~ 4 MB fifo */
+    int ret;
+    off_t fixed_size;
+    char *adr, reasons[BURN_REASONS_LEN];
+    struct stat stbuf;
 
-	for (trackno = 0 ; trackno < source_adr_count; trackno++) {
-		fifo_src[trackno] = NULL;
-		tracklist[trackno] = NULL;
-	}
+    for (trackno = 0 ; trackno < source_adr_count; trackno++) {
+        fifo_src[trackno] = NULL;
+        tracklist[trackno] = NULL;
+    }
 
-	if (all_tracks_type != BURN_AUDIO) {
-		all_tracks_type = BURN_MODE1;
-		/* a padding of 300 kiB helps to avoid the read-ahead bug */
-		padding = 300*1024;
-		fifo_chunksize = 2048;
-		fifo_chunks = 2048; /* 4 MB fifo */
-	}
+    if (all_tracks_type != BURN_AUDIO) {
+        all_tracks_type = BURN_MODE1;
+        /* a padding of 300 kiB helps to avoid the read-ahead bug */
+        padding = 300*1024;
+        fifo_chunksize = 2048;
+        fifo_chunks = 2048; /* 4 MB fifo */
+    }
 
-	target_disc = burn_disc_create();
-	session = burn_session_create();
-	burn_disc_add_session(target_disc, session, BURN_POS_END);
+    target_disc = burn_disc_create();
+    session = burn_session_create();
+    burn_disc_add_session(target_disc, session, BURN_POS_END);
 
-	for (trackno = 0 ; trackno < source_adr_count; trackno++) {
-	  tracklist[trackno] = track = burn_track_create();
-	  burn_track_define_data(track, 0, padding, 1, all_tracks_type);
+    for (trackno = 0 ; trackno < source_adr_count; trackno++) {
+        tracklist[trackno] = track = burn_track_create();
+        burn_track_define_data(track, 0, padding, 1, all_tracks_type);
 
-	  /* Open file descriptor to source of track data */
-	  adr = source_adr[trackno];
-	  fixed_size = 0;
-	  if (adr[0] == '-' && adr[1] == 0) {
-		fd = 0;
-	  } else {
-		fd = open(adr, O_RDONLY);
-		if (fd>=0)
-			if (fstat(fd,&stbuf)!=-1)
-				if((stbuf.st_mode&S_IFMT)==S_IFREG)
-					fixed_size = stbuf.st_size;
-	  }
-	  if (fixed_size==0)
-		unpredicted_size = 1;
+        /* Open file descriptor to source of track data */
+        adr = source_adr[trackno];
+        fixed_size = 0;
+        if (adr[0] == '-' && adr[1] == 0) {
+            fd = 0;
+        } else {
+            fd = open(adr, O_RDONLY);
+            if (fd>=0)
+                if (fstat(fd,&stbuf)!=-1)
+                    if((stbuf.st_mode&S_IFMT)==S_IFREG)
+                        fixed_size = stbuf.st_size;
+        }
+        if (fixed_size==0)
+            unpredicted_size = 1;
 
-	  /* Convert this filedescriptor into a burn_source object */
-	  data_src = NULL;
-	  if (fd >= 0)
-	  	data_src = burn_fd_source_new(fd, -1, fixed_size);
-	  if (data_src == NULL) {
-		fprintf(stderr,
-		       "FATAL: Could not open data source '%s'.\n",adr);
-		if(errno!=0)
-			fprintf(stderr,"(Most recent system error: %s )\n",
-				strerror(errno));
-		{ret = 0; goto ex;}
-	  }
-	  /* Install a fifo object on top of that data source object */
-	  fifo_src[trackno] = burn_fifo_source_new(data_src,
-					fifo_chunksize, fifo_chunks, 0);
-	  if (fifo_src[trackno] == NULL) {
-		fprintf(stderr,
-			"FATAL: Could not create fifo object of 4 MB\n");
-		{ret = 0; goto ex;}
-	  }
+        /* Convert this filedescriptor into a burn_source object */
+        data_src = NULL;
+        if (fd >= 0)
+            data_src = burn_fd_source_new(fd, -1, fixed_size);
+        if (data_src == NULL) {
+            fprintf(stderr,
+                    "FATAL: Could not open data source '%s'.\n",adr);
+            if(errno!=0)
+                fprintf(stderr,"(Most recent system error: %s )\n",
+                        strerror(errno));
+            {
+                ret = 0;
+                goto ex;
+            }
+        }
+        /* Install a fifo object on top of that data source object */
+        fifo_src[trackno] = burn_fifo_source_new(data_src,
+                            fifo_chunksize, fifo_chunks, 0);
+        if (fifo_src[trackno] == NULL) {
+            fprintf(stderr,
+                    "FATAL: Could not create fifo object of 4 MB\n");
+            {
+                ret = 0;
+                goto ex;
+            }
+        }
 
-	  /* Use the fifo object as data source for the track */
-	  if (burn_track_set_source(track, fifo_src[trackno])
-							 != BURN_SOURCE_OK) {
-		fprintf(stderr,
-		       "FATAL: Cannot attach source object to track object\n");
-		{ret = 0; goto ex;}
-	  }
+        /* Use the fifo object as data source for the track */
+        if (burn_track_set_source(track, fifo_src[trackno])
+                != BURN_SOURCE_OK) {
+            fprintf(stderr,
+                    "FATAL: Cannot attach source object to track object\n");
+            {
+                ret = 0;
+                goto ex;
+            }
+        }
 
-	  burn_session_add_track(session, track, BURN_POS_END);
-	  printf("Track %d : source is '%s'\n", trackno+1, adr);
+        burn_session_add_track(session, track, BURN_POS_END);
+        printf("Track %d : source is '%s'\n", trackno+1, adr);
 
-	  /* Give up local reference to the data burn_source object */
-	  burn_source_free(data_src);
-	  data_src = NULL;
-	  
-	} /* trackno loop end */
+        /* Give up local reference to the data burn_source object */
+        burn_source_free(data_src);
+        data_src = NULL;
 
-	/* Evaluate drive and media */
-	disc_state = burn_disc_get_status(drive);
-	if (disc_state != BURN_DISC_BLANK &&
-	    disc_state != BURN_DISC_APPENDABLE) {
-		if (disc_state == BURN_DISC_FULL) {
-			fprintf(stderr, "FATAL: Closed media with data detected. Need blank or appendable media.\n");
-			if (burn_disc_erasable(drive))
-				fprintf(stderr, "HINT: Try --blank_fast\n\n");
-		} else if (disc_state == BURN_DISC_EMPTY) 
-			fprintf(stderr,"FATAL: No media detected in drive\n");
-		else
-			fprintf(stderr,
-			 "FATAL: Cannot recognize state of drive and media\n");
-		{ret = 0; goto ex;}
-	}
+    } /* trackno loop end */
 
-	burn_options = burn_write_opts_new(drive);
-	burn_write_opts_set_perform_opc(burn_options, 0);
-	burn_write_opts_set_multi(burn_options, !!multi);
-	if(simulate_burn)
-		printf("\n*** Will TRY to SIMULATE burning ***\n\n");
-	burn_write_opts_set_simulate(burn_options, simulate_burn);
-	burn_drive_set_speed(drive, 0, 0);
-	burn_write_opts_set_underrun_proof(burn_options, 1);
-	if (burn_write_opts_auto_write_type(burn_options, target_disc,
-					reasons, 0) == BURN_WRITE_NONE) {
-		fprintf(stderr, "FATAL: Failed to find a suitable write mode with this media.\n");
-		fprintf(stderr, "Reasons given:\n%s\n", reasons);
-		{ret = 0; goto ex;}
-	}
-	burn_set_signal_handling("libburner : ", NULL, 0x30);
+    /* Evaluate drive and media */
+    disc_state = burn_disc_get_status(drive);
+    if (disc_state != BURN_DISC_BLANK &&
+            disc_state != BURN_DISC_APPENDABLE) {
+        if (disc_state == BURN_DISC_FULL) {
+            fprintf(stderr, "FATAL: Closed media with data detected. Need blank or appendable media.\n");
+            if (burn_disc_erasable(drive))
+                fprintf(stderr, "HINT: Try --blank_fast\n\n");
+        } else if (disc_state == BURN_DISC_EMPTY)
+            fprintf(stderr,"FATAL: No media detected in drive\n");
+        else
+            fprintf(stderr,
+                    "FATAL: Cannot recognize state of drive and media\n");
+        {
+            ret = 0;
+            goto ex;
+        }
+    }
 
-	printf("Burning starts. With e.g. 4x media expect up to a minute of zero progress.\n");
-	start_time = time(0);
-	burn_disc_write(burn_options, target_disc);
+    burn_options = burn_write_opts_new(drive);
+    burn_write_opts_set_perform_opc(burn_options, 0);
+    burn_write_opts_set_multi(burn_options, !!multi);
+    if(simulate_burn)
+        printf("\n*** Will TRY to SIMULATE burning ***\n\n");
+    burn_write_opts_set_simulate(burn_options, simulate_burn);
+    burn_drive_set_speed(drive, 0, 0);
+    burn_write_opts_set_underrun_proof(burn_options, 1);
+    if (burn_write_opts_auto_write_type(burn_options, target_disc,
+                                        reasons, 0) == BURN_WRITE_NONE) {
+        fprintf(stderr, "FATAL: Failed to find a suitable write mode with this media.\n");
+        fprintf(stderr, "Reasons given:\n%s\n", reasons);
+        {
+            ret = 0;
+            goto ex;
+        }
+    }
+    burn_set_signal_handling("libburner : ", NULL, 0x30);
 
-	while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING)
-		usleep(100002);
-	while (burn_drive_get_status(drive, &progress) != BURN_DRIVE_IDLE) {
-		if (progress.sectors <= 0 ||
-		    (progress.sector >= progress.sectors - 1 &&
-	             !unpredicted_size) ||
-		    (unpredicted_size && progress.sector == last_sector))
-			printf(
-			     "Thank you for being patient since %d seconds.",
-			     (int) (time(0) - start_time));
-		else if(unpredicted_size)
-			printf("Track %d : sector %d", progress.track+1,
-				progress.sector);
-		else
-			printf("Track %d : sector %d of %d",progress.track+1,
-				progress.sector, progress.sectors);
-		last_sector = progress.sector;
-		if (progress.track >= 0 && progress.track < source_adr_count) {
-			int size, free_bytes, ret;
-			char *status_text;
-	
-			ret = burn_fifo_inquire_status(
-				fifo_src[progress.track], &size, &free_bytes,
-				&status_text);
-			if (ret >= 0 ) 
-				printf("  [fifo %s, %2d%% fill]", status_text,
-					(int) (100.0 - 100.0 *
-						((double) free_bytes) /
-						(double) size));
-		} 
-		printf("\n");
-		sleep(1);
-	}
-	printf("\n");
+    printf("Burning starts. With e.g. 4x media expect up to a minute of zero progress.\n");
+    start_time = time(0);
+    burn_disc_write(burn_options, target_disc);
 
-	if (burn_is_aborting(0) > 0)
-		{ret = -1; goto ex;}
-	if (multi && current_profile != 0x1a && current_profile != 0x13 &&
-		current_profile != 0x12 && current_profile != 0x43) 
-			/* not with DVD+RW, formatted DVD-RW, DVD-RAM, BD-RE */
-		printf("NOTE: Media left appendable.\n");
-	if (simulate_burn)
-		printf("\n*** Did TRY to SIMULATE burning ***\n\n");
-	ret = 1;
-ex:;
-	/* Dispose objects */
-	if (burn_options != NULL)
-		burn_write_opts_free(burn_options);
-	for (trackno = 0 ; trackno < source_adr_count; trackno++) {
-		if (fifo_src[trackno] != NULL)
-	  		burn_source_free(fifo_src[trackno]);
-		if (tracklist[trackno])
-			burn_track_free(tracklist[trackno]);
-	}
-	if (data_src != NULL)
-		burn_source_free(data_src);
-	if (session != NULL)
-		burn_session_free(session);
-	if (target_disc != NULL)
-		burn_disc_free(target_disc);
-	return ret;
+    while (burn_drive_get_status(drive, NULL) == BURN_DRIVE_SPAWNING)
+        usleep(100002);
+    while (burn_drive_get_status(drive, &progress) != BURN_DRIVE_IDLE) {
+        if (progress.sectors <= 0 ||
+                (progress.sector >= progress.sectors - 1 &&
+                 !unpredicted_size) ||
+                (unpredicted_size && progress.sector == last_sector))
+            printf(
+                "Thank you for being patient since %d seconds.",
+                (int) (time(0) - start_time));
+        else if(unpredicted_size)
+            printf("Track %d : sector %d", progress.track+1,
+                   progress.sector);
+        else
+            printf("Track %d : sector %d of %d",progress.track+1,
+                   progress.sector, progress.sectors);
+        last_sector = progress.sector;
+        if (progress.track >= 0 && progress.track < source_adr_count) {
+            int size, free_bytes, ret;
+            char *status_text;
+
+            ret = burn_fifo_inquire_status(
+                      fifo_src[progress.track], &size, &free_bytes,
+                      &status_text);
+            if (ret >= 0 )
+                printf("  [fifo %s, %2d%% fill]", status_text,
+                       (int) (100.0 - 100.0 *
+                              ((double) free_bytes) /
+                              (double) size));
+        }
+        printf("\n");
+        sleep(1);
+    }
+    printf("\n");
+
+    if (burn_is_aborting(0) > 0)
+    {
+        ret = -1;
+        goto ex;
+    }
+    if (multi && current_profile != 0x1a && current_profile != 0x13 &&
+            current_profile != 0x12 && current_profile != 0x43)
+        /* not with DVD+RW, formatted DVD-RW, DVD-RAM, BD-RE */
+        printf("NOTE: Media left appendable.\n");
+    if (simulate_burn)
+        printf("\n*** Did TRY to SIMULATE burning ***\n\n");
+    ret = 1;
+ex:
+    ;
+    /* Dispose objects */
+    if (burn_options != NULL)
+        burn_write_opts_free(burn_options);
+    for (trackno = 0 ; trackno < source_adr_count; trackno++) {
+        if (fifo_src[trackno] != NULL)
+            burn_source_free(fifo_src[trackno]);
+        if (tracklist[trackno])
+            burn_track_free(tracklist[trackno]);
+    }
+    if (data_src != NULL)
+        burn_source_free(data_src);
+    if (session != NULL)
+        burn_session_free(session);
+    if (target_disc != NULL)
+        burn_disc_free(target_disc);
+    return ret;
 }
 
 
@@ -679,14 +698,14 @@ int libburner_setup(int argc, char **argv)
                 strcpy(drive_adr, argv[i]);
             }
         } else if ((!strcmp(argv[i], "--format_overwrite")) ||
-		   (!strcmp(argv[i], "--format"))) {
+                   (!strcmp(argv[i], "--format"))) {
             do_blank = 101;
 
         } else if (!strcmp(argv[i], "--multi")) {
-	    do_multi = 1;
+            do_multi = 1;
 
-	} else if (!strcmp(argv[i], "--stdin_size")) { /* obsoleted */
-	    i++;
+        } else if (!strcmp(argv[i], "--stdin_size")) { /* obsoleted */
+            i++;
 
         } else if (!strcmp(argv[i], "--try_to_simulate")) {
             simulate_burn = 1;
@@ -714,7 +733,7 @@ int libburner_setup(int argc, char **argv)
     if (driveno < 0)
         insuffient_parameters = 0;
     if (source_adr_count > 0)
-        insuffient_parameters = 0; 
+        insuffient_parameters = 0;
     if (do_blank)
         insuffient_parameters = 0;
     if (print_help || insuffient_parameters ) {
@@ -752,75 +771,89 @@ int libburner_setup(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	int ret;
+    int ret;
 
-	/* A warning to programmers who start their own projekt from here. */
-	if (sizeof(off_t) != 8) {
-		 fprintf(stderr,
-	   "\nFATAL: Compile time misconfiguration. off_t is not 64 bit.\n\n");
-		 exit(39);
-	}
+    /* A warning to programmers who start their own projekt from here. */
+    if (sizeof(off_t) != 8) {
+        fprintf(stderr,
+                "\nFATAL: Compile time misconfiguration. off_t is not 64 bit.\n\n");
+        exit(39);
+    }
 
-	ret = libburner_setup(argc, argv);
-	if (ret)
-		exit(ret);
+    ret = libburner_setup(argc, argv);
+    if (ret)
+        exit(ret);
 
-	printf("Initializing libburnia-project.org ...\n");
-	if (burn_initialize())
-		printf("Done\n");
-	else {
-		printf("FAILED\n");
-		fprintf(stderr,"\nFATAL: Failed to initialize.\n");
-		exit(33);
-	}
+    printf("Initializing libburnia-project.org ...\n");
+    if (burn_initialize())
+        printf("Done\n");
+    else {
+        printf("FAILED\n");
+        fprintf(stderr,"\nFATAL: Failed to initialize.\n");
+        exit(33);
+    }
 
-	/* Print messages of severity SORRY or more directly to stderr */
-	burn_msgs_set_severities("NEVER", "SORRY", "libburner : ");
+    /* Print messages of severity SORRY or more directly to stderr */
+    burn_msgs_set_severities("NEVER", "SORRY", "libburner : ");
 
-	/* Activate the synchronous signal handler which eventually will try to
-	   properly shutdown drive and library on aborting events. */
-	burn_set_signal_handling("libburner : ", NULL, 0x0);
+    /* Activate the synchronous signal handler which eventually will try to
+       properly shutdown drive and library on aborting events. */
+    burn_set_signal_handling("libburner : ", NULL, 0x0);
 
-	/** Note: driveno might change its value in this call */
-	ret = libburner_aquire_drive(drive_adr, &driveno);
-	if (ret<=0) {
-		fprintf(stderr,"\nFATAL: Failed to acquire drive.\n");
-		{ ret = 34; goto finish_libburn; }
-	}
-	if (ret == 2)
-		{ ret = 0; goto release_drive; }
-	if (do_blank) {
-		if (do_blank > 100)
-			ret = libburner_format(drive_list[driveno].drive);
-		else
-			ret = libburner_blank_disc(drive_list[driveno].drive,
-							do_blank == 1);
-		if (ret<=0)
-			{ ret = 36; goto release_drive; }
-	}
-	if (source_adr_count > 0) {
-		ret = libburner_payload(drive_list[driveno].drive,
-				source_adr, source_adr_count,
-				do_multi, simulate_burn, all_tracks_type);
-		if (ret<=0)
-			{ ret = 38; goto release_drive; }
-	}
-	ret = 0;
-release_drive:;
-	if (drive_is_grabbed)
-		burn_drive_release(drive_list[driveno].drive, 0);
+    /** Note: driveno might change its value in this call */
+    ret = libburner_aquire_drive(drive_adr, &driveno);
+    if (ret<=0) {
+        fprintf(stderr,"\nFATAL: Failed to acquire drive.\n");
+        {
+            ret = 34;
+            goto finish_libburn;
+        }
+    }
+    if (ret == 2)
+    {
+        ret = 0;
+        goto release_drive;
+    }
+    if (do_blank) {
+        if (do_blank > 100)
+            ret = libburner_format(drive_list[driveno].drive);
+        else
+            ret = libburner_blank_disc(drive_list[driveno].drive,
+                                       do_blank == 1);
+        if (ret<=0)
+        {
+            ret = 36;
+            goto release_drive;
+        }
+    }
+    if (source_adr_count > 0) {
+        ret = libburner_payload(drive_list[driveno].drive,
+                                source_adr, source_adr_count,
+                                do_multi, simulate_burn, all_tracks_type);
+        if (ret<=0)
+        {
+            ret = 38;
+            goto release_drive;
+        }
+    }
+    ret = 0;
+release_drive:
+    ;
+    if (drive_is_grabbed)
+        burn_drive_release(drive_list[driveno].drive, 0);
 
-finish_libburn:;
-	if (burn_is_aborting(0) > 0) {
-		burn_abort(4400, burn_abort_pacifier, "libburner : ");
-		fprintf(stderr,"\nlibburner run aborted\n");
-		exit(1);
-	} 
-	/* This app does not bother to know about exact scan state. 
-	   Better to accept a memory leak here. We are done anyway. */
-	/* burn_drive_info_free(drive_list); */
-	burn_finish();
-	exit(ret);
+finish_libburn:
+    ;
+    if (burn_is_aborting(0) > 0) {
+        burn_abort(4400, burn_abort_pacifier, "libburner : ");
+        fprintf(stderr,"\nlibburner run aborted\n");
+        exit(1);
+    }
+    /* This app does not bother to know about exact scan state.
+       Better to accept a memory leak here. We are done anyway. */
+    /* burn_drive_info_free(drive_list); */
+    burn_finish();
+    exit(ret);
 }
 
 

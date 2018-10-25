@@ -21,7 +21,7 @@
 
  -  #include "libburn/back_hacks.h" like you include "libburn/libburn.h"
 
- -  Set the libburn_back_hack_* variable of your choice to 1. 
+ -  Set the libburn_back_hack_* variable of your choice to 1.
     In your app. Not here.
 
  -  Then start and use libburn as usual. Watch out for results.
@@ -33,11 +33,11 @@
 
 /** Do not define this macro in your application. Only libburn/init.c is
     entitled to set it.
-*/ 
+*/
 #ifdef BURN_BACK_HACKS_INIT
 
 
-/** Corresponds to http://libburn.pykix.org/ticket/42 
+/** Corresponds to http://libburn.pykix.org/ticket/42
     Reinstates the old ban not to blank appendable CD-RW. We see no reason
     for this ban yet. It appears unusual. But maybe it patches a bug.
 */

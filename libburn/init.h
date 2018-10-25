@@ -13,7 +13,7 @@ extern int burn_running;
 extern double lib_start_time;
 
 /** Indicator for burn_drive_get_status() wether a signal hit parts of the
-    thread team. 
+    thread team.
     0= all works well ,
     1 to 5 = waiting for eventual signal on control thread
     > 5 = do abort now

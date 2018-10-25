@@ -15,7 +15,7 @@
 #ifndef LIBBURN_H
 #define LIBBURN_H
 
-/* 
+/*
 
 Applications must use 64 bit off_t. E.g. by defining
   #define _LARGEFILE_SOURCE
@@ -133,206 +133,206 @@ struct burn_write_opts;
 /** Possible disc writing style/modes */
 enum burn_write_types
 {
-	/** Packet writing.
-	      currently unsupported, (for DVD Incremental Streaming use TAO)
-	*/
-	BURN_WRITE_PACKET,
+    /** Packet writing.
+          currently unsupported, (for DVD Incremental Streaming use TAO)
+    */
+    BURN_WRITE_PACKET,
 
-	/** With CD:                     Track At Once recording
-	      2s gaps between tracks, no fonky lead-ins
+    /** With CD:                     Track At Once recording
+          2s gaps between tracks, no fonky lead-ins
 
-	    With sequential DVD-R[W]:    Incremental Streaming
-	    With DVD+R and BD-R:         Track of open size
-	    With DVD-RAM, DVD+RW, BD-RE: Random Writeable (used sequentially)
-	    With overwriteable DVD-RW:   Rigid Restricted Overwrite 
-	*/
-	BURN_WRITE_TAO,
+        With sequential DVD-R[W]:    Incremental Streaming
+        With DVD+R and BD-R:         Track of open size
+        With DVD-RAM, DVD+RW, BD-RE: Random Writeable (used sequentially)
+        With overwriteable DVD-RW:   Rigid Restricted Overwrite
+    */
+    BURN_WRITE_TAO,
 
-	/** With CD:                     Session At Once
-	      Block type MUST be BURN_BLOCK_SAO
-	      ts A70122: Currently not capable of mixing data and audio tracks.
+    /** With CD:                     Session At Once
+          Block type MUST be BURN_BLOCK_SAO
+          ts A70122: Currently not capable of mixing data and audio tracks.
 
-	    With sequential DVD-R[W]:    Disc-at-once, DAO
-	      Single session, single track, fixed size mandatory, (-dvd-compat)
-	    With other DVD or BD media:  same as BURN_WRITE_TAO but may demand
-	                                 that track size is known in advance.
-	*/
-	BURN_WRITE_SAO,
+        With sequential DVD-R[W]:    Disc-at-once, DAO
+          Single session, single track, fixed size mandatory, (-dvd-compat)
+        With other DVD or BD media:  same as BURN_WRITE_TAO but may demand
+                                     that track size is known in advance.
+    */
+    BURN_WRITE_SAO,
 
-	/** With CD: Raw disc at once recording.
-	      all subcodes must be provided by lib or user
-	      only raw block types are supported
-	    With DVD and BD media: not supported.
+    /** With CD: Raw disc at once recording.
+          all subcodes must be provided by lib or user
+          only raw block types are supported
+        With DVD and BD media: not supported.
 
-	    ts A90901: This had been disabled because its implementation
-	               relied on code from cdrdao which is not understood
-	               currently.
-	               A burn run will abort with "FATAL" error message
-	               if this mode is attempted.
-	               @since 0.7.2
-	    ts A91016: Re-implemented according to ECMA-130 Annex A and B.
-	               Now understood, explained and not stemming from cdrdao.
-	               @since 0.7.4
-	*/
-	BURN_WRITE_RAW,
+        ts A90901: This had been disabled because its implementation
+                   relied on code from cdrdao which is not understood
+                   currently.
+                   A burn run will abort with "FATAL" error message
+                   if this mode is attempted.
+                   @since 0.7.2
+        ts A91016: Re-implemented according to ECMA-130 Annex A and B.
+                   Now understood, explained and not stemming from cdrdao.
+                   @since 0.7.4
+    */
+    BURN_WRITE_RAW,
 
-	/** In replies this indicates that not any writing will work.
-	    As parameter for inquiries it indicates that no particular write
+    /** In replies this indicates that not any writing will work.
+        As parameter for inquiries it indicates that no particular write
             mode shall is specified.
-	    Do not use for setting a write mode for burning. It will not work.
-	*/
-	BURN_WRITE_NONE
+        Do not use for setting a write mode for burning. It will not work.
+    */
+    BURN_WRITE_NONE
 };
 
 /** Data format to send to the drive */
 enum burn_block_types
 {
-	/** sync, headers, edc/ecc provided by lib/user */
-	BURN_BLOCK_RAW0 = 1,
-	/** sync, headers, edc/ecc and p/q subs provided by lib/user */
-	BURN_BLOCK_RAW16 = 2,
-	/** sync, headers, edc/ecc and packed p-w subs provided by lib/user */
-	BURN_BLOCK_RAW96P = 4,
-	/** sync, headers, edc/ecc and raw p-w subs provided by lib/user */
-	BURN_BLOCK_RAW96R = 8,
-	/** only 2048 bytes of user data provided by lib/user */
-	BURN_BLOCK_MODE1 = 256,
-	/** 2336 bytes of user data provided by lib/user */
-	BURN_BLOCK_MODE2R = 512,
-	/** 2048 bytes of user data provided by lib/user
-	    subheader provided in write parameters
-	    are we ever going to support this shit?  I vote no.
-	    (supposed to be supported on all drives...)
-	*/
-	BURN_BLOCK_MODE2_PATHETIC = 1024,
-	/** 2048 bytes of data + 8 byte subheader provided by lib/user
-	    hey, this is also dumb
-	*/
-	BURN_BLOCK_MODE2_LAME = 2048,
-	/** 2324 bytes of data provided by lib/user
-	    subheader provided in write parameters
-	    no sir, I don't like it.
-	*/
-	BURN_BLOCK_MODE2_OBSCURE = 4096,
-	/** 2332 bytes of data supplied by lib/user
-	    8 bytes sub header provided in write parameters
-	    this is the second least suck mode2, and is mandatory for
-	    all drives to support.
-	*/
-	BURN_BLOCK_MODE2_OK = 8192,
-	/** SAO block sizes are based on cue sheet, so use this. */
-	BURN_BLOCK_SAO = 16384
+    /** sync, headers, edc/ecc provided by lib/user */
+    BURN_BLOCK_RAW0 = 1,
+    /** sync, headers, edc/ecc and p/q subs provided by lib/user */
+    BURN_BLOCK_RAW16 = 2,
+    /** sync, headers, edc/ecc and packed p-w subs provided by lib/user */
+    BURN_BLOCK_RAW96P = 4,
+    /** sync, headers, edc/ecc and raw p-w subs provided by lib/user */
+    BURN_BLOCK_RAW96R = 8,
+    /** only 2048 bytes of user data provided by lib/user */
+    BURN_BLOCK_MODE1 = 256,
+    /** 2336 bytes of user data provided by lib/user */
+    BURN_BLOCK_MODE2R = 512,
+    /** 2048 bytes of user data provided by lib/user
+        subheader provided in write parameters
+        are we ever going to support this shit?  I vote no.
+        (supposed to be supported on all drives...)
+    */
+    BURN_BLOCK_MODE2_PATHETIC = 1024,
+    /** 2048 bytes of data + 8 byte subheader provided by lib/user
+        hey, this is also dumb
+    */
+    BURN_BLOCK_MODE2_LAME = 2048,
+    /** 2324 bytes of data provided by lib/user
+        subheader provided in write parameters
+        no sir, I don't like it.
+    */
+    BURN_BLOCK_MODE2_OBSCURE = 4096,
+    /** 2332 bytes of data supplied by lib/user
+        8 bytes sub header provided in write parameters
+        this is the second least suck mode2, and is mandatory for
+        all drives to support.
+    */
+    BURN_BLOCK_MODE2_OK = 8192,
+    /** SAO block sizes are based on cue sheet, so use this. */
+    BURN_BLOCK_SAO = 16384
 };
 
 /** Possible status of the drive in regard to the disc in it. */
 enum burn_disc_status
 {
-	/** The current status is not yet known */
-	BURN_DISC_UNREADY,
+    /** The current status is not yet known */
+    BURN_DISC_UNREADY,
 
-	/** The drive holds a blank disc. It is ready for writing from scratch.
-	    Unused multi-session media:
-	      CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
-	    Blanked multi-session media (i.e. treated by burn_disc_erase())
-	      CD-RW, DVD-RW
-	    Overwriteable media with or without valid data
-	      DVD-RAM, DVD+RW, formatted DVD-RW, BD-RE
-	*/
-	BURN_DISC_BLANK,
+    /** The drive holds a blank disc. It is ready for writing from scratch.
+        Unused multi-session media:
+          CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
+        Blanked multi-session media (i.e. treated by burn_disc_erase())
+          CD-RW, DVD-RW
+        Overwriteable media with or without valid data
+          DVD-RAM, DVD+RW, formatted DVD-RW, BD-RE
+    */
+    BURN_DISC_BLANK,
 
-	/** There is no disc at all in the drive */
-	BURN_DISC_EMPTY,
+    /** There is no disc at all in the drive */
+    BURN_DISC_EMPTY,
 
-	/** There is an incomplete disc in the drive. It is ready for appending
-	    another session.
-	    Written but not yet closed multi-session media
-	      CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
-	*/
-	BURN_DISC_APPENDABLE,
+    /** There is an incomplete disc in the drive. It is ready for appending
+        another session.
+        Written but not yet closed multi-session media
+          CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
+    */
+    BURN_DISC_APPENDABLE,
 
-	/** There is a disc with data on it in the drive. It is usable only for
-	    reading.
-	    Written and closed multi-session media
-	      CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
-	    Read-Only media
-	      CD-ROM, DVD-ROM, BD-ROM
-	    Note that many DVD-ROM drives report any written media
-	    as Read-Only media and not by their real media types.
-	*/
-	BURN_DISC_FULL,
+    /** There is a disc with data on it in the drive. It is usable only for
+        reading.
+        Written and closed multi-session media
+          CD-R, CD-RW, DVD-R, DVD-RW, DVD+R, BD-R
+        Read-Only media
+          CD-ROM, DVD-ROM, BD-ROM
+        Note that many DVD-ROM drives report any written media
+        as Read-Only media and not by their real media types.
+    */
+    BURN_DISC_FULL,
 
-	/* ts A61007 */
-        /* @since 0.2.4 */
-	/** The drive was not grabbed when the status was inquired */
-	BURN_DISC_UNGRABBED,
+    /* ts A61007 */
+    /* @since 0.2.4 */
+    /** The drive was not grabbed when the status was inquired */
+    BURN_DISC_UNGRABBED,
 
-	/* ts A61020 */
-        /* @since 0.2.6 */
-	/** The media seems to be unsuitable for reading and for writing */
-	BURN_DISC_UNSUITABLE
+    /* ts A61020 */
+    /* @since 0.2.6 */
+    /** The media seems to be unsuitable for reading and for writing */
+    BURN_DISC_UNSUITABLE
 };
 
 
 /** Possible data source return values */
 enum burn_source_status
 {
-	/** The source is ok */
-	BURN_SOURCE_OK,
-	/** The source is at end of file */
-	BURN_SOURCE_EOF,
-	/** The source is unusable */
-	BURN_SOURCE_FAILED
+    /** The source is ok */
+    BURN_SOURCE_OK,
+    /** The source is at end of file */
+    BURN_SOURCE_EOF,
+    /** The source is unusable */
+    BURN_SOURCE_FAILED
 };
 
 
 /** Possible busy states for a drive */
 enum burn_drive_status
 {
-	/** The drive is not in an operation */
-	BURN_DRIVE_IDLE,
-	/** The library is spawning the processes to handle a pending
-	    operation (A read/write/etc is about to start but hasn't quite
-	    yet) */
-	BURN_DRIVE_SPAWNING,
-	/** The drive is reading data from a disc */
-	BURN_DRIVE_READING,
-	/** The drive is writing data to a disc */
-	BURN_DRIVE_WRITING,
-	/** The drive is writing Lead-In */
-	BURN_DRIVE_WRITING_LEADIN,
-	/** The drive is writing Lead-Out */
-	BURN_DRIVE_WRITING_LEADOUT,
-	/** The drive is erasing a disc */
-	BURN_DRIVE_ERASING,
-	/** The drive is being grabbed */
-	BURN_DRIVE_GRABBING,
+    /** The drive is not in an operation */
+    BURN_DRIVE_IDLE,
+    /** The library is spawning the processes to handle a pending
+        operation (A read/write/etc is about to start but hasn't quite
+        yet) */
+    BURN_DRIVE_SPAWNING,
+    /** The drive is reading data from a disc */
+    BURN_DRIVE_READING,
+    /** The drive is writing data to a disc */
+    BURN_DRIVE_WRITING,
+    /** The drive is writing Lead-In */
+    BURN_DRIVE_WRITING_LEADIN,
+    /** The drive is writing Lead-Out */
+    BURN_DRIVE_WRITING_LEADOUT,
+    /** The drive is erasing a disc */
+    BURN_DRIVE_ERASING,
+    /** The drive is being grabbed */
+    BURN_DRIVE_GRABBING,
 
-	/* ts A61102 */
-        /* @since 0.2.6 */
-	/** The drive gets written zeroes before the track payload data */
-	BURN_DRIVE_WRITING_PREGAP,
-	/** The drive is told to close a track (TAO only) */
-	BURN_DRIVE_CLOSING_TRACK,
-	/** The drive is told to close a session (TAO only) */
-	BURN_DRIVE_CLOSING_SESSION,
+    /* ts A61102 */
+    /* @since 0.2.6 */
+    /** The drive gets written zeroes before the track payload data */
+    BURN_DRIVE_WRITING_PREGAP,
+    /** The drive is told to close a track (TAO only) */
+    BURN_DRIVE_CLOSING_TRACK,
+    /** The drive is told to close a session (TAO only) */
+    BURN_DRIVE_CLOSING_SESSION,
 
-	/* ts A61223 */
-        /* @since 0.3.0 */
-	/** The drive is formatting media */
-	BURN_DRIVE_FORMATTING,
+    /* ts A61223 */
+    /* @since 0.3.0 */
+    /** The drive is formatting media */
+    BURN_DRIVE_FORMATTING,
 
-	/* ts A70822 */
-        /* @since 0.4.0 */
-	/** The drive is busy in synchronous read (if you see this then it
-	    has been interrupted) */
-	BURN_DRIVE_READING_SYNC,
-	/** The drive is busy in synchronous write (if you see this then it
-	    has been interrupted) */
-	BURN_DRIVE_WRITING_SYNC
-	
+    /* ts A70822 */
+    /* @since 0.4.0 */
+    /** The drive is busy in synchronous read (if you see this then it
+        has been interrupted) */
+    BURN_DRIVE_READING_SYNC,
+    /** The drive is busy in synchronous write (if you see this then it
+        has been interrupted) */
+    BURN_DRIVE_WRITING_SYNC
+
 };
 
-    
+
 /** Information about a track on a disc - this is from the q sub channel of the
     lead-in area of a disc.  The documentation here is very terse.
     See a document such as mmc3 for proper information.
@@ -341,76 +341,76 @@ enum burn_drive_status
 
     Do not restrict your application to unsigned char with any counter like
     "session", "point", "pmin", ...
-    Do not rely on the current size of a burn_toc_entry. 
+    Do not rely on the current size of a burn_toc_entry.
 
 */
 struct burn_toc_entry
 {
-	/** Session the track is in */
-	unsigned char session;
-	/** Type of data.  for this struct to be valid, it must be 1 */
-	unsigned char adr;
-	/** Type of data in the track */
-	unsigned char control;
-	/** Zero.  Always.  Really. */
-	unsigned char tno;
-	/** Track number or special information */
-	unsigned char point;
-	unsigned char min;
-	unsigned char sec;
-	unsigned char frame;
-	unsigned char zero;
-	/** Track start time minutes for normal tracks */
-	unsigned char pmin;
-	/** Track start time seconds for normal tracks */
-	unsigned char psec;
-	/** Track start time frames for normal tracks */
-	unsigned char pframe;
+    /** Session the track is in */
+    unsigned char session;
+    /** Type of data.  for this struct to be valid, it must be 1 */
+    unsigned char adr;
+    /** Type of data in the track */
+    unsigned char control;
+    /** Zero.  Always.  Really. */
+    unsigned char tno;
+    /** Track number or special information */
+    unsigned char point;
+    unsigned char min;
+    unsigned char sec;
+    unsigned char frame;
+    unsigned char zero;
+    /** Track start time minutes for normal tracks */
+    unsigned char pmin;
+    /** Track start time seconds for normal tracks */
+    unsigned char psec;
+    /** Track start time frames for normal tracks */
+    unsigned char pframe;
 
-	/* Indicates whether extension data are valid and eventually override
-	   older elements in this structure:
-	     bit0= DVD extension is valid @since 0.3.2
+    /* Indicates whether extension data are valid and eventually override
+       older elements in this structure:
+         bit0= DVD extension is valid @since 0.3.2
                    @since 0.5.2 : DVD extensions are made valid for CD too
              bit1= LRA extension is valid @since 0.7.2
              bit2= Track status bits extension is valid @since 1.2.8
-	*/
-	unsigned char extensions_valid;  
+    */
+    unsigned char extensions_valid;
 
-	/* ts A70201 : DVD extension. extensions_valid:bit0
-	   If invalid the members are guaranteed to be 0. */
-        /* @since 0.3.2 */
-	/* Tracks and session numbers are 16 bit. Here are the high bytes. */
-	unsigned char session_msb;
-	unsigned char point_msb;
-	/* pmin, psec, and pframe may be too small if DVD extension is valid */
-	int start_lba; 
-	/* min, sec, and frame may be too small if DVD extension is valid */
-	int track_blocks;
-	
-	/* ts A90909 : LRA extension. extensions_valid:bit1 */
-	/* @since 0.7.2 */
-	/* MMC-5 6.27.3.18 : The Last Recorded Address is valid for DVD-R,
-	                  DVD-R DL when LJRS = 00b, DVD-RW, HD DVD-R, and BD-R.
-	   This would mean profiles: 0x11, 0x15, 0x13, 0x14, 0x51, 0x41, 0x42 
-	*/
-	int last_recorded_address;
+    /* ts A70201 : DVD extension. extensions_valid:bit0
+       If invalid the members are guaranteed to be 0. */
+    /* @since 0.3.2 */
+    /* Tracks and session numbers are 16 bit. Here are the high bytes. */
+    unsigned char session_msb;
+    unsigned char point_msb;
+    /* pmin, psec, and pframe may be too small if DVD extension is valid */
+    int start_lba;
+    /* min, sec, and frame may be too small if DVD extension is valid */
+    int track_blocks;
 
-	/* ts B30112 : Track status bits extension. extensions_valid:bit2 */
-	/* @since 1.2.8 */
-	/* Names as of READ TRACK INFORMATION, MMC-5 6.27.3 :
-	    bit0 -  bit3 = Track Mode
-	    bit4         = Copy
-	    bit5         = Damage
-	    bit6 -  bit7 = LJRS
-	    bit8 - bit11 = Data Mode
-	   bit12         = FP
-	   bit13         = Packet/Inc
-	   bit14         = Blank
-	   bit15         = RT
-	   bit16         = NWA_V
-	   bit17         = LRA_V
-	*/
-	int track_status_bits;
+    /* ts A90909 : LRA extension. extensions_valid:bit1 */
+    /* @since 0.7.2 */
+    /* MMC-5 6.27.3.18 : The Last Recorded Address is valid for DVD-R,
+                      DVD-R DL when LJRS = 00b, DVD-RW, HD DVD-R, and BD-R.
+       This would mean profiles: 0x11, 0x15, 0x13, 0x14, 0x51, 0x41, 0x42
+    */
+    int last_recorded_address;
+
+    /* ts B30112 : Track status bits extension. extensions_valid:bit2 */
+    /* @since 1.2.8 */
+    /* Names as of READ TRACK INFORMATION, MMC-5 6.27.3 :
+        bit0 -  bit3 = Track Mode
+        bit4         = Copy
+        bit5         = Damage
+        bit6 -  bit7 = LJRS
+        bit8 - bit11 = Data Mode
+       bit12         = FP
+       bit13         = Packet/Inc
+       bit14         = Blank
+       bit15         = RT
+       bit16         = NWA_V
+       bit17         = LRA_V
+    */
+    int track_status_bits;
 
 };
 
@@ -425,7 +425,7 @@ struct burn_toc_entry
 
     The API calls may use any file object as data source. Consider to feed
     an eventual custom data stream asynchronously into a pipe(2) and to let
-    libburn handle the rest. 
+    libburn handle the rest.
     In this case the following rule applies:
     Call burn_source_free() exactly once for every source obtained from
     libburn API. You MUST NOT otherwise use or manipulate its components.
@@ -459,21 +459,21 @@ struct burn_toc_entry
 */
 struct burn_source {
 
-	/** Reference count for the data source. MUST be 1 when a new source
+    /** Reference count for the data source. MUST be 1 when a new source
             is created and thus the first reference is handed out. Increment
             it to take more references for yourself. Use burn_source_free()
             to destroy your references to it. */
-	int refcount;
+    int refcount;
 
 
-	/** Read data from the source. Semantics like with read(2), but MUST
-	    either deliver the full buffer as defined by size or MUST deliver
-	    EOF (return 0) or failure (return -1) at this call or at the
-	    next following call. I.e. the only incomplete buffer may be the
-	    last one from that source.
-	    libburn will read a single sector by each call to (*read).
-	    The size of a sector depends on BURN_MODE_*. The known range is
-	    2048 to 2352.
+    /** Read data from the source. Semantics like with read(2), but MUST
+        either deliver the full buffer as defined by size or MUST deliver
+        EOF (return 0) or failure (return -1) at this call or at the
+        next following call. I.e. the only incomplete buffer may be the
+        last one from that source.
+        libburn will read a single sector by each call to (*read).
+        The size of a sector depends on BURN_MODE_*. The known range is
+        2048 to 2352.
 
             If this call is reading from a pipe then it will learn
             about the end of data only when that pipe gets closed on the
@@ -482,226 +482,226 @@ struct burn_source {
             block aligned, then burning will halt until the input process
             closes the pipe.
 
-	    IMPORTANT:
-	    If this function pointer is NULL, then the struct burn_source is of
-	    version >= 1 and the job of .(*read)() is done by .(*read_xt)().
-	    See below, member .version.
-	*/
-	int (*read)(struct burn_source *, unsigned char *buffer, int size);
+        IMPORTANT:
+        If this function pointer is NULL, then the struct burn_source is of
+        version >= 1 and the job of .(*read)() is done by .(*read_xt)().
+        See below, member .version.
+    */
+    int (*read)(struct burn_source *, unsigned char *buffer, int size);
 
 
-	/** Read subchannel data from the source (NULL if lib generated) 
-	    WARNING: This is an obscure feature with CD raw write modes.
-	    Unless you checked the libburn code for correctness in that aspect
-	    you should not rely on raw writing with own subchannels.
-	    ADVICE: Set this pointer to NULL.
-	*/
-	int (*read_sub)(struct burn_source *, unsigned char *buffer, int size);
+    /** Read subchannel data from the source (NULL if lib generated)
+        WARNING: This is an obscure feature with CD raw write modes.
+        Unless you checked the libburn code for correctness in that aspect
+        you should not rely on raw writing with own subchannels.
+        ADVICE: Set this pointer to NULL.
+    */
+    int (*read_sub)(struct burn_source *, unsigned char *buffer, int size);
 
 
-	/** Get the size of the source's data. Return 0 means unpredictable
-	    size. If application provided (*get_size) might return 0, then
-	    the application MUST provide a fully functional (*set_size).
-	*/
-	off_t (*get_size)(struct burn_source *); 
+    /** Get the size of the source's data. Return 0 means unpredictable
+        size. If application provided (*get_size) might return 0, then
+        the application MUST provide a fully functional (*set_size).
+    */
+    off_t (*get_size)(struct burn_source *);
 
 
-	/* ts A70125 : BROKE BINARY BACKWARD COMPATIBILITY AT libburn-0.3.1. */
-        /* @since 0.3.2 */
-	/** Program the reply of (*get_size) to a fixed value. It is advised
-	    to implement this by a attribute  off_t fixed_size;  in *data .
-	    The read() function does not have to take into respect this fake
-	    setting. It is rather a note of libburn to itself. Eventually
-	    necessary truncation or padding is done in libburn. Truncation
-	    is usually considered a misburn. Padding is considered ok.
+    /* ts A70125 : BROKE BINARY BACKWARD COMPATIBILITY AT libburn-0.3.1. */
+    /* @since 0.3.2 */
+    /** Program the reply of (*get_size) to a fixed value. It is advised
+        to implement this by a attribute  off_t fixed_size;  in *data .
+        The read() function does not have to take into respect this fake
+        setting. It is rather a note of libburn to itself. Eventually
+        necessary truncation or padding is done in libburn. Truncation
+        is usually considered a misburn. Padding is considered ok.
 
-	    libburn is supposed to work even if (*get_size) ignores the
+        libburn is supposed to work even if (*get_size) ignores the
             setting by (*set_size). But your application will not be able to
-	    enforce fixed track sizes by  burn_track_set_size() and possibly
-	    even padding might be left out.
-	*/
-	int (*set_size)(struct burn_source *source, off_t size);
+        enforce fixed track sizes by  burn_track_set_size() and possibly
+        even padding might be left out.
+    */
+    int (*set_size)(struct burn_source *source, off_t size);
 
 
-	/** Clean up the source specific data. This function will be called
-	    once by burn_source_free() when the last referer disposes the
-	    source.
-	*/
-	void (*free_data)(struct burn_source *);
+    /** Clean up the source specific data. This function will be called
+        once by burn_source_free() when the last referer disposes the
+        source.
+    */
+    void (*free_data)(struct burn_source *);
 
 
-	/** Next source, for when a source runs dry and padding is disabled
-	    WARNING: This is an obscure feature. Set to NULL at creation and
-	             from then on leave untouched and uninterpreted.
-	*/
-	struct burn_source *next;
+    /** Next source, for when a source runs dry and padding is disabled
+        WARNING: This is an obscure feature. Set to NULL at creation and
+                 from then on leave untouched and uninterpreted.
+    */
+    struct burn_source *next;
 
 
-	/** Source specific data. Here the various source classes express their
-	    specific properties and the instance objects store their individual
-	    management data.
+    /** Source specific data. Here the various source classes express their
+        specific properties and the instance objects store their individual
+        management data.
             E.g. data could point to a struct like this:
-		struct app_burn_source
-		{
-			struct my_app *app_handle;
-			... other individual source parameters ...
-			off_t fixed_size;
-		};
+    	struct app_burn_source
+    	{
+    		struct my_app *app_handle;
+    		... other individual source parameters ...
+    		off_t fixed_size;
+    	};
 
-	    Function (*free_data) has to be prepared to clean up and free
-	    the struct.
-	*/
-	void *data;
+        Function (*free_data) has to be prepared to clean up and free
+        the struct.
+    */
+    void *data;
 
 
-	/* ts A71222 : Supposed to be binary backwards compatible extension. */
-        /* @since 0.4.2 */
-	/** Valid only if above member .(*read)() is NULL. This indicates a
-	    version of struct burn_source younger than 0.
-	    From then on, member .version tells which further members exist
-	    in the memory layout of struct burn_source. libburn will only touch
-	    those announced extensions.
+    /* ts A71222 : Supposed to be binary backwards compatible extension. */
+    /* @since 0.4.2 */
+    /** Valid only if above member .(*read)() is NULL. This indicates a
+        version of struct burn_source younger than 0.
+        From then on, member .version tells which further members exist
+        in the memory layout of struct burn_source. libburn will only touch
+        those announced extensions.
 
-	    Versions:
-	     0  has .(*read)() != NULL, not even .version is present.
+        Versions:
+         0  has .(*read)() != NULL, not even .version is present.
              1  has .version, .(*read_xt)(), .(*cancel)()
-	*/
-	int version;
+    */
+    int version;
 
-	/** This substitutes for (*read)() in versions above 0. */
-	int (*read_xt)(struct burn_source *, unsigned char *buffer, int size);
+    /** This substitutes for (*read)() in versions above 0. */
+    int (*read_xt)(struct burn_source *, unsigned char *buffer, int size);
 
-	/** Informs the burn_source that the consumer of data prematurely
-	    ended reading. This call may or may not be issued by libburn
-	    before (*free_data)() is called.
-	*/
-	int (*cancel)(struct burn_source *source);
+    /** Informs the burn_source that the consumer of data prematurely
+        ended reading. This call may or may not be issued by libburn
+        before (*free_data)() is called.
+    */
+    int (*cancel)(struct burn_source *source);
 };
 
 
 /** Information on a drive in the system */
 struct burn_drive_info
 {
-	/** Name of the vendor of the drive */
-	char vendor[9];
-	/** Name of the drive */
-	char product[17];
-	/** Revision of the drive */
-	char revision[5];
+    /** Name of the vendor of the drive */
+    char vendor[9];
+    /** Name of the drive */
+    char product[17];
+    /** Revision of the drive */
+    char revision[5];
 
-	/** Invalid: Was: "Location of the drive in the filesystem." */
-	/** This string has no meaning any more. Once it stored the drive
+    /** Invalid: Was: "Location of the drive in the filesystem." */
+    /** This string has no meaning any more. Once it stored the drive
             device file address. Now always use function burn_drive_d_get_adr()
             to inquire a device file address.            ^^^^^ ALWAYS ^^^^^^^*/
-	char location[17];
+    char location[17];
 
-	/* NOTE: The capability to write particular media types is also
-	         announced by their profile number being in the list returned
-	         by burn_drive_get_all_profile(). This is the only way to
-	         inquire types DVD-RW, DVD+R, DVD+R DL, DVD+RW, BD-R, BD-RE.
-	*/
-	/** Can the drive read DVD-RAM discs */
-	unsigned int read_dvdram:1;
-	/** Can the drive read DVD-R discs */
-	unsigned int read_dvdr:1;
-	/** Can the drive read DVD-ROM discs */
-	unsigned int read_dvdrom:1;
-	/** Can the drive read CD-R discs */
-	unsigned int read_cdr:1;
-	/** Can the drive read CD-RW discs */
-	unsigned int read_cdrw:1;
+    /* NOTE: The capability to write particular media types is also
+             announced by their profile number being in the list returned
+             by burn_drive_get_all_profile(). This is the only way to
+             inquire types DVD-RW, DVD+R, DVD+R DL, DVD+RW, BD-R, BD-RE.
+    */
+    /** Can the drive read DVD-RAM discs */
+    unsigned int read_dvdram:1;
+    /** Can the drive read DVD-R discs */
+    unsigned int read_dvdr:1;
+    /** Can the drive read DVD-ROM discs */
+    unsigned int read_dvdrom:1;
+    /** Can the drive read CD-R discs */
+    unsigned int read_cdr:1;
+    /** Can the drive read CD-RW discs */
+    unsigned int read_cdrw:1;
 
-	/** Can the drive write DVD-RAM discs */
-	unsigned int write_dvdram:1;
-	/** Can the drive write DVD-R discs */
-	unsigned int write_dvdr:1;
-	/** Can the drive write CD-R discs */
-	unsigned int write_cdr:1;
-	/** Can the drive write CD-RW discs */
-	unsigned int write_cdrw:1;
+    /** Can the drive write DVD-RAM discs */
+    unsigned int write_dvdram:1;
+    /** Can the drive write DVD-R discs */
+    unsigned int write_dvdr:1;
+    /** Can the drive write CD-R discs */
+    unsigned int write_cdr:1;
+    /** Can the drive write CD-RW discs */
+    unsigned int write_cdrw:1;
 
-	/** Can the drive simulate a write */
-	unsigned int write_simulate:1;
+    /** Can the drive simulate a write */
+    unsigned int write_simulate:1;
 
-	/** DEPRECATED: Can the drive report C2 errors */
-	unsigned int c2_errors:1;
+    /** DEPRECATED: Can the drive report C2 errors */
+    unsigned int c2_errors:1;
 
-	/** DEPRECATED: The size of the drive's buffer (in kilobytes) */
-	int buffer_size;
+    /** DEPRECATED: The size of the drive's buffer (in kilobytes) */
+    int buffer_size;
 
 
-	/** 
-	 * The supported block types in tao mode.
-	 * They should be tested with the desired block type.
-	 * See also burn_block_types.
-	 */
-	int tao_block_types;
-	/** 
-	 * The supported block types in sao mode.
-	 * They should be tested with the desired block type.
-	 * See also burn_block_types.
-	 */
-	int sao_block_types;
-	/** 
-	 * The supported block types in raw mode.
-	 * They should be tested with the desired block type.
-	 * See also burn_block_types.
-	 */
-	int raw_block_types;
-	/** 
-	 * The supported block types in packet mode.
-	 * They should be tested with the desired block type.
-	 * See also burn_block_types.
-	 */
-	int packet_block_types;
+    /**
+     * The supported block types in tao mode.
+     * They should be tested with the desired block type.
+     * See also burn_block_types.
+     */
+    int tao_block_types;
+    /**
+     * The supported block types in sao mode.
+     * They should be tested with the desired block type.
+     * See also burn_block_types.
+     */
+    int sao_block_types;
+    /**
+     * The supported block types in raw mode.
+     * They should be tested with the desired block type.
+     * See also burn_block_types.
+     */
+    int raw_block_types;
+    /**
+     * The supported block types in packet mode.
+     * They should be tested with the desired block type.
+     * See also burn_block_types.
+     */
+    int packet_block_types;
 
-	/** The value by which this drive can be indexed when using functions
-	    in the library. This is the value to pass to all libbburn functions
-	    that operate on a drive. */
-	struct burn_drive *drive;
+    /** The value by which this drive can be indexed when using functions
+        in the library. This is the value to pass to all libbburn functions
+        that operate on a drive. */
+    struct burn_drive *drive;
 };
 
 
-/** Operation progress report. All values are 0 based indices. 
+/** Operation progress report. All values are 0 based indices.
  * */
 struct burn_progress {
-	/** The total number of sessions */
-	int sessions;
-	/** Current session.*/
-	int session;
-	/** The total number of tracks */
-	int tracks;
-	/** Current track. */
-	int track;
-	/** The total number of indices */
-	int indices;
-	/** Curent index. */
-	int index;
-	/** The starting logical block address */
-	int start_sector;
-	/** On write: The number of sectors.
-	    On blank: 0x10000 as upper limit for relative progress steps */
-	int sectors;
-	/** On write: The current sector being processed.
-	    On blank: Relative progress steps 0 to 0x10000 */
-	int sector;
+    /** The total number of sessions */
+    int sessions;
+    /** Current session.*/
+    int session;
+    /** The total number of tracks */
+    int tracks;
+    /** Current track. */
+    int track;
+    /** The total number of indices */
+    int indices;
+    /** Curent index. */
+    int index;
+    /** The starting logical block address */
+    int start_sector;
+    /** On write: The number of sectors.
+        On blank: 0x10000 as upper limit for relative progress steps */
+    int sectors;
+    /** On write: The current sector being processed.
+        On blank: Relative progress steps 0 to 0x10000 */
+    int sector;
 
-	/* ts A61023 */
-        /* @since 0.2.6 */
-	/** The capacity of the drive buffer */
-	unsigned buffer_capacity;
-	/** The free space in the drive buffer (might be slightly outdated) */
-	unsigned buffer_available;
+    /* ts A61023 */
+    /* @since 0.2.6 */
+    /** The capacity of the drive buffer */
+    unsigned buffer_capacity;
+    /** The free space in the drive buffer (might be slightly outdated) */
+    unsigned buffer_available;
 
-	/* ts A61119 */
-        /* @since 0.2.6 */
-	/** The number of bytes sent to the drive buffer */
-	off_t buffered_bytes;
-	/** The minimum number of bytes stored in buffer during write.
+    /* ts A61119 */
+    /* @since 0.2.6 */
+    /** The number of bytes sent to the drive buffer */
+    off_t buffered_bytes;
+    /** The minimum number of bytes stored in buffer during write.
             (Caution: Before surely one buffer size of bytes was processed,
-                      this value is 0xffffffff.) 
-	*/
-	unsigned buffer_min_fill;
+                      this value is 0xffffffff.)
+    */
+    unsigned buffer_min_fill;
 };
 
 
@@ -720,41 +720,41 @@ struct burn_progress {
 */
 struct burn_speed_descriptor {
 
-	/** Where this info comes from : 
-	    0 = misc
-	    1 = mode page 2Ah
-	    2 = ACh GET PERFORMANCE Type 03h
-	    3 = ACh GET PERFORMANCE Type 00h Data Type 10h (read speed)
-	*/
-	int source;
+    /** Where this info comes from :
+        0 = misc
+        1 = mode page 2Ah
+        2 = ACh GET PERFORMANCE Type 03h
+        3 = ACh GET PERFORMANCE Type 00h Data Type 10h (read speed)
+    */
+    int source;
 
-	/** The media type that was current at the time of report
-	    -2 = state unknown, -1 = no media was loaded , else see
-	    burn_disc_get_profile() */
-	int profile_loaded;
-	char profile_name[80];
+    /** The media type that was current at the time of report
+        -2 = state unknown, -1 = no media was loaded , else see
+        burn_disc_get_profile() */
+    int profile_loaded;
+    char profile_name[80];
 
-	/** The attributed capacity of appropriate media in logical block units
-	    i.e. 2352 raw bytes or 2048 data bytes. -1 = capacity unknown. */
-	int end_lba;
+    /** The attributed capacity of appropriate media in logical block units
+        i.e. 2352 raw bytes or 2048 data bytes. -1 = capacity unknown. */
+    int end_lba;
 
-	/** Speed is given in 1000 bytes/s , 0 = invalid. The numbers
-	    are supposed to be usable with burn_drive_set_speed() */
-	int write_speed;
-	int read_speed;
+    /** Speed is given in 1000 bytes/s , 0 = invalid. The numbers
+        are supposed to be usable with burn_drive_set_speed() */
+    int write_speed;
+    int read_speed;
 
-	/** Expert info from ACh GET PERFORMANCE and/or mode page 2Ah.
-	    Expect values other than 0 or 1 to get a meaning in future.*/
-	/* Rotational control: 0 = CLV/default , 1 = CAV */
-	int wrc;
-	/* 1 = drive promises reported performance over full media */
-	int exact;
-	/* 1 = suitable for mixture of read and write */
-	int mrw;
+    /** Expert info from ACh GET PERFORMANCE and/or mode page 2Ah.
+        Expect values other than 0 or 1 to get a meaning in future.*/
+    /* Rotational control: 0 = CLV/default , 1 = CAV */
+    int wrc;
+    /* 1 = drive promises reported performance over full media */
+    int exact;
+    /* 1 = suitable for mixture of read and write */
+    int mrw;
 
-	/** List chaining. Use .next until NULL to iterate over the list */
-	struct burn_speed_descriptor *prev;
-	struct burn_speed_descriptor *next;
+    /** List chaining. Use .next until NULL to iterate over the list */
+    struct burn_speed_descriptor *prev;
+    struct burn_speed_descriptor *next;
 };
 
 
@@ -800,7 +800,7 @@ void burn_finish(void);
             <0 severe error, do no use libburn again
     @since 0.2.6
 */
-int burn_abort(int patience, 
+int burn_abort(int patience,
                int (*pacifier_func)(void *handle, int patience, int elapsed),
                void *handle);
 
@@ -837,7 +837,7 @@ void burn_set_scsi_logging(int flag);
 /* ts A60813 */
 /** Set parameters for behavior on opening device files. To be called early
     after burn_initialize() and before any bus scan. But not mandatory at all.
-    Parameter value 1 enables a feature, 0 disables.  
+    Parameter value 1 enables a feature, 0 disables.
     Default is (1,0,0). Have a good reason before you change it.
     @param exclusive
                      0 = no attempt to make drive access exclusive.
@@ -929,7 +929,7 @@ void burn_allow_untested_profiles(int yes);
     Special address "stdio:-" means stdout = "stdio:/dev/fd/1".
     The role of such a drive is determined by the file type obtained via
     fstat({number}).
-   
+
     Roles 2 and 3 perform all their eventual data transfer activities on a file
     via standard i/o functions open(2), lseek(2), read(2), write(2), close(2).
     The media profile is reported as 0xffff. Write space information from those
@@ -960,7 +960,7 @@ void burn_allow_untested_profiles(int yes);
                   tray door, etc).
     @return       1 = success , 0 = drive not found , -1 = other error
     @since 0.2.2
-*/    
+*/
 int burn_drive_scan_and_grab(struct burn_drive_info *drive_infos[],
                              char* adr, int load);
 
@@ -1005,7 +1005,7 @@ void burn_drive_clear_whitelist(void);
             <0 when finished but failed.
 */
 int burn_drive_scan(struct burn_drive_info *drive_infos[],
-		    unsigned int *n_drives);
+                    unsigned int *n_drives);
 
 /* ts A60904 : ticket 62, contribution by elmom */
 /** Release memory about a single drive and any exclusive lock on it.
@@ -1014,12 +1014,12 @@ int burn_drive_scan(struct burn_drive_info *drive_infos[],
                       obtained from burn_drive_scan() : &(drive_infos[driveno])
     @param force controls degree of permissible drive usage at the moment this
                  function is called, and the amount of automatically provided
-                 drive shutdown : 
+                 drive shutdown :
                   0= drive must be ungrabbed and BURN_DRIVE_IDLE
-                  1= try to release drive even if in state BURN_DRIVE_GRABBING 
+                  1= try to release drive even if in state BURN_DRIVE_GRABBING
                  Use these two only. Further values are to be defined.
     @return 1 on success, 2 if drive was already forgotten,
-            0 if not permissible, <0 on other failures, 
+            0 if not permissible, <0 on other failures,
     @since 0.2.2
 */
 int burn_drive_info_forget(struct burn_drive_info *drive_info, int force);
@@ -1099,7 +1099,7 @@ int burn_drive_convert_fs_adr(char *path, char adr[]);
     @since 0.2.6
 */
 int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
-				 int target_no, int lun_no, char adr[]);
+                                int target_no, int lun_no, char adr[]);
 
 /* ts B10728 */
 /** Try to convert a given drive device file address into the address of a
@@ -1132,7 +1132,7 @@ int burn_drive_convert_scsi_adr(int bus_no, int host_no, int channel_no,
     @since 1.1.4
 */
 int burn_lookup_device_link(char *dev_adr, char link_adr[],
-                         char *dir_adr, char **templ, int num_templ, int flag);
+                            char *dir_adr, char **templ, int num_templ, int flag);
 
 /* ts A60923 - A61005 */
 /** Try to obtain bus,host,channel,target,lun from path. If there is an SCSI
@@ -1143,7 +1143,7 @@ int burn_lookup_device_link(char *dev_adr, char link_adr[],
     @since 0.2.6
 */
 int burn_drive_obtain_scsi_adr(char *path, int *bus_no, int *host_no,
-				int *channel_no, int *target_no, int *lun_no);
+                               int *channel_no, int *target_no, int *lun_no);
 
 /** Grab a drive. This must be done before the drive can be used (for reading,
     writing, etc).
@@ -1328,7 +1328,7 @@ int burn_drive_get_bd_r_pow(struct burn_drive *drive);
 /* ts A61020 */
 /** Returns start and end lba of the media which is currently inserted
     in the given drive. The drive has to be grabbed to have hope for reply.
-    Shortcomming (not a feature): unless burn_disc_read_atip() was called 
+    Shortcomming (not a feature): unless burn_disc_read_atip() was called
     only blank media will return valid info.
     @param drive The drive to query.
     @param start_lba Returns the start lba value
@@ -1392,8 +1392,8 @@ char *burn_guess_cd_manufacturer(int m_li, int s_li, int f_li,
     @since 0.7.2
 */
 int burn_disc_get_cd_info(struct burn_drive *d, char disc_type[80],
-                        unsigned int *disc_id, char bar_code[9], int *app_code,
-			int *valid);
+                          unsigned int *disc_id, char bar_code[9], int *app_code,
+                          int *valid);
 
 /* ts B11201 */
 /** Read the array of CD-TEXT packs from the Lead-in of an audio CD.
@@ -1454,8 +1454,8 @@ int burn_disc_get_bd_spare_info(struct burn_drive *d,
     @since 1.1.4
 */
 int burn_disc_get_phys_format_info(struct burn_drive *d, int *disk_category,
-                        char **book_name, int *part_version, int *num_layers,
-                        int *num_blocks, int flag);
+                                   char **book_name, int *part_version, int *num_layers,
+                                   int *num_blocks, int flag);
 
 /* ts A61110 */
 /** Read start lba and Next Writeable Address of a track from media.
@@ -1476,12 +1476,12 @@ int burn_disc_get_phys_format_info(struct burn_drive *d, int *disk_category,
     @since 0.2.6
 */
 int burn_disc_track_lba_nwa(struct burn_drive *d, struct burn_write_opts *o,
-				int trackno, int *lba, int *nwa);
+                            int trackno, int *lba, int *nwa);
 
 /* ts B10525 */
 /** Tells whether a previous attempt to determine the Next Writeable Address
     of the upcoming track reveiled that the READ TRACK INFORMATION Damage Bit
-    is set for this track and that no valid writable address is available. 
+    is set for this track and that no valid writable address is available.
     See MMC-5 6.27.3.7 Damage Bit, 6.27.3.11 NWA_V (NWA valid)
     @param d     The drive to query.
     @param flag  Bitfield for control purposes (unused yet, submit 0)
@@ -1523,7 +1523,7 @@ int burn_disc_close_damaged(struct burn_write_opts *o, int flag);
     is nwa as obtained by burn_disc_track_lba_nwa() with trackno 0.
     @param d The drive to query.
     @param start_lba returns the start address of that track
-    @return <= 0 : failure, 1 = ok 
+    @return <= 0 : failure, 1 = ok
     @since 0.3.2
 */
 int burn_disc_get_msc1(struct burn_drive *d, int *start_lba);
@@ -1552,7 +1552,7 @@ off_t burn_disc_available_space(struct burn_drive *d,
 /* ts A61202 */
 /** Tells the MMC Profile identifier of the loaded media. The drive must be
     grabbed in order to get a non-zero result.
-    libburn currently writes only to profiles 
+    libburn currently writes only to profiles
       0x09 "CD-R"
       0x0a "CD-RW"
       0x11 "DVD-R sequential recording"
@@ -1578,7 +1578,7 @@ off_t burn_disc_available_space(struct burn_drive *d,
     @param d The drive where the media is inserted.
     @param pno Profile Number. See also mmc5r03c.pdf, table 89
     @param name Profile Name (see above list, unknown profiles have empty name)
-    @return 1 profile is valid, 0 no profile info available 
+    @return 1 profile is valid, 0 no profile info available
     @since 0.3.0
 */
 int burn_disc_get_profile(struct burn_drive *d, int *pno, char name[80]);
@@ -1588,7 +1588,7 @@ int burn_disc_get_profile(struct burn_drive *d, int *pno, char name[80]);
 /** Obtain product id and standards defined media codes.
     The product id is a printable string which is supposed to be the same
     for identical media but should vary with non-identical media. Some media
-    cannot provide such an id at all. 
+    cannot provide such an id at all.
     The pair (profile_number, product_id) should be the best id to identify
     media with identical product specifications.
     The reply parameters media_code1 and media_code2 can be used with
@@ -1613,8 +1613,8 @@ int burn_disc_get_profile(struct burn_drive *d, int *pno, char name[80]);
     @since 0.7.2
 */
 int burn_disc_get_media_id(struct burn_drive *d,
-	char **product_id, char **media_code1, char **media_code2,
-	char **book_type, int flag);
+                           char **product_id, char **media_code1, char **media_code2,
+                           char **book_type, int flag);
 
 
 /* ts A90904 */
@@ -1633,7 +1633,7 @@ int burn_disc_get_media_id(struct burn_drive *d,
     @since 0.7.2
 */
 char *burn_guess_manufacturer(int profile_no,
-				 char *manuf_code, char *media_code, int flag);
+                              char *manuf_code, char *media_code, int flag);
 
 
 /** Tells whether a disc can be erased or not
@@ -1648,7 +1648,7 @@ int burn_disc_erasable(struct burn_drive *d);
     @return the current status of the drive. See also burn_drive_status.
 */
 enum burn_drive_status burn_drive_get_status(struct burn_drive *drive,
-					     struct burn_progress *p);
+        struct burn_progress *p);
 
 /** Creates a write_opts struct for burning to the specified drive.
     The returned object must later be freed with burn_write_opts_free().
@@ -1773,7 +1773,7 @@ void burn_disc_format(struct burn_drive *drive, off_t size, int flag);
     @since 0.3.0
 */
 int burn_disc_get_formats(struct burn_drive *drive, int *status, off_t *size,
-				unsigned *bl_sas, int *num_formats);
+                          unsigned *bl_sas, int *num_formats);
 
 /* ts A70112 */
 /** Inquire parameters of an available media format.
@@ -1791,7 +1791,7 @@ int burn_disc_get_formats(struct burn_drive *drive, int *status, off_t *size,
     @since 0.3.0
 */
 int burn_disc_get_format_descr(struct burn_drive *drive, int index,
-				int *type, off_t *size, unsigned *tdp);
+                               int *type, off_t *size, unsigned *tdp);
 
 
 
@@ -1834,7 +1834,7 @@ int burn_precheck_write(struct burn_write_opts *o, struct burn_disc *disc,
     BURN_DISC_BLANK ot BURN_DISC_APPENDABLE before calling this function.
     Note: write_type BURN_WRITE_SAO is currently not capable of writing a mix
     of data and audio tracks. You must use BURN_WRITE_TAO for such sessions.
-    To be set by burn_write_opts_set_write_type(). 
+    To be set by burn_write_opts_set_write_type().
     Note: This function is not suitable for overwriting data in the middle of
           a valid data area because it is allowed to append trailing data.
           For exact random access overwriting use burn_random_access_write().
@@ -1912,7 +1912,7 @@ void burn_drive_cancel(struct burn_drive *drive);
     fatal errors during write, blank or format, a call to burn_drive_cancel()
     by the application thread.
     @param d The drive to inquire.
-    @return 1=burn seems to have went well, 0=burn failed 
+    @return 1=burn seems to have went well, 0=burn failed
     @since 0.2.6
 */
 int burn_drive_wrote_well(struct burn_drive *d);
@@ -1982,7 +1982,7 @@ struct burn_session *burn_session_create(void);
 */
 void burn_session_free(struct burn_session *s);
 
-/** Add a session to a disc at a specific position, increasing the 
+/** Add a session to a disc at a specific position, increasing the
     sessions's reference count.
 	@param d Disc to add the session to
 	@param s Session to add to the disc
@@ -1990,7 +1990,7 @@ void burn_session_free(struct burn_session *s);
 	@return 0 for failure, 1 for success
 */
 int burn_disc_add_session(struct burn_disc *d, struct burn_session *s,
-			  unsigned int pos);
+                          unsigned int pos);
 
 /** Remove a session from a disc
 	@param d Disc to remove session from
@@ -2045,8 +2045,8 @@ int burn_disc_remove_session(struct burn_disc *d, struct burn_session *s);
     @since 1.2.0
 */
 int burn_session_by_cue_file(struct burn_session *session,
-			char *path, int fifo_size, struct burn_source **fifo,
-                        unsigned char **text_packs, int *num_packs, int flag);
+                             char *path, int fifo_size, struct burn_source **fifo,
+                             unsigned char **text_packs, int *num_packs, int flag);
 
 
 /** Create a track */
@@ -2064,7 +2064,7 @@ void burn_track_free(struct burn_track *t);
 	@return 0 for failure, 1 for success
 */
 int burn_session_add_track(struct burn_session *s, struct burn_track *t,
-			   unsigned int pos);
+                           unsigned int pos);
 
 /** Remove a track from a session
 	@param s Session to remove track from
@@ -2090,7 +2090,7 @@ int burn_session_set_start_tno(struct burn_session *session, int tno,
                                int flag);
 
 /* ts B20108 */
-/** Inquire the CD track start number, as set by default or by 
+/** Inquire the CD track start number, as set by default or by
     burn_session_set_start_tno().
     @param session   The session to be inquired
     @param flag      Bitfield for control purposes. Unused yet. Submit 0.
@@ -2118,7 +2118,7 @@ int burn_session_get_start_tno(struct burn_session *session, int flag);
     See below macros BURN_CDTEXT_LANGUAGES_0X00 and BURN_CDTEXT_LANGUAGES_0X45,
     but be aware that many of these codes have never been seen on CD, and that
     many of them do not have a character representation among the above
-    Character Codes. 
+    Character Codes.
     Default is 0x09 = English for block 0 and 0x00 = Unknown for block 1 to 7.
     Copyright and Character Code are 0x00 for all blocks by default.
     See also file doc/cdtext.txt, "Format of a CD-TEXT packs array",
@@ -2156,7 +2156,7 @@ int burn_session_set_cdtext_par(struct burn_session *s,
         "Maltese", "Dutch", "Norwegian", "Occitan", \
         "Polish", "Portuguese", "Romanian", "Romansh", \
         "Serbian", "Slovak", "Slovenian", "Finnish", \
-        "Swedish", "Turkish", "Flemish", "Wallon" 
+        "Swedish", "Turkish", "Flemish", "Wallon"
 
 /** This is the second list of languages sorted by their Language codes,
     which start at 0x45.  They stem from from EBU Tech 3264, appendix 3.
@@ -2201,7 +2201,7 @@ int burn_session_set_cdtext_par(struct burn_session *s,
          ""
 
 /* ts B11206 */
-/** Obtain the current settings as of burn_session_set_cdtext_par() 
+/** Obtain the current settings as of burn_session_set_cdtext_par()
     @param s            Session which to inquire
     @param char_codes   Will return Character Codes for block 0 to 7
     @param copyrights   Will return Copyright bytes for block 0 to 7
@@ -2368,7 +2368,7 @@ int burn_session_input_sheet_v07t(struct burn_session *session,
     @return             Without flag bit0: > 0 is success, <= 0 failure
                         With flag bit0: > 0 is number of packs,
                                           0 means no packs will be generated,
-                                        < 0 means failure  
+                                        < 0 means failure
     @since 1.2.0
 */
 int burn_cdtext_from_session(struct burn_session *s,
@@ -2432,7 +2432,7 @@ int burn_make_input_sheet_v07t(unsigned char *text_packs, int num_packs,
 int burn_session_dispose_cdtext(struct burn_session *s, int block);
 
 
-/* ts B11221*/ 
+/* ts B11221*/
 /** Read an array of CD-TEXT packs from a file. This array should be suitable
     for burn_write_opts_set_leadin_text().
     The function tolerates and removes 4-byte headers as produced by
@@ -2462,7 +2462,7 @@ int burn_cdtext_from_packfile(char *path, unsigned char **text_packs,
 	@param mode data format (bitfield)
 */
 void burn_track_define_data(struct burn_track *t, int offset, int tail,
-			    int pad, int mode);
+                            int pad, int mode);
 
 
 /* ts B11206 */
@@ -2529,9 +2529,9 @@ int burn_track_get_cdtext(struct burn_track *t, int block,
     They were attached by burn_track_set_cdtext().
     @param t            Track where to remove the CD-TEXT attribute.
     @param block        Number of the language block in which the attribute
-                        shall appear. Possible values: 0 to 7. 
+                        shall appear. Possible values: 0 to 7.
                         -1 causes text packs of all blocks to be removed.
-    @return             > 0 is success, <= 0 failure 
+    @return             > 0 is success, <= 0 failure
     @since 1.2.0
 */
 int burn_track_dispose_cdtext(struct burn_track *t, int block);
@@ -2564,7 +2564,7 @@ int burn_track_set_cdxa_conv(struct burn_track *t, int value);
 	@param serial 5 digit serial number. A number in 0-99999.
 */
 void burn_track_set_isrc(struct burn_track *t, char *country, char *owner,
-			 unsigned char year, unsigned int serial);
+                         unsigned char year, unsigned int serial);
 
 /* ts B11226 */
 /** Set the composed ISRC string for a track. This is an alternative to
@@ -2602,7 +2602,7 @@ void burn_track_clear_isrc(struct burn_track *t);
     @since 1.2.0
 */
 int burn_track_set_index(struct burn_track *t, int index_number,
-                                        unsigned int relative_lba, int flag);
+                         unsigned int relative_lba, int flag);
 
 /* ts B20103 */
 /** Remove all index start addresses and reset to the default indexing of
@@ -2685,10 +2685,10 @@ struct burn_disc *burn_drive_get_disc(struct burn_drive *d);
 	@param s The data source to use for the contents of the track
 	@return An error code stating if the source is ready for use for
 	        writing the track, or if an error occurred
-    
+
 */
 enum burn_source_status burn_track_set_source(struct burn_track *t,
-					      struct burn_source *s);
+        struct burn_source *s);
 
 
 /* ts A70218 */
@@ -2716,7 +2716,7 @@ void burn_source_free(struct burn_source *s);
     @return Pointer to a burn_source object, NULL indicates failure
 */
 struct burn_source *burn_file_source_new(const char *path,
-					 const char *subpath);
+        const char *subpath);
 
 
 /* ts A91122 : An interface to open(O_DIRECT) or similar OS tricks. */
@@ -2735,7 +2735,7 @@ struct burn_source *burn_file_source_new(const char *path,
     burn_disk_write() will allocate a suitable read/write buffer for its own
     operations. A fifo created by burn_fifo_source_new() will allocate
     suitable memory for its buffer if called with flag bit0 and a multiple
-    of a safe buffer amount. 
+    of a safe buffer amount.
     @param path       The file address to open
     @param open_flags The flags as of man 2 open. Normally just O_RDONLY.
     @param flag       Bitfield for control purposes (unused yet, submit 0).
@@ -2776,7 +2776,7 @@ int burn_os_free_buffer(void *buffer, size_t amount, int flag);
     @param datafd The source of data.
     @param subfd The eventual source of subchannel data. Only used in exotic
                  raw write modes. Submit -1 for normal tasks.
-    @param size The eventual fixed size of eventually both fds. 
+    @param size The eventual fixed size of eventually both fds.
                 If this value is 0, the size will be determined from datafd.
     @return Pointer to a burn_source object, NULL indicates failure
 */
@@ -2823,8 +2823,8 @@ struct burn_source *burn_fd_source_new(int datafd, int subfd, off_t size);
     @since 0.8.8
 */
 struct burn_source *burn_offst_source_new(
-                struct burn_source *inp, struct burn_source *prev,
-                off_t start, off_t size, int flag);
+    struct burn_source *inp, struct burn_source *prev,
+    off_t start, off_t size, int flag);
 
 /* ts A70930 */
 /** Creates a fifo which acts as proxy for an already existing data source.
@@ -2839,14 +2839,14 @@ struct burn_source *burn_offst_source_new(
     content is consumed, the buffer space gets freed and the worker thread
     ends. This happens asynchronously. So expect two buffers and worker threads
     to exist for a short time between tracks. Be modest in your size demands if
-    multiple tracks are to be expected. 
+    multiple tracks are to be expected.
     @param inp        The burn_source for which the fifo shall act as proxy.
                       It can be disposed by burn_source_free() immediately
                       after this call.
     @param chunksize  The size in bytes of a chunk.
                       Use 2048 for sources suitable for BURN_BLOCK_MODE1,
                       2352 for sources which deliver for BURN_BLOCK_AUDIO,
-                      2056 for sources which shall get treated by 
+                      2056 for sources which shall get treated by
                       burn_track_set_cdxa_conv(track, 1).
                       Some variations of burn_source might work only with
                       a particular chunksize. E.g. libisofs demands 2048.
@@ -2871,7 +2871,7 @@ struct burn_source *burn_offst_source_new(
     @since 0.4.0
 */
 struct burn_source *burn_fifo_source_new(struct burn_source *inp,
-                                         int chunksize, int chunks, int flag);
+        int chunksize, int chunks, int flag);
 
 /* ts A71003 */
 /** Inquires state and fill parameters of a fifo burn_source which was created
@@ -2892,8 +2892,8 @@ struct burn_source *burn_fifo_source_new(struct burn_source *inp,
              7="aborted"   : consumption has ended after input error
     @since 0.4.0
 */
-int burn_fifo_inquire_status(struct burn_source *fifo, int *size, 
-                            int *free_bytes, char **status_text);
+int burn_fifo_inquire_status(struct burn_source *fifo, int *size,
+                             int *free_bytes, char **status_text);
 
 /* ts A91125 */
 /** Inquire various counters which reflect the fifo operation.
@@ -2911,9 +2911,9 @@ int burn_fifo_inquire_status(struct burn_source *fifo, int *size,
     @since 0.7.4
 */
 void burn_fifo_get_statistics(struct burn_source *fifo,
-                             int *total_min_fill, int *interval_min_fill,
-                             int *put_counter, int *get_counter,
-                             int *empty_counter, int *full_counter);
+                              int *total_min_fill, int *interval_min_fill,
+                              int *put_counter, int *get_counter,
+                              int *empty_counter, int *full_counter);
 
 /* ts A91125 */
 /** Inquire the fifo minimum fill counter for intervals and reset that counter.
@@ -2955,7 +2955,7 @@ int burn_fifo_peek_data(struct burn_source *fifo, char *buf, int bufsize,
     Filling will go on asynchronously after burn_fifo_fill() returned.
     This call and burn_fifo_peek_data() do not disturb each other.
     @param fifo     The fifo object to start
-    @param fill     Number of bytes desired. Expect to get return 1 if 
+    @param fill     Number of bytes desired. Expect to get return 1 if
                     at least fifo size - 32k were read.
     @param flag     Bitfield for control purposes.
                     bit0= fill fifo to maximum size
@@ -2992,7 +2992,7 @@ int burn_track_get_sectors(struct burn_track *);
     @param written_bytes Number of bytes written to track
     @since 0.2.6
 */
-int burn_track_get_counters(struct burn_track *t, 
+int burn_track_get_counters(struct burn_track *t,
                             off_t *read_bytes, off_t *written_bytes);
 
 
@@ -3002,7 +3002,7 @@ int burn_track_get_counters(struct burn_track *t,
           Fractional speeds should be rounded up. Like 4xCD = 706.
     @param d The drive to set speed for
     @param read Read speed in k/s (0 is max, -1 is min).
-    @param write Write speed in k/s (0 is max, -1 is min). 
+    @param write Write speed in k/s (0 is max, -1 is min).
 */
 void burn_drive_set_speed(struct burn_drive *d, int read, int write);
 
@@ -3015,7 +3015,7 @@ void burn_drive_set_speed(struct burn_drive *d, int read, int write);
     operation will be checked whether it will fill the drive buffer up to
     more than max_percent. If so, then waiting will happen until the buffer
     fill is predicted with at most min_percent.
-    Thus: if min_percent < max_percent then transfer rate will oscillate. 
+    Thus: if min_percent < max_percent then transfer rate will oscillate.
     This may allow the driver to operate on other devices, e.g. a disk from
     which to read the input for writing. On the other hand, this checking might
     reduce maximum throughput to the drive or even get misled by faulty buffer
@@ -3042,8 +3042,8 @@ void burn_drive_set_speed(struct burn_drive *d, int read, int write);
     @since 0.3.8
 */
 int burn_drive_set_buffer_waiting(struct burn_drive *d, int enable,
-                                int min_usec, int max_usec, int timeout_sec,
-                                int min_percent, int max_percent);
+                                  int min_usec, int max_usec, int timeout_sec,
+                                  int min_percent, int max_percent);
 
 /* ts B61116 */
 /** Control the write simulation mode before or after burn_write_opts get
@@ -3082,8 +3082,8 @@ void burn_structure_print_track(struct burn_track *t);
     @return Returns 1 on success and 0 on failure.
 */
 int burn_write_opts_set_write_type(struct burn_write_opts *opts,
-				   enum burn_write_types write_type,
-				   int block_type);
+                                   enum burn_write_types write_type,
+                                   int block_type);
 
 
 /* ts A70207 */
@@ -3102,8 +3102,8 @@ int burn_write_opts_set_write_type(struct burn_write_opts *opts,
     @since 0.3.2
 */
 enum burn_write_types burn_write_opts_auto_write_type(
-          struct burn_write_opts *opts, struct burn_disc *disc,
-          char reasons[BURN_REASONS_LEN], int flag);
+    struct burn_write_opts *opts, struct burn_disc *disc,
+    char reasons[BURN_REASONS_LEN], int flag);
 
 
 /** Supplies toc entries for writing - not normally required for cd mastering
@@ -3112,8 +3112,8 @@ enum burn_write_types burn_write_opts_auto_write_type(
     @param toc_entries
 */
 void burn_write_opts_set_toc_entries(struct burn_write_opts *opts,
-				     int count,
-				     struct burn_toc_entry *toc_entries);
+                                     int count,
+                                     struct burn_toc_entry *toc_entries);
 
 /** Sets the session format for a disc
     @param opts The write opts to change
@@ -3121,10 +3121,10 @@ void burn_write_opts_set_toc_entries(struct burn_write_opts *opts,
 */
 void burn_write_opts_set_format(struct burn_write_opts *opts, int format);
 
-/** Sets the simulate value for the write_opts struct . 
+/** Sets the simulate value for the write_opts struct .
     This corresponds to the Test Write bit in MMC mode page 05h. Several media
     types do not support this. See struct burn_multi_caps.might_simulate for
-    actual availability of this feature. 
+    actual availability of this feature.
     If the media is suitable, the drive will perform burn_disc_write() as a
     simulation instead of effective write operations. This means that the
     media content and burn_disc_get_status() stay unchanged.
@@ -3153,13 +3153,13 @@ int  burn_write_opts_set_simulate(struct burn_write_opts *opts, int sim);
             Returns 0 if not.
 */
 int burn_write_opts_set_underrun_proof(struct burn_write_opts *opts,
-				       int underrun_proof);
+                                       int underrun_proof);
 
 /** Sets whether to use opc or not with the write_opts struct
     @param opts The write opts to change
     @param opc If non-zero, optical power calibration will be performed at
                start of burn
-	 
+
 */
 void burn_write_opts_set_perform_opc(struct burn_write_opts *opts, int opc);
 
@@ -3180,7 +3180,7 @@ void burn_write_opts_set_mediacatalog(struct burn_write_opts *opts,
                             0= deactivate it
 */
 void burn_write_opts_set_has_mediacatalog(struct burn_write_opts *opts,
-                                          int has_mediacatalog);
+        int has_mediacatalog);
 
 
 /* ts A61106 */
@@ -3191,7 +3191,7 @@ void burn_write_opts_set_has_mediacatalog(struct burn_write_opts *opts,
           libburn will refuse to write if burn_write_opts_set_multi() is
           enabled under such conditions.
     @param opts The option object to be manipulated
-    @param multi 1=media will be appendable, 0=media will be closed (default) 
+    @param multi 1=media will be appendable, 0=media will be closed (default)
     @since 0.2.6
 */
 void burn_write_opts_set_multi(struct burn_write_opts *opts, int multi);
@@ -3199,7 +3199,7 @@ void burn_write_opts_set_multi(struct burn_write_opts *opts, int multi);
 
 /* ts B31024 */
 /** Set the severity to be used with write error messages which are potentially
-    caused by not using write type BURN_WRITE_SAO on fast blanked DVD-RW. 
+    caused by not using write type BURN_WRITE_SAO on fast blanked DVD-RW.
 
     Normally the call burn_write_opts_auto_write_type() can prevent such
     errors by looking for MMC feature 21h "Incremental Streaming Writable"
@@ -3279,7 +3279,7 @@ void burn_write_opts_set_fillup(struct burn_write_opts *opts,
 /* ts A70303 */
 /** Eventually makes libburn ignore the failure of some conformance checks:
     - the check whether CD write+block type is supported by the drive
-    - the check whether the media profile supports simulated burning 
+    - the check whether the media profile supports simulated burning
     @param opts The write opts to change
     @param use_force 1=ignore above checks, 0=refuse work on failed check
     @since 0.3.4
@@ -3300,8 +3300,8 @@ void burn_write_opts_set_force(struct burn_write_opts *opts, int use_force);
                   >=16 use WRITE12 but not before the LBA given by value
     @since 0.4.6
 */
-void burn_write_opts_set_stream_recording(struct burn_write_opts *opts, 
-                                         int value);
+void burn_write_opts_set_stream_recording(struct burn_write_opts *opts,
+        int value);
 
 /* ts A91115 */
 /** Overrides the write chunk size for DVD and BD media which is normally
@@ -3325,7 +3325,7 @@ void burn_write_opts_set_dvd_obs(struct burn_write_opts *opts, int obs);
     @param opts The write opts to change
     @param pad  1 means to pad up in any case, 0 means automatic decision.
     @since 1.2.4
-*/  
+*/
 void burn_write_opts_set_obs_pad(struct burn_write_opts *opts, int pad);
 
 
@@ -3353,7 +3353,7 @@ void burn_write_opts_set_stdio_fsync(struct burn_write_opts *opts, int rythm);
 */
 void burn_read_opts_set_raw(struct burn_read_opts *opts, int raw_mode);
 
-/** Sets whether to report c2 errors or not 
+/** Sets whether to report c2 errors or not
     @param opts The read opts to change
     @param c2errors If non-zero, report c2 errors.
 */
@@ -3364,42 +3364,42 @@ void burn_read_opts_set_c2errors(struct burn_read_opts *opts, int c2errors);
     @param subcodes_audio If non-zero, read subcodes from audio tracks on the disc.
 */
 void burn_read_opts_read_subcodes_audio(struct burn_read_opts *opts,
-					int subcodes_audio);
+                                        int subcodes_audio);
 
-/** Sets whether to read subcodes from data tracks or not 
+/** Sets whether to read subcodes from data tracks or not
     @param opts The read opts to change
     @param subcodes_data If non-zero, read subcodes from data tracks on the disc.
 */
 void burn_read_opts_read_subcodes_data(struct burn_read_opts *opts,
-				       int subcodes_data);
+                                       int subcodes_data);
 
 /** Sets whether to recover errors if possible
     @param opts The read opts to change
     @param hardware_error_recovery If non-zero, attempt to recover errors if possible.
 */
 void burn_read_opts_set_hardware_error_recovery(struct burn_read_opts *opts,
-						int hardware_error_recovery);
+        int hardware_error_recovery);
 
 /** Sets whether to report recovered errors or not
     @param opts The read opts to change
     @param report_recovered_errors If non-zero, recovered errors will be reported.
 */
 void burn_read_opts_report_recovered_errors(struct burn_read_opts *opts,
-					    int report_recovered_errors);
+        int report_recovered_errors);
 
 /** Sets whether blocks with unrecoverable errors should be read or not
     @param opts The read opts to change
     @param transfer_damaged_blocks If non-zero, blocks with unrecoverable errors will still be read.
 */
 void burn_read_opts_transfer_damaged_blocks(struct burn_read_opts *opts,
-					    int transfer_damaged_blocks);
+        int transfer_damaged_blocks);
 
 /** Sets the number of retries to attempt when trying to correct an error
     @param opts The read opts to change
     @param hardware_error_retries The number of retries to attempt when correcting an error.
 */
 void burn_read_opts_set_hardware_error_retries(struct burn_read_opts *opts,
-					       unsigned char hardware_error_retries);
+        unsigned char hardware_error_retries);
 
 
 /* ts A90815 */
@@ -3422,7 +3422,7 @@ int burn_drive_get_all_profiles(struct burn_drive *d, int *num_profiles,
 /* ts A90815 */
 /** Obtains the profile name associated with a profile code.
     @param profile_code the profile code to be translated
-    @param name         returns the profile name (e.g. "DVD+RW")  
+    @param name         returns the profile name (e.g. "DVD+RW")
     @return             1= known profile code , 0= unknown profile code
     @since 0.7.0
 */
@@ -3431,7 +3431,7 @@ int burn_obtain_profile_name(int profile_code, char name[80]);
 
 /** Gets the maximum write speed for a drive and eventually loaded media.
     The return value might change by the media type of already loaded media,
-    again by call burn_drive_grab() and again by call burn_disc_read_atip(). 
+    again by call burn_drive_grab() and again by call burn_disc_read_atip().
     @param d Drive to query
     @return Maximum write speed in K/s
 */
@@ -3440,7 +3440,7 @@ int burn_drive_get_write_speed(struct burn_drive *d);
 
 /* ts A61021 */
 /** Gets the minimum write speed for a drive and eventually loaded media.
-    The return value might change by the media type of already loaded media, 
+    The return value might change by the media type of already loaded media,
     again by call burn_drive_grab() and again by call burn_disc_read_atip().
     @param d Drive to query
     @return Minimum write speed in K/s
@@ -3490,7 +3490,7 @@ int burn_drive_get_speedlist(struct burn_drive *d,
     @since 0.3.8
 */
 int burn_drive_get_best_speed(struct burn_drive *d, int speed_goal,
-                        struct burn_speed_descriptor **best_descr, int flag);
+                              struct burn_speed_descriptor **best_descr, int flag);
 
 
 /* ts A61226 */
@@ -3509,83 +3509,83 @@ int burn_drive_free_speedlist(struct burn_speed_descriptor **speed_list);
 */
 struct burn_multi_caps {
 
-	/* Multi-session capability can keep the media appendable after
-	   writing a session. It also guarantees that the drive will be able
-	   to predict and use the appropriate Next Writeable Address to place
-	   the next session on the media without overwriting the existing ones.
-	   It does not guarantee that the selected write type is able to do
-	   an appending session after the next session. (E.g. CD SAO is capable
-	   of multi-session by keeping a disc appendable. But .might_do_sao
-	   will be 0 afterwards, when checking the appendable media.)
-	    1= media may be kept appendable by burn_write_opts_set_multi(o,1)
- 	    0= media will not be appendable
-	*/
-	int multi_session;
+    /* Multi-session capability can keep the media appendable after
+       writing a session. It also guarantees that the drive will be able
+       to predict and use the appropriate Next Writeable Address to place
+       the next session on the media without overwriting the existing ones.
+       It does not guarantee that the selected write type is able to do
+       an appending session after the next session. (E.g. CD SAO is capable
+       of multi-session by keeping a disc appendable. But .might_do_sao
+       will be 0 afterwards, when checking the appendable media.)
+        1= media may be kept appendable by burn_write_opts_set_multi(o,1)
+        0= media will not be appendable
+    */
+    int multi_session;
 
-	/* Multi-track capability can write more than one track source
-	   during a single session. The written tracks can later be found in
-	   libburn's TOC model with their start addresses and sizes.
-	    1= multiple tracks per session are allowed
-	    0= only one track per session allowed
-	*/
-	int multi_track;
+    /* Multi-track capability can write more than one track source
+       during a single session. The written tracks can later be found in
+       libburn's TOC model with their start addresses and sizes.
+        1= multiple tracks per session are allowed
+        0= only one track per session allowed
+    */
+    int multi_track;
 
-	/* Start-address capability can set a non-zero address with
-	   burn_write_opts_set_start_byte(). Eventually this has to respect
-	   .start_alignment and .start_range_low, .start_range_high in this
-	   structure.
-	    1= non-zero start address is allowed
+    /* Start-address capability can set a non-zero address with
+       burn_write_opts_set_start_byte(). Eventually this has to respect
+       .start_alignment and .start_range_low, .start_range_high in this
+       structure.
+        1= non-zero start address is allowed
             0= only start address 0 is allowed (to depict the drive's own idea
                about the appropriate write start)
-	*/
-	int start_adr;
+    */
+    int start_adr;
 
-	/** The alignment for start addresses.
-	    ( start_address % start_alignment ) must be 0.
-	*/
-	off_t start_alignment;
+    /** The alignment for start addresses.
+        ( start_address % start_alignment ) must be 0.
+    */
+    off_t start_alignment;
 
-	/** The lowest permissible start address.
-	*/
-	off_t start_range_low;
+    /** The lowest permissible start address.
+    */
+    off_t start_range_low;
 
-	/** The highest addressable start address.
-	*/
-	off_t start_range_high;
+    /** The highest addressable start address.
+    */
+    off_t start_range_high;
 
-	/** Potential availability of write modes
-	     4= needs no size prediction, not to be chosen automatically
-	     3= needs size prediction, not to be chosen automatically
-  	     2= available, no size prediction necessary
-	     1= available, needs exact size prediction
-	     0= not available
-	    With CD media (profiles 0x09 and 0x0a) check also the elements
-	    *_block_types of the according write mode.
-	*/
-	int might_do_tao;
-	int might_do_sao;
-	int might_do_raw;
+    /** Potential availability of write modes
+         4= needs no size prediction, not to be chosen automatically
+         3= needs size prediction, not to be chosen automatically
+         2= available, no size prediction necessary
+         1= available, needs exact size prediction
+         0= not available
+        With CD media (profiles 0x09 and 0x0a) check also the elements
+        *_block_types of the according write mode.
+    */
+    int might_do_tao;
+    int might_do_sao;
+    int might_do_raw;
 
-	/** Generally advised write mode.
-	    Not necessarily the one chosen by burn_write_opts_auto_write_type()
-	    because the burn_disc structure might impose particular demands.
-	*/
-	enum burn_write_types advised_write_mode;
+    /** Generally advised write mode.
+        Not necessarily the one chosen by burn_write_opts_auto_write_type()
+        because the burn_disc structure might impose particular demands.
+    */
+    enum burn_write_types advised_write_mode;
 
-	/** Write mode as given by parameter wt of burn_disc_get_multi_caps().
-	*/
-	enum burn_write_types selected_write_mode;
+    /** Write mode as given by parameter wt of burn_disc_get_multi_caps().
+    */
+    enum burn_write_types selected_write_mode;
 
-	/** Profile number which was current when the reply was generated */
-	int current_profile;
+    /** Profile number which was current when the reply was generated */
+    int current_profile;
 
-	/** Wether the current profile indicates CD media. 1=yes, 0=no */
-	int current_is_cd_profile;
+    /** Wether the current profile indicates CD media. 1=yes, 0=no */
+    int current_is_cd_profile;
 
-        /* ts A70528 */
-        /* @since 0.3.8 */
-	/** Wether the current profile is able to perform simulated write */
-	int might_simulate;
+    /* ts A70528 */
+    /* @since 0.3.8 */
+    /** Wether the current profile is able to perform simulated write */
+    int might_simulate;
 };
 
 /** Allocates a struct burn_multi_caps (see above) and fills it with values
@@ -3599,11 +3599,11 @@ struct burn_multi_caps {
               return value is 0 if the desired mode is not possible.
     @param caps returns the info structure
     @param flag Bitfield for control purposes (unused yet, submit 0)
-    @return < 0 : error , 0 : writing seems impossible , 1 : writing possible 
+    @return < 0 : error , 0 : writing seems impossible , 1 : writing possible
     @since 0.3.2
 */
 int burn_disc_get_multi_caps(struct burn_drive *d, enum burn_write_types wt,
-			 struct burn_multi_caps **caps, int flag);
+                             struct burn_multi_caps **caps, int flag);
 
 /** Removes from memory a multi session info structure which was returned by
     burn_disc_get_multi_caps(). The pointer *caps gets set to NULL.
@@ -3638,7 +3638,7 @@ void burn_session_get_leadout_entry(struct burn_session *s,
     @return array of sessions
 */
 struct burn_session **burn_disc_get_sessions(struct burn_disc *d,
-                                             int *num);
+        int *num);
 
 /* ts B30112 */
 /* @since 1.2.8 */
@@ -3660,7 +3660,7 @@ int burn_disc_get_sectors(struct burn_disc *d);
     @return array of tracks
 */
 struct burn_track **burn_session_get_tracks(struct burn_session *s,
-                                            int *num);
+        int *num);
 
 int burn_session_get_sectors(struct burn_session *s);
 
@@ -3677,7 +3677,7 @@ int burn_track_get_mode(struct burn_track *track);
 int burn_session_get_hidefirst(struct burn_session *session);
 
 /** Returns the library's version in its parts.
-    This is the runtime counterpart of the three build time macros 
+    This is the runtime counterpart of the three build time macros
     burn_header_version_* below.
     @param major The major version number
     @param minor The minor version number
@@ -3865,7 +3865,7 @@ char *burn_list_sev_texts(int flag);
 
 /* ts A70915 */
 /** Replace the messenger object handle of libburn by a compatible handle
-    obtained from a related library. 
+    obtained from a related library.
     See also: libisofs, API function iso_get_messenger().
     @param messenger The foreign but compatible message handle.
     @return 1 : success, <=0 : failure
@@ -3885,10 +3885,10 @@ typedef int (*burn_abort_handler_t)(void *handle, int signum, int flag);
 /** Control built-in signal handling. Either by setting an own handler or
     by activating the built-in signal handler.
 
-    A function parameter handle of NULL activates the built-in abort handler. 
+    A function parameter handle of NULL activates the built-in abort handler.
     Depending on mode it may cancel all drive operations, wait for all drives
     to become idle, exit(1). It may also prepare function
-    burn_drive_get_status() for waiting and performing exit(1). 
+    burn_drive_get_status() for waiting and performing exit(1).
     Parameter handle may be NULL or a text that shall be used as prefix for
     pacifier messages of burn_abort_pacifier(). Other than with an application
     provided handler, the prefix char array does not have to be kept existing
@@ -3943,11 +3943,11 @@ typedef int (*burn_abort_handler_t)(void *handle, int signum, int flag);
                       the indicator of burn_is_aborting() gets set.
                   bit8: @since 1.3.2
                         try to ignore SIGPIPE (regardless of bit0 - bit3)
-                   
+
     @since 0.2.6
 */
-void burn_set_signal_handling(void *handle, burn_abort_handler_t handler, 
-			     int mode);
+void burn_set_signal_handling(void *handle, burn_abort_handler_t handler,
+                              int mode);
 
 
 /* ts B00304 */
@@ -3984,7 +3984,7 @@ int burn_is_aborting(int flag);
     operation or synchronization of the drive buffer will happen.
     See burn_drive_reset_simulate().
 
-    @param d            The drive to which to write 
+    @param d            The drive to which to write
     @param byte_address The start address of the write in byte
                         (1 LBA unit = 2048 bytes) (do respect media alignment)
     @param data         The bytes to be written
@@ -4038,7 +4038,7 @@ int burn_get_read_capacity(struct burn_drive *d, int *capacity, int flag);
                         bit1= do not submit error message if read error
                         bit2= on error do not try to read a second time
                               with single block steps.
-                              @since 0.5.2 
+                              @since 0.5.2
                         bit3= return -2 on permission denied error rather than
                               issuing a warning message.
                               @since 1.0.6
@@ -4071,7 +4071,7 @@ int burn_read_data(struct burn_drive *d, off_t byte_address,
     of data. But the actual start and end position of this audio stream
     will differ by a few dozens of milliseconds, depending on individual
     CD and individual drive.
-    Expect leading and trailing zeros, as well as slight truncation. 
+    Expect leading and trailing zeros, as well as slight truncation.
 
     @param d            The drive from which to read.
                         It must be a real MMC drive (i.e. not a stdio file)
@@ -4144,7 +4144,7 @@ int burn_drive_extract_audio(struct burn_drive *drive,
                         bit3= Enable DAP : "flaw obscuring mechanisms like
                                             audio data mute and interpolate"
     @since 1.3.2
-*/  
+*/
 int burn_drive_extract_audio_track(struct burn_drive *drive,
                                    struct burn_track *track,
                                    char *target_path, int flag);
@@ -4205,14 +4205,14 @@ void burn_allow_drive_role_4(int allowed);
 /* ts A70923 */
 /** Find out whether a given address string would lead to the given drive
     object. This should be done in advance for track source addresses
-    with parameter drive_role set to 2. 
+    with parameter drive_role set to 2.
     Although a real MMC drive should hardly exist as two drive objects at
     the same time, this can easily happen with stdio-drives. So if more than
     one drive is used by the application, then this gesture is advised:
       burn_drive_d_get_adr(d2, adr2);
       if (burn_drive_equals_adr(d1, adr2, burn_drive_get_drive_role(d2)))
         ... Both drive objects point to the same storage facility ...
- 
+
     @param d1      Existing drive object
     @param adr2    Address string to be tested. Prefix "stdio:" overrides
                    parameter drive_role2 by either 0 or 2 as appropriate.
